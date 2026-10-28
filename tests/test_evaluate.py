@@ -8,7 +8,8 @@ from frontdesk.demo import DEMO_DIR
 from frontdesk.providers import Completion
 from frontdesk.providers.replay import thread_id_from_prompt
 
-RECS = json.loads((DEMO_DIR / "triage.json").read_text())
+RECS = {tid: {k: v for k, v in rec.items() if k != "_usage"}
+        for tid, rec in json.loads((DEMO_DIR / "triage.json").read_text()).items()}
 BAND = {5: "today", 4: "week", 3: "week", 2: "none", 1: "none"}
 
 
