@@ -13,7 +13,7 @@ GMAIL_TOKEN = HOME / "gmail_token.json"
 
 DEFAULTS = {
     "provider": "anthropic",
-    "model": "claude-opus-5",
+    "model": "claude-opus-5-5",   # picked by evals/results/SCOREBOARD.md
     "provider_options": {"effort": "medium"},
     "keychain_service": "frontdesk-anthropic",
     "gmail_query": "in:inbox newer_than:7d",
