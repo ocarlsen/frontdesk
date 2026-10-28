@@ -39,5 +39,22 @@ def settings() -> dict:
     return s
 
 
+PROFILE_MAX = 2000
+
+
+def save_setting(key: str, value) -> None:
+    """Update one key in settings.json, keeping the others; written 0600 via an atomic rename."""
+    if key not in DEFAULTS:
+        raise ValueError(f"unknown setting {key!r}")
+    ensure_home()
+    current = json.loads(SETTINGS_PATH.read_text()) if SETTINGS_PATH.exists() else {}
+    current[key] = value
+    tmp = SETTINGS_PATH.with_name(SETTINGS_PATH.name + ".tmp")
+    tmp.unlink(missing_ok=True)
+    with os.fdopen(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as f:
+        f.write(json.dumps(current, indent=2) + "\n")
+    os.replace(tmp, SETTINGS_PATH)
+
+
 def ensure_home() -> None:
     HOME.mkdir(mode=0o700, parents=True, exist_ok=True)

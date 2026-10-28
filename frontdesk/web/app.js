@@ -16,6 +16,7 @@ const GMAIL_PREFIX = "https://mail.google.com/";
 const STATIC = document.documentElement.dataset.static === "1";
 const EXPORTED = Date.parse(document.documentElement.dataset.exported || "");
 const staticHidden = new Set();
+const staticLabels = new Map();   // item id -> bucket the visitor moved it to
 
 function staticFile(itemId) {
   return itemId.replace(/[^A-Za-z0-9]/g, "-");
@@ -150,6 +151,18 @@ function buildDetail(item, triage) {
   });
   reply.append(label, ta, hint);
   actions.append(save, copy);
+  if (triage) {
+    const moveTo = el("span", "moveto");
+    moveTo.append(el("span", "kbdhint", "Move to"));
+    for (const [b, name] of [["needs_you", "Needs you"], ["fyi", "FYI"], ["ignore", "Ignore"]]) {
+      if (b === triage.bucket) continue;
+      const mb = el("button", "btn small", name);
+      mb.type = "button";
+      mb.addEventListener("click", () => relabel(item, b, name, mb));
+      moveTo.append(mb);
+    }
+    actions.append(moveTo);
+  }
   const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
@@ -223,6 +236,8 @@ async function postAction(kind, itemId, extra) {
   if (STATIC) {
     if (kind === "archive") staticHidden.add(itemId);
     if (kind === "unarchive") staticHidden.delete(itemId);
+    if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
+    if (kind === "profile") throw new Error("demo mode");
     if (kind === "draft") return { status: "done", demo: true, note: "Demo: nothing was saved to Gmail." };
     return { status: "done" };
   }
@@ -273,6 +288,18 @@ async function saveDraft(item, ta, btn) {
   }
 }
 
+async function relabel(item, bucket, name, btn) {
+  btn.disabled = true;
+  try {
+    await postAction("relabel", item.id, { bucket });
+    await load();
+    toast("Moved to " + name + ". FrontDesk keeps your call as a private label.");
+  } catch (e) {
+    btn.disabled = false;
+    toast("Move failed: " + e.message);
+  }
+}
+
 async function archive(item, btn) {
   btn.disabled = true;
   try {
@@ -302,7 +329,8 @@ function whyPanel(t) {
   const cost = t.cost_usd === null || t.cost_usd === undefined ? "n/a"
     : "$" + Number(t.cost_usd).toFixed(4);
   const rows = [
-    ["Decision", t.bucket.replace("_", " ") + ", urgency " + t.urgency + " of 5 (" + band + ")"],
+    ["Decision", t.bucket.replace("_", " ") + ", urgency " + t.urgency + " of 5 (" + band + ")"
+      + (t.model_bucket ? "; you moved it here (the model said " + t.model_bucket.replace("_", " ") + ")" : "")],
     ["Reason", t.reason],
     ["Model", t.model_served || t.model],
     ["Prompt version", t.prompt_version || "unknown"],
@@ -390,6 +418,11 @@ async function load() {
         r.item.updated_at = shiftIso(r.item.updated_at, delta);
         for (const m of r.item.messages) m.sent_at = shiftIso(m.sent_at, delta);
         if (r.triage) r.triage.triaged_at = shiftIso(r.triage.triaged_at, delta);
+        const moved = staticLabels.get(r.item.id);
+        if (r.triage && moved && moved !== r.triage.bucket) {
+          r.triage.model_bucket = r.triage.model_bucket || r.triage.bucket;
+          r.triage.bucket = moved;
+        }
         return r;
       });
     }
@@ -426,6 +459,56 @@ async function syncNow() {
     btn.disabled = false;
     btn.textContent = "Sync";
   }
+}
+
+// ---- Profile: a few sentences in the owner's words that the model treats as trusted context.
+async function openProfile() {
+  const panel = document.getElementById("profilepanel");
+  const box = el("div", "helpbox");
+  box.append(el("h2", null, "Your profile"));
+  box.append(el("p", "kbdhint",
+    "Tell FrontDesk what matters to you, in a few sentences. It is added to the model's " +
+    "instructions as trusted context (your mail never is). Saving re-ranks on the next Sync."));
+  const ta = el("textarea");
+  ta.rows = 6;
+  ta.maxLength = 2000;
+  ta.placeholder = "For example: I'm job hunting, so recruiter mail is at least FYI. " +
+    "Invoices from my landlord are always needs you.";
+  const status = el("p", "kbdhint");
+  const save = el("button", "btn primary", "Save");
+  save.type = "button";
+  const cancel = el("button", "btn", "Close");
+  cancel.type = "button";
+  cancel.addEventListener("click", () => { panel.hidden = true; });
+  const row = el("div", "actions");
+  row.append(save, cancel);
+  box.append(ta, status, row);
+  panel.replaceChildren(box);
+  panel.hidden = false;
+  try {
+    const res = await fetch(STATIC ? "api/profile.json" : "/api/profile", { cache: "no-store" });
+    const out = await res.json();
+    ta.value = out.profile || "";
+    if (out.demo) {
+      save.disabled = true;
+      ta.readOnly = true;
+      status.textContent = "Demo: the profile is off here. In your own copy, edit it above.";
+    }
+  } catch (e) {
+    status.textContent = "Could not load the profile: " + e.message;
+  }
+  save.addEventListener("click", async () => {
+    save.disabled = true;
+    try {
+      await postAction("profile", "", { text: ta.value });
+      status.textContent = "Saved. Click Sync to re-rank with it.";
+    } catch (e) {
+      status.textContent = "Save failed: " + e.message;
+    } finally {
+      save.disabled = false;
+    }
+  });
+  ta.focus();
 }
 
 // ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open, u close, e archive,
@@ -495,6 +578,7 @@ function onKey(e) {
   if (e.key === "Escape") {
     if (typing) t.blur();
     toggleHelp(false);
+    document.getElementById("profilepanel").hidden = true;
     return;
   }
   if (typing) return;
@@ -534,6 +618,7 @@ function onKey(e) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sync").addEventListener("click", syncNow);
+  document.getElementById("profile").addEventListener("click", openProfile);
   buildHelp();
   document.addEventListener("keydown", onKey);
   load();

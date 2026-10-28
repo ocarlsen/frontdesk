@@ -59,6 +59,17 @@ CREATE TABLE IF NOT EXISTS hidden (
     reason TEXT NOT NULL,
     at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS labels (
+    -- The owner's correction of a ranking: private ground truth for `frontdesk eval --mine`.
+    item_id TEXT NOT NULL,
+    item_updated_at TEXT NOT NULL,   -- a new message makes the old correction stale
+    owner_bucket TEXT NOT NULL,
+    model_bucket TEXT NOT NULL,
+    model TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    at TEXT NOT NULL,
+    PRIMARY KEY (item_id, item_updated_at)
+);
 CREATE TABLE IF NOT EXISTS actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     idem_key TEXT UNIQUE NOT NULL,
@@ -214,6 +225,17 @@ class Store:
                 db.execute("UPDATE actions SET status=?, payload=? WHERE id=?",
                            (status, json.dumps(result), action_id))
 
+    def set_label(self, item: Item, owner_bucket: str) -> None:
+        t = self.db.execute("SELECT bucket, model, prompt_version FROM triage WHERE item_id=?",
+                            (item.id,)).fetchone()
+        with self.tx() as db:
+            db.execute("INSERT OR REPLACE INTO labels VALUES (?,?,?,?,?,?,?)",
+                       (item.id, item.updated_at, owner_bucket, t["bucket"] if t else "",
+                        t["model"] if t else "", t["prompt_version"] if t else "", now()))
+
+    def labels(self) -> list[sqlite3.Row]:
+        return self.db.execute("SELECT * FROM labels").fetchall()
+
     def hide(self, item_id: str, reason: str) -> None:
         with self.tx() as db:
             db.execute("INSERT OR REPLACE INTO hidden VALUES (?,?,?)", (item_id, reason, now()))
@@ -233,10 +255,13 @@ class Store:
         """Every item with its triage, ranked: needs_you, then fyi, then ignore, then untriaged;
         within a bucket by urgency then recency."""
         rows = self.db.execute(
-            "SELECT i.data, t.* FROM items i LEFT JOIN triage t ON t.item_id = i.id "
+            "SELECT i.data, t.*, l.owner_bucket FROM items i "
+            "LEFT JOIN triage t ON t.item_id = i.id "
+            "LEFT JOIN labels l ON l.item_id = i.id AND l.item_updated_at = i.updated_at "
             "WHERE i.id NOT IN (SELECT item_id FROM hidden) "
-            "ORDER BY CASE t.bucket WHEN 'needs_you' THEN 0 WHEN 'fyi' THEN 1 "
-            "WHEN 'ignore' THEN 2 ELSE 3 END, t.urgency DESC, i.updated_at DESC"
+            "ORDER BY CASE COALESCE(l.owner_bucket, t.bucket) WHEN 'needs_you' THEN 0 "
+            "WHEN 'fyi' THEN 1 WHEN 'ignore' THEN 2 ELSE 3 END, t.urgency DESC, "
+            "i.updated_at DESC"
         ).fetchall()
         out = []
         for r in rows:
@@ -244,5 +269,7 @@ class Store:
             tri = None
             if r["bucket"] is not None:
                 tri = Triage(**{f: r[f] for f in TRIAGE_FIELDS})
+                if r["owner_bucket"] and r["owner_bucket"] != tri.bucket:
+                    tri.model_bucket, tri.bucket = tri.bucket, r["owner_bucket"]
             out.append((item, tri))
         return out

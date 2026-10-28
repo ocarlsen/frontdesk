@@ -260,3 +260,35 @@ def test_app_js_wires_the_detail_panels():
     for call in ("d.append(whyPanel(triage))", "saveDraft(item, ta, save)",
                  "archive(item, arch)", 'document.addEventListener("keydown", onKey)'):
         assert call in js, call
+
+
+def test_profile_read_and_save(tmp_path):
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    from frontdesk import config
+    from frontdesk.web.server import make_server
+    config.save_setting("serve_port", 9999)            # an unrelated key must survive a save
+    store = Store(tmp_path / "p.db")
+    httpd = make_server(store, "127.0.0.1", 0, settings={})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    hdr = {"X-FrontDesk": "action", "Content-Type": "application/json"}
+
+    def post(body):
+        req = urllib.request.Request(base + "/api/action", data=_json.dumps(body).encode(),
+                                     method="POST", headers=hdr)
+        try:
+            return urllib.request.urlopen(req).status
+        except urllib.error.HTTPError as e:
+            return e.code
+    try:
+        assert post({"kind": "profile", "text": "I am job hunting."}) == 200
+        got = _json.loads(urllib.request.urlopen(base + "/api/profile").read())
+        assert got == {"profile": "I am job hunting.", "demo": False}
+        assert config.settings()["serve_port"] == 9999
+        assert post({"kind": "profile", "text": "x" * 2001}) == 400
+        assert oct(config.SETTINGS_PATH.stat().st_mode & 0o777) == "0o600"
+    finally:
+        httpd.shutdown()

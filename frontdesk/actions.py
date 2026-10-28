@@ -138,3 +138,16 @@ def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
               "body_sha256": sha}
     store.finish_action(action_id, "done", result)
     return result
+
+
+def relabel(store: Store, item_id: str, bucket: str) -> dict:
+    """The owner moves a thread to another bucket. Local only (no Gmail call); the correction is
+    kept as a private label and wins over the model until a new message arrives."""
+    from .items import BUCKETS
+    if bucket not in BUCKETS:
+        raise ActionError(f"unknown bucket {bucket!r}")
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    store.set_label(item, bucket)
+    return {"status": "done", "kind": "relabel", "bucket": bucket}

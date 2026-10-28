@@ -159,3 +159,9 @@ li.card.current { box-shadow: inset 3px 0 0 var(--accent); }
 .helpbox dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
 .helpbox dd { margin: 0; color: var(--muted); }
 .kbdhint { color: var(--muted); font-size: .8em; }
+
+.moveto { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
+.btn.small { padding: 4px 10px; font-size: .85em; }
+
+.helpbox textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }

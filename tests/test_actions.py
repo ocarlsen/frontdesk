@@ -143,3 +143,25 @@ def test_draft_account_mismatch_refused(tmp_path):
     with pytest.raises(actions.ActionError, match="actions token is for"):
         actions.save_draft(store_with_item(tmp_path), "gmail:t1", "ok", SEEN, g, "click-0001")
     assert g.drafts == []
+
+
+def test_relabel_overrides_ranking_until_a_new_message(tmp_path):
+    from frontdesk import evaluate
+    from frontdesk.items import Triage
+    store = store_with_item(tmp_path)
+    store.save_triage(Triage("gmail:t1", "ignore", 1, "promo", "", "fake:m", "t",
+                             "2026-10-28T16:00:00Z", prompt_version="v1"))
+    actions.relabel(store, "gmail:t1", "fyi")
+    t = store.ranked()[0][1]
+    assert (t.bucket, t.model_bucket) == ("fyi", "ignore")
+    rep = evaluate.mine_report(store)
+    assert "Your corrections: 1" in rep and "ignore -> fyi: 1" in rep
+    assert "promo" not in rep and "gmail:t1" not in rep          # aggregate only
+    store.upsert_item(store.get_item("gmail:t1").__class__(**{
+        **store.get_item("gmail:t1").__dict__, "updated_at": "2026-10-28T18:00:00Z"}))
+    assert store.ranked()[0][1].bucket == "ignore"               # correction was for the old state
+
+
+def test_relabel_rejects_unknown_bucket(tmp_path):
+    with pytest.raises(actions.ActionError):
+        actions.relabel(store_with_item(tmp_path), "gmail:t1", "urgent")

@@ -303,3 +303,23 @@ def scoreboard(reports: list[dict]) -> str:
                      f"{_frac(best['triage']['accuracy']):.0%}) at ${per_thousand(r):.2f}/1k: "
                      f"{verdict}.")
     return "\n".join(lines) + "\n"
+
+
+def mine_report(store) -> str:
+    """Aggregate-only quality on the owner's REAL mail, from their corrections. Prints counts,
+    never a subject, sender or body. Rankings the owner did not correct are counted as accepted:
+    an assumption, stated in the output, since FrontDesk records disagreement, not agreement."""
+    ranked = store.db.execute("SELECT COUNT(*) FROM triage").fetchone()[0]
+    labels = store.labels()
+    moves = Counter((r["model_bucket"] or "untriaged", r["owner_bucket"]) for r in labels
+                    if r["model_bucket"] != r["owner_bucket"])
+    missed = sum(n for (m, o), n in moves.items() if o == "needs_you")
+    corrected = sum(moves.values())
+    lines = [f"Rankings in the store: {ranked}. Your corrections: {corrected}."]
+    if ranked:
+        lines.append(f"Correction rate: {corrected}/{ranked} = {corrected / ranked:.0%} "
+                     "(uncorrected rankings are assumed right).")
+    lines.append(f"Threads that needed you but were ranked lower: {missed}.")
+    for (m, o), n in sorted(moves.items()):
+        lines.append(f"  {m} -> {o}: {n}")
+    return "\n".join(lines)

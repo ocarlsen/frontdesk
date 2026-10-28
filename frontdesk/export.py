@@ -46,6 +46,7 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
         n = load_demo(store, now=now, log=lambda *_: None)
         rows = server.ranked_payload(store)
         (out / "api" / "items.json").write_text(json.dumps(rows))
+        (out / "api" / "profile.json").write_text(json.dumps({"profile": "", "demo": True}))
         meta = _meta_csp(server.MSG_CSP)
         for r in rows:
             for i, m in enumerate(r["item"]["messages"]):

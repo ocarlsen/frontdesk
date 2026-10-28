@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--suite", choices=["triage", "injection", "all"], default="all")
     e.add_argument("--limit", type=int, help="at most N cases per suite")
     e.add_argument("--model", help="override the configured model for this run")
+    e.add_argument("--mine", action="store_true",
+                   help="aggregate quality on YOUR mail from your corrections (free, offline)")
     sb = sub.add_parser("scoreboard", help="compare eval runs and apply the pick rule")
     sb.add_argument("--dir", default="evals")
     ex = sub.add_parser("export-demo", help="write the demo inbox as static files for hosting")
@@ -153,6 +155,9 @@ def eval_main(args, s: dict) -> int:
     from pathlib import Path
 
     from . import evaluate
+    if args.mine:
+        print(evaluate.mine_report(Store()))
+        return 0
     from .providers import get_provider
     if args.model:
         s = {**s, "model": args.model}

@@ -119,9 +119,28 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from ..gmail.auth import AuthError, action_credentials
     from ..gmail.client import GmailClient
     kind, item_id, key = req.get("kind"), req.get("item_id"), req.get("key")
-    if kind not in ("archive", "unarchive", "draft") or not isinstance(item_id, str) \
-            or not isinstance(key, str):
+    if kind == "profile":
+        item_id = key = ""
+    elif kind not in ("archive", "unarchive", "draft", "relabel") \
+            or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
+    if kind == "profile":   # the owner's own words for the model; local settings only
+        text = req.get("text")
+        if settings.get("demo"):
+            return HTTPStatus.CONFLICT, {"error": "Demo mode: the profile can't be changed."}
+        if not isinstance(text, str) or len(text) > config.PROFILE_MAX:
+            return HTTPStatus.BAD_REQUEST, {"error": f"profile must be text, at most "
+                                                     f"{config.PROFILE_MAX} characters"}
+        config.save_setting("owner_profile", text.strip())
+        return HTTPStatus.OK, {"status": "done", "kind": "profile"}
+    if kind == "relabel":   # local only: no Gmail token needed
+        store = Store(db_path)
+        try:
+            return HTTPStatus.OK, actions.relabel(store, item_id, str(req.get("bucket", "")))
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
     try:
         gmail = None if settings.get("demo") else GmailClient(action_credentials())
     except AuthError as e:
@@ -225,6 +244,11 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             elif path in STATIC:
                 name, ctype = STATIC[path]
                 self._send(HTTPStatus.OK, (STATIC_DIR / name).read_bytes(), ctype)
+            elif path == "/api/profile":
+                demo = bool((settings or {}).get("demo"))
+                prof = "" if demo else config.settings()["owner_profile"]
+                self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo}).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/items":
                 # A fresh Store per request: sqlite3 connections refuse cross-thread use by
                 # default and ThreadingHTTPServer runs each request on its own thread.
