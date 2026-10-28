@@ -40,4 +40,8 @@ class ReplayProvider:
         rec = self.recordings.get(tid)
         if rec is None:
             raise ProviderError(f"replay: no recorded triage for thread {tid}")
-        return Completion(dict(rec), Usage(model_served=self.model))
+        rec = dict(rec)
+        u = rec.pop("_usage", None)   # present when recorded from a live model
+        if u is None:
+            return Completion(rec, Usage(model_served=self.model))
+        return Completion(rec, Usage(**u))

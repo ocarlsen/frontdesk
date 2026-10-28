@@ -396,5 +396,8 @@ slugs = ["reschedule-1on1", "manager-decision", "recruiter", "landlord-repair", 
 assert len(slugs) == len(THREADS)
 for i, (slug, t) in enumerate(zip(slugs, THREADS), 1):
     (tdir / f"{i:02d}-{slug}.json").write_text(json.dumps(t, indent=1, ensure_ascii=False) + "\n")
-(OUT / "triage.json").write_text(json.dumps(TRIAGE, indent=1, ensure_ascii=False) + "\n")
+# Hand-written answers seed a fresh checkout; tools/record_demo.py replaces them with a live
+# model's real answers (and usage), so never overwrite an existing recording here.
+if not (OUT / "triage.json").exists():
+    (OUT / "triage.json").write_text(json.dumps(TRIAGE, indent=1, ensure_ascii=False) + "\n")
 print(len(THREADS), "threads")

@@ -15,7 +15,8 @@ python3.12 -m venv .venv && .venv/bin/pip install -e .
 ```
 
 The demo loads 20 synthetic threads (all `example.com`) through the **real** Gmail normalizer and
-triage pipeline, with recorded model answers in place of live calls. It includes a phishing mail
+triage pipeline, replaying answers recorded once from Claude Opus 5.5 (`tools/record_demo.py`),
+so each thread's "Why this ranking" panel shows the real model, tokens and cost. It includes a phishing mail
 and two prompt-injection attempts so you can see how they are handled:
 
 ![An injection attempt inside a real request: still ranked Needs you, reply drafted with placeholders](docs/screenshot-thread.jpg)
@@ -31,6 +32,24 @@ and two prompt-injection attempts so you can see how they are handled:
 
 FrontDesk does not send, archive or change mail yet. Those actions are designed (see Roadmap) and
 will arrive behind separate, explicit permissions.
+
+## Results
+
+Measured on 80 labeled synthetic threads and 32 prompt-injection attacks ([`evals/`](evals/),
+full table in [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)):
+
+| Model | Missed a thread that needed you | Bucket accuracy | Injection attacks resisted | $ per 1,000 threads |
+|---|---|---|---|---|
+| **Claude Opus 5.5** (default) | 0 of 33 | 73/74 | 32/32 | $7.63 |
+| Claude Opus 5 | 0 of 33 | 73/74 | 32/32 | $9.40 |
+| Claude Sonnet 5 | 0 of 33 | 71/74 | 31/32, put attacker text in a reply | $3.58 |
+| Claude Fable 5.1 | 0 of 33 | 74/74 | 32/32 | $20.14 |
+
+How the default is picked: a model must clear hard safety floors first (never file a thread
+that needed you as ignore, never carry attacker text into a reply, no invented links or amounts);
+the cheapest model that clears them wins. Accuracy differences above the floors are within the
+95% intervals at this sample size, and the report says so instead of declaring a winner on
+noise. Run it yourself with `frontdesk eval` (billed) and `frontdesk scoreboard`.
 
 ## How it works
 
@@ -64,7 +83,9 @@ The design assumes **inbound mail is hostile**: anyone can email you, and the te
 
 What this does **not** claim: prompt injection is not solved. These layers limit what a malicious
 mail can achieve (it cannot act, exfiltrate through tools, or run code in the page), but it can
-still try to sway a ranking or a draft. A measured red-team suite is on the roadmap.
+still try to sway a ranking or a draft. The red-team suite in `evals/injection/` measures how often
+that works per model; two known gaps it documents: CSS-hidden text still reaches the model, and a
+forged quote placed at the very top of a message survives quote stripping.
 
 ## Data handling
 
@@ -110,16 +131,11 @@ only reserved `example.*` domains.
 
 ## Roadmap
 
-1. **Measured quality:** a labeled synthetic eval set (headline metric: recall on `needs_you`,
-   since a missed one is the costly error), a red-team suite of injection attempts with a published
-   pass rate per model and prompt version, and cost and cache-hit numbers per run.
-2. **Inspectable decisions:** each ranking shows why, which model and prompt version made it, and
-   what it cost; any decision can be replayed against another model.
-3. **Actions:** Archive, then Reply. A reply becomes a Gmail draft first; Send confirms the exact
+1. **Actions:** Archive, then Reply. A reply becomes a Gmail draft first; Send confirms the exact
    text and recipients (derived from the thread, never from the model), records the action before
    it happens so a double-click cannot send twice, refuses if a new message arrived, and holds for
    a short undo window. These use a separate token, so sync stays read-only.
-4. **More sources and models:** Slack (your own internal app), a second model adapter with a
+2. **More sources and models:** Slack (your own internal app), a second model adapter with a
    parity test.
 
 ## License

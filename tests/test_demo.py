@@ -133,7 +133,7 @@ def test_every_fixture_has_a_recording():
     ids = {t["id"] for t in demo.load_threads()}
     assert ids == set(recs)
     for r in recs.values():
-        triage.validate(dict(r))
+        triage.validate({k: v for k, v in r.items() if k != "_usage"})
         if r["bucket"] != "needs_you":
             assert r["proposed_reply"] == ""
 
