@@ -47,8 +47,8 @@ class GmailClient:
         for attempt in range(self.retries + 1):
             resp = self.session.request(method, url, params=params, json=body,
                                         timeout=self.timeout)
-            if resp.status_code == 200:
-                return resp.json()
+            if resp.status_code in (200, 204):
+                return resp.json() if resp.content else {}
             if retry and resp.status_code in RETRY_STATUSES and attempt < self.retries:
                 retry_after = resp.headers.get("Retry-After", "")
                 delay = float(retry_after) if retry_after.isdigit() else self.backoff * 2 ** attempt
@@ -81,6 +81,16 @@ class GmailClient:
         """Label changes are idempotent (removing INBOX twice is a no-op), so retry is safe."""
         return self._request("POST", f"threads/{thread_id}/modify",
                              body={"addLabelIds": list(add), "removeLabelIds": list(remove)})
+
+    def create_draft(self, body: dict) -> dict:
+        """Not retried: a timeout may have created it, and a retry would make a duplicate."""
+        return self._request("POST", "drafts", body=body, retry=False)
+
+    def get_draft(self, draft_id: str, fmt: str = "full") -> dict:
+        return self._get(f"drafts/{draft_id}", {"format": fmt})
+
+    def delete_draft(self, draft_id: str) -> None:
+        self._request("DELETE", f"drafts/{draft_id}")
 
     def get_attachment(self, message_id: str, attachment_id: str) -> str:
         """Base64url data of one attachment (used for inline cid: images)."""

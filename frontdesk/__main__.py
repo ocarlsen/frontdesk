@@ -19,6 +19,18 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("serve", help="serve the ranked page")
     sub.add_parser("status", help="counts per bucket")
     sub.add_parser("smoke", help="one live model call on a synthetic thread (no real mail)")
+    dr = sub.add_parser("draft", help="create a Gmail DRAFT with links kept exactly (never sends)")
+    who = dr.add_mutually_exclusive_group(required=True)
+    who.add_argument("--to", action="append", help="recipient (repeatable): a new draft")
+    who.add_argument("--reply-to-thread", metavar="THREAD_ID",
+                     help="reply in this Gmail thread; recipients come from the thread")
+    dr.add_argument("--subject", help="subject of a new draft")
+    dr.add_argument("--cc", action="append")
+    dr.add_argument("--reply-all", action="store_true", help="threaded reply: also cc To/Cc")
+    dr.add_argument("--body-file", required=True, help="body text, or HTML if --html or *.html")
+    dr.add_argument("--html", action="store_true")
+    ad = sub.add_parser("audit-draft", help="exit 1 if a stored draft has google.com/url links")
+    ad.add_argument("--draft-id", required=True)
     e = sub.add_parser("eval", help="score triage on the labeled synthetic datasets (billed)")
     e.add_argument("--dir", default="evals", help="dataset root (default: ./evals)")
     e.add_argument("--suite", choices=["triage", "injection", "all"], default="all")
@@ -39,6 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     s = config.settings()
     store = Store()
 
+    if args.cmd in ("draft", "audit-draft"):
+        return draft_main(args)
     if args.cmd == "authorize-actions":
         from .gmail.auth import action_credentials
         from .gmail.client import GmailClient
@@ -84,6 +98,42 @@ def main(argv: list[str] | None = None) -> int:
             k = tri.bucket if tri else "untriaged"
             counts[k] = counts.get(k, 0) + 1
         print(" ".join(f"{k}={v}" for k, v in counts.items()) or "empty")
+    return 0
+
+
+def draft_main(args) -> int:
+    """Drafts for other tools and sessions. Uses the actions token; prints JSON on stdout."""
+    import json
+    import sys as _sys
+    from pathlib import Path
+
+    from . import drafting
+    from .gmail.auth import action_credentials
+    from .gmail.client import GmailClient
+    gmail = GmailClient(action_credentials())
+    if args.cmd == "audit-draft":
+        rep = drafting.audit_draft(gmail, args.draft_id)
+        print(json.dumps(rep, indent=1))
+        return 0 if rep["pass"] else 1
+    src = args.body_file
+    body = _sys.stdin.read() if src == "-" else Path(src).read_text()
+    is_html = args.html or src.endswith((".html", ".htm"))
+    try:
+        if args.reply_to_thread:
+            if args.subject:
+                raise drafting.DraftError("--subject is derived from the thread for a reply")
+            d = drafting.draft_reply(gmail, args.reply_to_thread, body, is_html=is_html,
+                                     reply_all=args.reply_all)
+        else:
+            if not args.subject:
+                raise drafting.DraftError("a new draft needs --subject")
+            d = drafting.draft_new(gmail, args.to, args.subject, body, is_html=is_html,
+                                   cc=args.cc)
+    except drafting.DraftError as e:
+        print(f"frontdesk: {e}", file=_sys.stderr)
+        return 2
+    print(json.dumps({"draftId": d.draft_id, "messageId": d.message_id,
+                      "threadId": d.thread_id, "url": d.url}, indent=1))
     return 0
 
 
@@ -153,10 +203,11 @@ def run() -> int:
     """Expected failures (missing key, locked Keychain, missing OAuth client) print one line,
     not a traceback."""
     from .gmail.auth import AuthError
+    from .gmail.client import GmailError
     from .providers import ProviderError
     try:
         return main()
-    except (ProviderError, AuthError) as e:
+    except (ProviderError, AuthError, GmailError) as e:
         print(f"frontdesk: {e}", file=sys.stderr)
         return 2
 
