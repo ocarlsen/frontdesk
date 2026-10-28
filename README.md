@@ -29,11 +29,12 @@ and two prompt-injection attempts so you can see how they are handled:
 - **Triage** each thread with the model you choose: `needs_you` / `fyi` / `ignore`, urgency 1 to 5,
   a one-line reason, and a proposed reply when one is warranted. Replies never invent facts: where
   only you know the answer they carry a placeholder like `[time that works]`.
-- **Show** a ranked page with each thread rendered like Gmail (the mail's own HTML, safely
-  sandboxed), copy-ready replies, and a Sync button.
-
-FrontDesk does not send, archive or change mail yet. Those actions are designed (see Roadmap) and
-will arrive behind separate, explicit permissions.
+- **Show** a ranked page that leads each thread with a short summary, renders the full thread
+  like Gmail (the mail's own HTML, safely sandboxed), and has a Sync button.
+- **Act**, with a second, separate permission (`frontdesk authorize-actions`): archive with undo,
+  save the edited reply as a Gmail draft, or send it. Send shows the exact message and its
+  recipients (derived from the thread, never from the model), waits 30 seconds for an undo,
+  refuses if a new message arrived, and is never retried on a timeout.
 
 ## Results
 
@@ -77,7 +78,7 @@ The design assumes **inbound mail is hostile**: anyone can email you, and the te
 
 | Layer | What it enforces |
 |---|---|
-| Gmail scope | `gmail.readonly` only. The token cannot send, delete or modify, whatever the model says. |
+| Gmail scope | Sync uses `gmail.readonly`. Actions use a separate `gmail.modify` token, loaded only by the action path; the model has no access to it. |
 | Prompt | Mail is passed as JSON inside `<untrusted_thread>`, with `<` escaped so a body cannot close the tag. The instructions say embedded instructions are signals about the sender, not commands. |
 | Output | A fixed JSON schema, re-validated in code. A proposed reply is forced empty unless the thread is `needs_you`. The model has no tools. |
 | Rendering | Email HTML is served from its own route under a CSP with no script, no remote loads (tracking pixels stay blocked), no forms, `<meta http-equiv>` stripped, inside a sandboxed iframe without `allow-scripts`. All other text is rendered with `textContent`. |
@@ -133,11 +134,7 @@ only reserved `example.*` domains.
 
 ## Roadmap
 
-1. **Actions:** Archive, then Reply. A reply becomes a Gmail draft first; Send confirms the exact
-   text and recipients (derived from the thread, never from the model), records the action before
-   it happens so a double-click cannot send twice, refuses if a new message arrived, and holds for
-   a short undo window. These use a separate token, so sync stays read-only.
-2. **More sources and models:** Slack (your own internal app), a second model adapter with a
+1. **More sources and models:** Slack (your own internal app), a second model adapter with a
    parity test.
 
 ## License

@@ -86,6 +86,13 @@ class GmailClient:
         """Not retried: a timeout may have created it, and a retry would make a duplicate."""
         return self._request("POST", "drafts", body=body, retry=False)
 
+    def send_message(self, raw: str, thread_id: str | None = None) -> dict:
+        """Not retried, ever: a timeout may already have sent it."""
+        body: dict = {"raw": raw}
+        if thread_id:
+            body["threadId"] = thread_id
+        return self._request("POST", "messages/send", body=body, retry=False)
+
     def get_draft(self, draft_id: str, fmt: str = "full") -> dict:
         return self._get(f"drafts/{draft_id}", {"format": fmt})
 

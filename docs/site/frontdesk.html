@@ -68,7 +68,7 @@ computer, with the model you choose.</p>
 
 <ul class="facts">
   <li><b>Local-first</b><span>No server, no account, no analytics. Your mail stays on your machine.</span></li>
-  <li><b>Read-only by default</b><span>Archive and drafts need a second, separate permission. It never sends.</span></li>
+  <li><b>Read-only by default</b><span>Archive, drafts and sending need a second, separate permission. Mail goes out only when you click Send and confirm.</span></li>
   <li><b>Measured</b><span>Labeled test set and a 32-attack prompt-injection suite, scored per model.</span></li>
   <li><b>Bring your own model</b><span>One small adapter per vendor; switching is a setting.</span></li>
 </ul>
@@ -119,7 +119,8 @@ cheaper but copied a forged payment commitment into one reply, so it fails that 
 report, with confidence intervals, is in the repository.</p>
 
 <div class="callout"><p><b>What it doesn't claim.</b> Prompt injection is not solved. FrontDesk
-limits what a malicious email can do (it cannot send, run code in the page, or use tools), and
+limits what a malicious email can do (it cannot make anything send, run code in the page, or
+use tools), and
 the attack suite measures how often one still sways a ranking or a draft.</p></div>
 
 <section id="privacy" aria-labelledby="privacy-title">
@@ -136,7 +137,10 @@ server.</p>
 <h3>What it reads from Google</h3>
 <p>With the read-only permission, FrontDesk reads the Gmail threads that match a search you set
 (by default, your inbox from the last seven days). If you grant the separate actions permission,
-it can also archive a thread, move it back to your inbox, and create drafts. It never sends mail.</p>
+it can also archive a thread, move it back to your inbox, create drafts, and send a reply. It
+sends only when you click Send, see the exact message and its recipients, and confirm; the reply
+then waits 30 seconds, during which you can undo it. It never sends on its own, and the model
+never chooses recipients.</p>
 
 <h3>Where your data goes</h3>
 <p>FrontDesk keeps the threads it syncs, its rankings and your Google sign-in tokens on your
@@ -187,8 +191,10 @@ Questions at its issues.</p>
 (frontdesk/providers/anthropic_provider.py). No other HTTP client in the package.</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
 (frontdesk/gmail/auth.py).</li>
-<li>Never sends: no send call exists. <b>Update "It never sends" (facts strip and privacy) if Send
-ships.</b></li>
+<li>Sends only on confirm: frontdesk/sending.py is the only caller of GmailClient.send_message;
+prepare derives recipients from the thread (drafting.reply_context), confirm queues it, the
+dispatcher sends after UNDO_SECONDS = 30, cancel works until then. No code path sends without a
+confirmed action row. Tests: tests/test_sending.py.</li>
 <li>HTML not sent to the model: triage.render_user pops html; only inline cid: images are
 downloaded, for local display.</li>
 <li>Folder 0700, DB and tokens 0600; prune on complete sync; no training code.</li>

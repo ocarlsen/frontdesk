@@ -1,5 +1,6 @@
-"""Gmail drafts with links left exactly as written, for the page's Reply and for other tools
-(`frontdesk draft`). Drafts only: nothing here can send.
+"""Gmail replies with links left exactly as written: drafts for the page's Save draft and for
+other tools (`frontdesk draft`), and the message the page's Send flow hands to Gmail. Nothing in
+this module sends; frontdesk.sending owns the one send call, behind its confirm and undo steps.
 
 Why it exists: some draft paths rewrite every link to a google.com/url redirect. This builds the
 raw MIME itself (text/plain plus a text/html alternative whose hrefs are the URLs byte for byte)
@@ -117,12 +118,19 @@ def create(gmail: GmailClient, msg: EmailMessage, thread_id: str | None = None) 
                  f"https://mail.google.com/mail/?authuser={me}#drafts?compose={mid}")
 
 
-def draft_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool = False,
-                reply_all: bool = False) -> Draft:
+def build_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool = False,
+                reply_all: bool = False) -> tuple[EmailMessage, dict]:
+    """The reply message and the context it was derived from (recipients, subject, thread)."""
     me = gmail.profile_email()
     ctx = reply_context(gmail.get_thread(thread_id), me, reply_all)
     msg = build_mime(me, ctx["to"], ctx["subject"], body, is_html=is_html, cc=ctx["cc"],
                      in_reply_to=ctx["in_reply_to"], references=ctx["references"])
+    return msg, ctx
+
+
+def draft_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool = False,
+                reply_all: bool = False) -> Draft:
+    msg, ctx = build_reply(gmail, thread_id, body, is_html=is_html, reply_all=reply_all)
     return create(gmail, msg, ctx["thread_id"])
 
 

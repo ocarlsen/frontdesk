@@ -292,3 +292,37 @@ def test_profile_read_and_save(tmp_path):
         assert oct(config.SETTINGS_PATH.stat().st_mode & 0o777) == "0o600"
     finally:
         httpd.shutdown()
+
+
+def test_send_routes_in_demo_mode_send_nothing(tmp_path):
+    import json as _json
+    import urllib.request
+
+    from frontdesk.items import Item, Message
+    from frontdesk.web.server import make_server
+    store = Store(tmp_path / "send.db")
+    seen = "2026-10-28T16:00:00Z"
+    store.upsert_item(Item(id="gmail:s1", source="gmail", account="o@example.com", subject="Hi",
+                           participants=[], updated_at=seen,
+                           messages=[Message("Ann <ann@example.com>", seen, "Lunch?")]))
+    httpd = make_server(store, "127.0.0.1", 0, settings={"demo": True})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
+    def post(body):
+        req = urllib.request.Request(base + "/api/action", data=_json.dumps(body).encode(),
+                                     method="POST",
+                                     headers={"X-FrontDesk": "action",
+                                              "Content-Type": "application/json"})
+        return _json.loads(urllib.request.urlopen(req).read())
+    try:
+        p = post({"kind": "send_prepare", "item_id": "gmail:s1", "key": "k" * 16,
+                  "body": "Yes, Thursday.", "seen_updated_at": seen})
+        assert p["to"] == ["ann@example.com"] and p["demo"] is True
+        c = post({"kind": "send_confirm", "action_id": p["action_id"]})
+        assert c["demo"] is True
+        st = _json.loads(urllib.request.urlopen(
+            f"{base}/api/send-status?id={p['action_id']}").read())
+        assert st["status"] == "demo"      # never recorded as sent: nothing reached Gmail
+    finally:
+        httpd.shutdown()

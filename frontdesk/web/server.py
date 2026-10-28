@@ -119,9 +119,22 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from ..gmail.auth import AuthError, action_credentials
     from ..gmail.client import GmailClient
     kind, item_id, key = req.get("kind"), req.get("item_id"), req.get("key")
+    if kind in ("send_confirm", "send_cancel"):
+        from .. import sending
+        aid = req.get("action_id")
+        if not isinstance(aid, int):
+            return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, action_id}"}
+        store = Store(db_path)
+        try:
+            fn = sending.confirm if kind == "send_confirm" else sending.cancel
+            return HTTPStatus.OK, fn(store, aid)
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
     if kind == "profile":
         item_id = key = ""
-    elif kind not in ("archive", "unarchive", "draft", "relabel") \
+    elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -147,6 +160,10 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
     store = Store(db_path)
     try:
+        if kind == "send_prepare":
+            from .. import sending
+            return HTTPStatus.OK, sending.prepare(store, item_id, req.get("body"),
+                                                  str(req.get("seen_updated_at", "")), gmail, key)
         if kind == "draft":
             return HTTPStatus.OK, actions.save_draft(store, item_id, req.get("body"),
                                                      str(req.get("seen_updated_at", "")),
@@ -249,6 +266,22 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 prof = "" if demo else config.settings()["owner_profile"]
                 self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo}).encode(),
                            "application/json; charset=utf-8")
+            elif path == "/api/send-status":
+                from .. import actions, sending
+                q = parse_qs(query)
+                sid = q.get("id", [""])[0]
+                store = Store(db_path)
+                try:
+                    out = sending.status(store, int(sid)) if sid.isdigit() else None
+                except actions.ActionError:
+                    out = None
+                finally:
+                    store.db.close()
+                if out is None:
+                    self._send(HTTPStatus.NOT_FOUND, b"Not found\n", TEXT)
+                else:
+                    self._send(HTTPStatus.OK, json.dumps(out).encode(),
+                               "application/json; charset=utf-8")
             elif path == "/api/items":
                 # A fresh Store per request: sqlite3 connections refuse cross-thread use by
                 # default and ThreadingHTTPServer runs each request on its own thread.
@@ -332,8 +365,40 @@ def make_server(store: Store, host: str, port: int, settings: dict | None = None
     return ThreadingHTTPServer((host, port), make_handler(store.path, settings, token, extra))
 
 
+def start_dispatcher(db_path: Path, interval: float = 2.0) -> threading.Thread:
+    """Sends confirmed replies once their undo window passes. One loop per server; the claim in
+    sending.dispatch_due makes a second loop (or a cancel) safe anyway."""
+    from .. import sending
+    from ..gmail.auth import action_credentials
+    from ..gmail.client import GmailClient
+    clients: list = []
+
+    def gmail():
+        if not clients:
+            clients.append(GmailClient(action_credentials()))
+        return clients[0]
+
+    def loop():
+        while True:
+            try:
+                store = Store(db_path)
+                try:
+                    sending.dispatch_due(store, gmail)
+                finally:
+                    store.db.close()
+            except Exception as e:  # noqa: BLE001 - keep the loop alive; report the type only
+                print(f"send dispatcher: {type(e).__name__}", flush=True)
+            threading.Event().wait(interval)
+
+    t = threading.Thread(target=loop, name="send-dispatcher", daemon=True)
+    t.start()
+    return t
+
+
 def serve(store: Store, host: str, port: int, settings: dict | None = None) -> None:
     s = settings or {}
+    if not s.get("demo"):
+        start_dispatcher(store.path)
     token = None if host in LOOPBACK else load_token(config.HOME)
     httpd = make_server(store, host, port, s, token)
     shown = host
