@@ -118,7 +118,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from ..gmail.auth import AuthError, action_credentials
     from ..gmail.client import GmailClient
     kind, item_id, key = req.get("kind"), req.get("item_id"), req.get("key")
-    if kind not in ("archive", "unarchive") or not isinstance(item_id, str) \
+    if kind not in ("archive", "unarchive", "draft") or not isinstance(item_id, str) \
             or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     try:
@@ -127,6 +127,10 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
     store = Store(db_path)
     try:
+        if kind == "draft":
+            return HTTPStatus.OK, actions.save_draft(store, item_id, req.get("body"),
+                                                     str(req.get("seen_updated_at", "")),
+                                                     gmail, key)
         return HTTPStatus.OK, actions.set_archived(store, item_id, kind == "archive", gmail, key)
     except actions.ActionError as e:
         return HTTPStatus.CONFLICT, {"error": str(e)}
@@ -266,7 +270,7 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 status, out = run_sync(db_path, s)
             else:
                 n = int(self.headers.get("Content-Length") or 0)
-                if not 0 < n <= 4096 or "application/json" not in \
+                if not 0 < n <= 65536 or "application/json" not in \
                         self.headers.get("Content-Type", ""):
                     self._send(HTTPStatus.BAD_REQUEST, b"Bad request\n", TEXT)
                     return

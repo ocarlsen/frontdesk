@@ -82,3 +82,64 @@ def test_prune_clears_hidden_rows(tmp_path):
     actions.set_archived(store, "gmail:t1", True, None, "click-0001")
     store.prune("gmail", "owner@example.com", set())
     assert not store.is_hidden("gmail:t1")
+
+
+class DraftGmail(FakeGmail):
+    def __init__(self, exc=None, **kw):
+        super().__init__(**kw)
+        self.exc, self.drafts = exc, []
+
+    def get_thread(self, tid):
+        return {"id": tid, "messages": [{
+            "id": "m1", "internalDate": "1000", "labelIds": ["INBOX"],
+            "payload": {"headers": [{"name": "From", "value": "Ann <ann@example.com>"},
+                                    {"name": "Subject", "value": "Lunch"},
+                                    {"name": "Message-ID", "value": "<m1@x>"}]}}]}
+
+    def create_draft(self, body):
+        if self.exc:
+            raise self.exc
+        self.drafts.append(body)
+        return {"id": f"d{len(self.drafts)}", "message": {"id": "mm", "threadId": "t1"}}
+
+
+SEEN = "2026-10-28T16:00:00Z"
+
+
+def test_draft_saves_once_per_click(tmp_path):
+    store, g = store_with_item(tmp_path), DraftGmail()
+    out = actions.save_draft(store, "gmail:t1", "Thursday works.", SEEN, g, "click-0001")
+    again = actions.save_draft(store, "gmail:t1", "Thursday works.", SEEN, g, "click-0001")
+    assert out["draft_id"] == again["draft_id"] == "d1" and len(g.drafts) == 1
+    assert store.action("draft:gmail:t1:click-0001")["status"] == "done"
+
+
+@pytest.mark.parametrize("body,seen,msg", [
+    ("", SEEN, "empty"),
+    ("See you at [time that works].", SEEN, "bracketed"),
+    ("Thursday works.", "2026-10-28T17:00:00Z", "new message arrived"),
+])
+def test_draft_refusals_never_reach_gmail(tmp_path, body, seen, msg):
+    store, g = store_with_item(tmp_path), DraftGmail()
+    with pytest.raises(actions.ActionError, match=msg):
+        actions.save_draft(store, "gmail:t1", body, seen, g, "click-0001")
+    assert g.drafts == []
+
+
+def test_ambiguous_timeout_is_recorded_unknown_and_not_retried(tmp_path):
+    import requests
+    store = store_with_item(tmp_path)
+    with pytest.raises(actions.ActionError, match="check Drafts"):
+        actions.save_draft(store, "gmail:t1", "ok", SEEN, DraftGmail(exc=requests.Timeout()),
+                           "click-0001")
+    g = DraftGmail()
+    with pytest.raises(actions.ActionError, match="may have gone through"):
+        actions.save_draft(store, "gmail:t1", "ok", SEEN, g, "click-0001")
+    assert g.drafts == []
+
+
+def test_draft_account_mismatch_refused(tmp_path):
+    g = DraftGmail(owner="other@example.com")
+    with pytest.raises(actions.ActionError, match="actions token is for"):
+        actions.save_draft(store_with_item(tmp_path), "gmail:t1", "ok", SEEN, g, "click-0001")
+    assert g.drafts == []

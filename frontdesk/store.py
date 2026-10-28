@@ -206,9 +206,13 @@ class Store:
                              (idem_key, item_id, kind, json.dumps(payload), "pending", now()))
             return cur.lastrowid
 
-    def finish_action(self, action_id: int, status: str) -> None:
+    def finish_action(self, action_id: int, status: str, result: dict | None = None) -> None:
         with self.tx() as db:
-            db.execute("UPDATE actions SET status=? WHERE id=?", (status, action_id))
+            if result is None:
+                db.execute("UPDATE actions SET status=? WHERE id=?", (status, action_id))
+            else:
+                db.execute("UPDATE actions SET status=?, payload=? WHERE id=?",
+                           (status, json.dumps(result), action_id))
 
     def hide(self, item_id: str, reason: str) -> None:
         with self.tx() as db:

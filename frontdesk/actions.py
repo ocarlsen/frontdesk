@@ -8,13 +8,21 @@
    belongs to the same account as the item;
 4. record done or failed.
 
-Archive removes the INBOX label: reversible, and Undo adds it back. In demo mode (gmail=None) the
-store side runs and Gmail is skipped, so the flow is visible without an account."""
+Archive removes the INBOX label: reversible, and Undo adds it back. Save draft creates a Gmail
+draft in the thread from the text the owner sees in the box (never the model's text unedited
+by the page, never recipients from the body); it refuses if a new message arrived since the page
+loaded the thread. In demo mode (gmail=None) the store side runs and Gmail is skipped, so the
+flow is visible without an account."""
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import sqlite3
 
+import requests
+
+from . import drafting
 from .gmail.client import GmailClient, GmailError
 from .store import Store
 
@@ -75,3 +83,58 @@ def set_archived(store: Store, item_id: str, archived: bool, gmail: GmailClient 
         store.unhide(item_id)
     store.finish_action(action_id, "done")
     return {"status": "done", "kind": kind}
+
+
+MAX_DRAFT_CHARS = 20_000
+_PLACEHOLDER = re.compile(r"\[[^\]\n]{1,80}\]")
+
+
+def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
+               gmail: GmailClient | None, client_key: str) -> dict:
+    """A threaded Gmail draft from exactly the text in the box. Drafts only: nothing here sends."""
+    if not _CLIENT_KEY.fullmatch(client_key or ""):
+        raise ActionError("missing or malformed idempotency key")
+    if not isinstance(body, str) or not body.strip():
+        raise ActionError("the reply is empty")
+    if len(body) > MAX_DRAFT_CHARS:
+        raise ActionError("the reply is too long")
+    if _PLACEHOLDER.search(body):
+        raise ActionError("fill in the [bracketed] parts first")
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    if item.updated_at != seen_updated_at:
+        raise ActionError("a new message arrived in this thread; reload before saving")
+    key = f"draft:{item_id}:{client_key}"
+    prior = store.action(key)
+    if prior is not None:
+        if prior["status"] == "done":
+            return json.loads(prior["payload"])
+        if prior["status"] == "unknown":
+            raise ActionError("an earlier save may have gone through; check Gmail Drafts")
+    sha = hashlib.sha256(body.encode()).hexdigest()
+    try:
+        action_id = store.begin_action(key, item_id, "draft", {"body_sha256": sha})
+    except sqlite3.IntegrityError:
+        if prior is None:
+            raise ActionError("this save is already in progress") from None
+        action_id = prior["id"]
+    if gmail is None:
+        result = {"status": "done", "kind": "draft", "demo": True,
+                  "note": "Demo mode: nothing was saved to Gmail."}
+        store.finish_action(action_id, "done", result)
+        return result
+    try:
+        _check_account(gmail, item.account)
+        d = drafting.draft_reply(gmail, _native_id(item_id), body)
+    except (GmailError, ActionError, drafting.DraftError) as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(str(e)) from e
+    except requests.RequestException as e:
+        # The create call is not retried: it may have reached Gmail. Record that we don't know.
+        store.finish_action(action_id, "unknown")
+        raise ActionError("Gmail did not answer; check Drafts before trying again") from e
+    result = {"status": "done", "kind": "draft", "draft_id": d.draft_id, "url": d.url,
+              "body_sha256": sha}
+    store.finish_action(action_id, "done", result)
+    return result

@@ -245,10 +245,18 @@ def test_action_route_guards_and_demo_archive(tmp_path):
         assert post(good, {"Content-Type": "application/json"})[0] == 403        # no header
         assert post(good, {**ok, "X-FrontDesk": "sync"})[0] == 403             # wrong route tag
         assert post(good, {"X-FrontDesk": "action"})[0] == 400                 # not JSON
-        assert post(b"x" * 5000, ok)[0] == 400                                  # too large
+        assert post(b"x" * 70000, ok)[0] == 400                                 # too large
         assert post(_json.dumps({"kind": "delete"}).encode(), ok)[0] == 400     # unknown kind
         code, out = post(good, ok)
         assert code == 200 and out["status"] == "done"
         assert store.ranked() == []
     finally:
         httpd.shutdown()
+
+
+def test_app_js_wires_the_detail_panels():
+    """Guards against an edit silently dropping a panel from the thread view."""
+    js = (Path(server.__file__).parent / "app.js").read_text()
+    for call in ("d.append(whyPanel(triage))", "saveDraft(item, ta, save)",
+                 "archive(item, arch)"):
+        assert call in js, call

@@ -100,33 +100,40 @@ function buildDetail(item, triage) {
   });
   const reply = el("div", "reply");
   const actions = el("div", "actions");
-  const text = triage && triage.proposed_reply ? triage.proposed_reply : "";
-  if (text) {
-    const id = "reply-" + Math.random().toString(36).slice(2);
-    const label = el("label", null, "Proposed reply");
-    label.htmlFor = id;
-    const ta = el("textarea");
-    ta.id = id;
-    ta.readOnly = true;
-    ta.value = text;
-    const copy = el("button", "btn primary", "Copy reply");
-    copy.type = "button";
-    copy.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        copy.textContent = "Copied";
-      } catch (e) {
-        ta.select();
-        copy.textContent = "Select and copy manually";
-      }
-      setTimeout(() => { copy.textContent = "Copy reply"; }, 1800);
-    });
-    reply.append(label, ta);
-    actions.append(copy);
-  } else {
-    reply.append(el("p", "note", triage ? "No reply suggested." : "Not triaged yet."));
-  }
-  if (triage) d.append(whyPanel(triage));
+  const proposed = triage && triage.proposed_reply ? triage.proposed_reply : "";
+  const id = "reply-" + Math.random().toString(36).slice(2);
+  const label = el("label", null, proposed ? "Proposed reply (edit it, then save)" : "Reply");
+  label.htmlFor = id;
+  const ta = el("textarea");
+  ta.id = id;
+  ta.value = proposed;
+  ta.placeholder = "Write a reply";
+  const hint = el("p", "hint");
+  const save = el("button", "btn primary", "Save as Gmail draft");
+  save.type = "button";
+  const refresh = () => {
+    // Placeholders like [time that works] mark facts only the owner knows; never save them.
+    const open = ta.value.match(/\[[^\]\n]{1,80}\]/g) || [];
+    save.disabled = !ta.value.trim() || open.length > 0;
+    hint.textContent = open.length ? "Fill in " + open.join(", ") + " before saving." : "";
+  };
+  ta.addEventListener("input", refresh);
+  refresh();
+  save.addEventListener("click", () => saveDraft(item, ta, save));
+  const copy = el("button", "btn", "Copy");
+  copy.type = "button";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(ta.value);
+      copy.textContent = "Copied";
+    } catch (e) {
+      ta.select();
+      copy.textContent = "Select and copy manually";
+    }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1800);
+  });
+  reply.append(label, ta, hint);
+  actions.append(save, copy);
   const arch = el("button", "btn", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
@@ -140,6 +147,7 @@ function buildDetail(item, triage) {
     actions.append(a);
   }
   if (actions.childNodes.length) reply.append(actions);
+  if (triage) d.append(whyPanel(triage));
   d.append(reply);
   return d;
 }
@@ -191,11 +199,11 @@ function clickKey() {
   return Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
 }
 
-async function postAction(kind, itemId) {
+async function postAction(kind, itemId, extra) {
   const res = await fetch("/api/action", {
     method: "POST",
     headers: { "X-FrontDesk": "action", "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, item_id: itemId, key: clickKey() }),
+    body: JSON.stringify(Object.assign({ kind, item_id: itemId, key: clickKey() }, extra || {})),
   });
   const out = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(out.error || "HTTP " + res.status);
@@ -215,6 +223,28 @@ function toast(text, undoLabel, onUndo) {
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, 10000);
+}
+
+async function saveDraft(item, ta, btn) {
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = "Saving...";
+  try {
+    const out = await postAction("draft", item.id,
+                                 { body: ta.value, seen_updated_at: item.updated_at });
+    if (out.demo) {
+      toast(out.note);
+    } else {
+      toast("Draft saved in Gmail.", "Open draft", () => {
+        if (safeGmailUrl(out.url)) window.open(out.url, "_blank", "noopener");
+      });
+    }
+    btn.textContent = "Saved";
+  } catch (e) {
+    btn.textContent = label;
+    btn.disabled = false;
+    toast("Save failed: " + e.message);
+  }
 }
 
 async function archive(item, btn) {

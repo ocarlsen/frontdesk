@@ -141,3 +141,5 @@ details > .linkbtn { display: block; margin: 0 0 6px auto; }
 .toast[hidden] { display: none; }
 .toast .linkbtn { color: #8fb0ff; font-weight: 600; }
 .btn[disabled] { opacity: .6; cursor: progress; }
+
+.hint { margin: 4px 0 0; font-size: .85em; color: #b45309; min-height: 1em; }
