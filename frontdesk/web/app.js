@@ -97,6 +97,12 @@ function safeGmailUrl(u) {
   return typeof u === "string" && u.startsWith(GMAIL_PREFIX) ? u : null;
 }
 
+function safeOpenUrl(u) {
+  // Gmail, or a Slack workspace host; anything else is not linked.
+  if (safeGmailUrl(u)) return u;
+  return typeof u === "string" && /^https:\/\/[a-z0-9-]+\.slack\.com\//.test(u) ? u : null;
+}
+
 function buildDetail(item, triage) {
   const d = el("div", "detail");
   const msgs = Array.isArray(item.messages) ? item.messages : [];
@@ -173,7 +179,10 @@ function buildDetail(item, triage) {
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
   reply.append(label, ta, hint);
-  actions.append(save, send, copy);
+  // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
+  const isGmail = item.source !== "slack";
+  if (isGmail) actions.append(save, send);
+  actions.append(copy);
   if (triage) {
     const moveTo = el("span", "moveto");
     moveTo.append(el("span", "kbdhint", "Move to"));
@@ -189,10 +198,10 @@ function buildDetail(item, triage) {
   const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
-  actions.append(arch);
-  const url = safeGmailUrl(item.url);
+  if (isGmail) actions.append(arch);
+  const url = safeOpenUrl(item.url);
   if (url) {
-    const a = el("a", "btn", "Open in Gmail");
+    const a = el("a", "btn", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
     a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";

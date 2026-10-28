@@ -327,3 +327,32 @@ def test_send_routes_in_demo_mode_send_nothing(tmp_path):
         assert st["status"] == "cancelled"
     finally:
         httpd.shutdown()
+
+
+def test_sync_all_skips_slack_without_a_token(monkeypatch):
+    from frontdesk import sources
+    from frontdesk.gmail.sync import SyncResult
+    monkeypatch.delenv("SLACK_USER_TOKEN", raising=False)
+    monkeypatch.setattr(sources, "gmail_sync", lambda *a, **k: SyncResult(3, 0))
+    monkeypatch.setattr(sources.shutil, "which", lambda _: None)      # no Keychain either
+    out = sources.sync_all(None, {"slack_keychain_service": "x"}, log=lambda *_: None)
+    assert list(out) == ["gmail"]
+
+
+def test_sync_all_runs_slack_and_survives_its_failure(monkeypatch):
+    from frontdesk import sources
+    from frontdesk.gmail.sync import SyncResult
+    from frontdesk.slack import sync as slack_sync_mod
+    monkeypatch.setenv("SLACK_USER_TOKEN", "xoxp-test")
+    monkeypatch.setattr(sources, "gmail_sync", lambda *a, **k: SyncResult(3, 0))
+    monkeypatch.setattr(slack_sync_mod, "sync", lambda *a, **k: SyncResult(2, 1))
+    assert sorted(sources.sync_all(None, {"slack_keychain_service": "x"},
+                                   log=lambda *_: None)) == ["gmail", "slack"]
+
+    def boom(*a, **k):
+        raise RuntimeError("slack down")
+    monkeypatch.setattr(slack_sync_mod, "sync", boom)
+    logs = []
+    assert list(sources.sync_all(None, {"slack_keychain_service": "x"}, log=logs.append)) \
+        == ["gmail"]
+    assert any("slack sync failed" in m for m in logs)

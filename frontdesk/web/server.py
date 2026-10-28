@@ -87,8 +87,8 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
     from .. import triage
     from ..gmail.auth import AuthError
     from ..gmail.client import GmailError
-    from ..gmail.sync import sync
     from ..providers import ProviderError, get_provider
+    from ..sources import sync_all
     if settings.get("demo"):
         return HTTPStatus.CONFLICT, {"error": "Sync is off in demo mode (synthetic inbox)."}
     if not _sync_lock.acquire(blocking=False):
@@ -96,10 +96,12 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
     store = Store(db_path)
     try:
         try:
-            r = sync(store, settings, log=lambda *_: None, interactive=False)
+            res = sync_all(store, settings, log=lambda *_: None, interactive=False)
         except (AuthError, GmailError) as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
-        out = {"synced": r.synced, "removed": r.removed, "triaged": 0, "failed": 0}
+        out = {"synced": sum(r.synced for r in res.values()),
+               "removed": sum(r.removed for r in res.values()), "triaged": 0, "failed": 0,
+               "sources": sorted(res)}
         try:
             done: list = []
             out["triaged"], out["failed"] = triage.run(store, get_provider(settings),

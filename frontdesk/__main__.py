@@ -71,9 +71,9 @@ def main(argv: list[str] | None = None) -> int:
         who = GmailClient(action_credentials(interactive=True)).profile_email()
         print(f"actions enabled for {who} (token: {config.GMAIL_ACTIONS_TOKEN})")
     elif args.cmd == "sync":
-        from .gmail.sync import sync
-        r = sync(store, s)
-        print(f"synced {r.synced} threads, removed {r.removed}")
+        from .sources import sync_all
+        for name, r in sync_all(store, s).items():
+            print(f"{name}: synced {r.synced}, removed {r.removed}")
     elif args.cmd == "triage":
         from . import triage
         from .providers import get_provider

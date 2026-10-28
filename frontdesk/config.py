@@ -20,6 +20,9 @@ DEFAULTS = {
     "keychain_service": "frontdesk-anthropic",
     "gmail_query": "in:inbox newer_than:7d",
     "gmail_max_threads": 100,
+    "slack_keychain_service": "frontdesk-slack",   # or set SLACK_USER_TOKEN
+    "slack_days": 7,
+    "slack_max_items": 60,
     "serve_host": "127.0.0.1",
     "serve_port": 8765,
     "serve_display_host": "",   # address to print when serve_host is 0.0.0.0
