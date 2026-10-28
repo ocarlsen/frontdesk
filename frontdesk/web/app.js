@@ -765,10 +765,20 @@ function onKey(e) {
       break;
     case "e":
       if (li && cardItems.get(li)) {
+        // Fade the row while the server works; move the highlight only once it is gone, to the
+        // thread that was below it (or above it, at the end of the list).
         const it = cardItems.get(li);
         const btn = li.querySelector(".actions .btn-archive") || el("button");
-        move(1);
-        if (it.source === "slack") markDone(it, btn); else archive(it, btn);
+        const cards = visibleCards();
+        const i = cards.indexOf(li);
+        const nextId = (cards[i + 1] || cards[i - 1] || {}).dataset?.id || null;
+        li.classList.add("leaving");
+        const act = it.source === "slack" ? markDone(it, btn) : archive(it, btn);
+        act.then(() => {
+          const still = visibleCards().find(c => c.dataset.id === it.id);
+          if (still) { still.classList.remove("leaving"); return; }   // the action failed
+          setCurrent(visibleCards().find(c => c.dataset.id === nextId) || null);
+        });
       }
       break;
     case "r":

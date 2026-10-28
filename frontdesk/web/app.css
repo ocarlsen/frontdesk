@@ -175,3 +175,5 @@ li.card.current { box-shadow: inset 3px 0 0 var(--accent); }
 .sendmeta dd { margin: 0; overflow-wrap: anywhere; }
 .sendbody { white-space: pre-wrap; font: inherit; background: var(--bg); border: 1px solid var(--line);
   border-radius: 6px; padding: 10px; max-height: 40vh; overflow: auto; margin: 0 0 8px; }
+
+li.card.leaving { opacity: .45; transition: opacity .15s; }
