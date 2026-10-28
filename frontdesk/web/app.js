@@ -163,7 +163,12 @@ function buildDetail(item, triage) {
     send.disabled = save.disabled;
     hint.textContent = open.length ? "Fill in " + open.join(", ") + " before saving." : "";
   };
-  ta.addEventListener("input", refresh);
+  ta.addEventListener("input", () => {
+    // Editing after a save or a cancelled send means there is something new to save or send.
+    save.textContent = "Save as Gmail draft";
+    send.textContent = "Send...";
+    refresh();
+  });
   refresh();
   save.addEventListener("click", () => saveDraft(item, ta, save));
   const copy = el("button", "btn", "Copy");
