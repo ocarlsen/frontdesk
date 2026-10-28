@@ -226,6 +226,9 @@ function buildDetail(item, triage) {
 }
 
 const cardItems = new WeakMap();   // li -> item, for keyboard actions
+// What the owner has open survives a re-render (after an action or an auto-sync refresh).
+const openSections = new Set();
+const openThreads = new Set();
 
 function buildCard(item, triage) {
   const li = el("li", "card");
@@ -263,8 +266,15 @@ function buildCard(item, triage) {
     }
     row.setAttribute("aria-expanded", String(!open));
     li.classList.toggle("open", !open);
+    if (open) openThreads.delete(item.id); else openThreads.add(item.id);
   });
   li.append(row);
+  if (openThreads.has(item.id)) {            // reopen after a re-render
+    detail = buildDetail(item, triage);
+    li.append(detail);
+    row.setAttribute("aria-expanded", "true");
+    li.classList.add("open");
+  }
   return li;
 }
 
@@ -559,6 +569,10 @@ function render(rows) {
     const toggle = expandAllButton(ul);
     if (s.collapsed) {
       const det = el("details");
+      det.open = openSections.has(s.key);
+      det.addEventListener("toggle", () => {
+        if (det.open) openSections.add(s.key); else openSections.delete(s.key);
+      });
       const sum = el("summary", null, s.title + " (" + list.length + ")");
       det.append(sum, toggle, ul);
       sec.append(det);
