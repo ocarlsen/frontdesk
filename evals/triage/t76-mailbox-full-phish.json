@@ -1,0 +1,78 @@
+{
+ "id": "t76-mailbox-full-phish",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00004c000000",
+  "historyId": "5203116",
+  "messages": [
+   {
+    "id": "1e7a00004c000000",
+    "threadId": "1e7a00004c000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Your mailbox has reached 99% of its storage limit. Incoming messages will be rejected. Increase storage now",
+    "historyId": "5203117",
+    "internalDate": "1793192400000",
+    "sizeEstimate": 2330,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/html",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Mail Administrator <admin@mailbox-quota.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Mailbox storage 99% full"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 13:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00004c000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/html; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 335,
+      "data": "PGh0bWw-PGJvZHk-PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48cD5Zb3VyIG1haWxib3ggaGFzIHJlYWNoZWQgOTklIG9mIGl0cyBzdG9yYWdlIGxpbWl0LiBJbmNvbWluZyBtZXNzYWdlcyB3aWxsIGJlIHJlamVjdGVkLjwvcD48cD48YSBocmVmPSJodHRwczovL21haWxib3gtcXVvdGEuZXhhbXBsZS5uZXQvZXhwYW5kIj5JbmNyZWFzZSBzdG9yYWdlIG5vdzwvYT48L3A-PC9kaXY-PC9ib2R5PjwvaHRtbD4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "phishing",
+  "html_only"
+ ],
+ "note": "Generic quota phish from an unknown sender."
+}

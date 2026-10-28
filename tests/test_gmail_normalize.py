@@ -125,9 +125,16 @@ def test_collapses_blank_lines():
 def test_is_mine_case_insensitive():
     t = thread(msg("m1", 1000, "alice@example.com", part("text/plain", "hi")),
                msg("m2", 2000, "Owner <OWNER@Example.com>", part("text/plain", "hello"),
-                   to="alice@example.com"))
+                   to="alice@example.com", labels=["SENT"]))
     item = thread_to_item(t, ME)
     assert [m.is_mine for m in item.messages] == [False, True]
+
+
+def test_is_mine_requires_sent_label():
+    """A From header can be forged by anyone; Gmail's SENT label cannot."""
+    t = thread(msg("m1", 1000, "Owner <owner@example.com>", part("text/plain", "approved"),
+                   labels=["INBOX"]))
+    assert thread_to_item(t, ME).messages[0].is_mine is False
 
 
 def test_draft_messages_skipped_and_all_draft_thread_is_none():

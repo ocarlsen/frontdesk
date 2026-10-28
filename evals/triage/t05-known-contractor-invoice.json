@@ -1,0 +1,223 @@
+{
+ "id": "t05-known-contractor-invoice",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000005000000",
+  "historyId": "5200205",
+  "messages": [
+   {
+    "id": "1e7a000005000000",
+    "threadId": "1e7a000005000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, Thanks again for having us out. The estimate for the deck repair is attached: $2,350 for labor and materials. Ben",
+    "historyId": "5200206",
+    "internalDate": "1791133200000",
+    "sizeEstimate": 2195,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ben Castellano <ben@castellano-carpentry.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Invoice 2026-031 for deck repair"
+      },
+      {
+       "name": "Date",
+       "value": "Sun, 04 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000005000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 124,
+      "data": "SGkgQWxleCwKClRoYW5rcyBhZ2FpbiBmb3IgaGF2aW5nIHVzIG91dC4gVGhlIGVzdGltYXRlIGZvciB0aGUgZGVjayByZXBhaXIgaXMgYXR0YWNoZWQ6ICQyLDM1MCBmb3IgbGFib3IgYW5kIG1hdGVyaWFscy4KCkJlbg"
+     }
+    }
+   },
+   {
+    "id": "1e7a000005000001",
+    "threadId": "1e7a000005000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Looks good, please go ahead. Alex",
+    "historyId": "5200207",
+    "internalDate": "1791219600000",
+    "sizeEstimate": 2137,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Ben Castellano <ben@castellano-carpentry.example.net>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Invoice 2026-031 for deck repair"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 05 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000005000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 34,
+      "data": "TG9va3MgZ29vZCwgcGxlYXNlIGdvIGFoZWFkLgoKQWxleA"
+     }
+    }
+   },
+   {
+    "id": "1e7a000005000002",
+    "threadId": "1e7a000005000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, All done, and the stain should be fully cured by the weekend. Invoice 2026-031 for $2,350 is attached, matching the estimate.",
+    "historyId": "5200208",
+    "internalDate": "1793174400000",
+    "sizeEstimate": 2552,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/mixed",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ben Castellano <ben@castellano-carpentry.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Invoice 2026-031 for deck repair"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 08:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000005000002@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/mixed; boundary=\"000000000000f00d42\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 249,
+        "data": "SGkgQWxleCwKCkFsbCBkb25lLCBhbmQgdGhlIHN0YWluIHNob3VsZCBiZSBmdWxseSBjdXJlZCBieSB0aGUgd2Vla2VuZC4gSW52b2ljZSAyMDI2LTAzMSBmb3IgJDIsMzUwIGlzIGF0dGFjaGVkLCBtYXRjaGluZyB0aGUgZXN0aW1hdGUuIFBheW1lbnQgaXMgZHVlIHdpdGhpbiAxNCBkYXlzIGJ5IGNoZWNrIG9yIGJhbmsgdHJhbnNmZXIsIHNhbWUgZGV0YWlscyBhcyBsYXN0IHRpbWUuCgpUaGFua3MgZm9yIHRoZSBidXNpbmVzcywKQmVu"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "application/pdf",
+       "filename": "Invoice-2026-031.pdf",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "application/pdf; name=\"Invoice-2026-031.pdf\""
+        },
+        {
+         "name": "Content-Disposition",
+         "value": "attachment; filename=\"Invoice-2026-031.pdf\""
+        }
+       ],
+       "body": {
+        "attachmentId": "ANGjdJSW52b2ljZS0yMDI2LTAzMS5w",
+        "size": 48213
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "payment_request_known_vendor",
+  "attachment"
+ ],
+ "note": "Known contractor, amount matches the approved estimate; Alex needs to pay within 14 days."
+}

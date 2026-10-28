@@ -1,0 +1,79 @@
+{
+ "id": "t69-suspicious-invoice",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000045000000",
+  "historyId": "5202829",
+  "messages": [
+   {
+    "id": "1e7a000045000000",
+    "threadId": "1e7a000045000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Dear Customer, Our records show invoice INV-99317 for $3,980.00 remains unpaid. Please remit payment today via the secure portal to avoid",
+    "historyId": "5202830",
+    "internalDate": "1793188800000",
+    "sizeEstimate": 2267,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Accounts Dept <accounts@globex-billing.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Invoice INV-99317 overdue - immediate payment"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000045000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 224,
+      "data": "RGVhciBDdXN0b21lciwKCk91ciByZWNvcmRzIHNob3cgaW52b2ljZSBJTlYtOTkzMTcgZm9yICQzLDk4MC4wMCByZW1haW5zIHVucGFpZC4gUGxlYXNlIHJlbWl0IHBheW1lbnQgdG9kYXkgdmlhIHRoZSBzZWN1cmUgcG9ydGFsIHRvIGF2b2lkIGNvbGxlY3Rpb25zOgoKaHR0cHM6Ly9nbG9iZXgtYmlsbGluZy5leGFtcGxlLm5ldC9yZW1pdC9JTlYtOTkzMTcKCkFjY291bnRzIERlcGFydG1lbnQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "payment_request_suspicious",
+  "phishing"
+ ],
+ "note": "Unknown vendor, generic salutation, no prior relationship, pressure to pay via link: phishing-shaped."
+}

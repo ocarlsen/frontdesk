@@ -1,0 +1,78 @@
+{
+ "id": "t47-html-only-appointment-confirmed",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002f000000",
+  "historyId": "5201927",
+  "messages": [
+   {
+    "id": "1e7a00002f000000",
+    "threadId": "1e7a00002f000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Hi Alex, Your eye exam is confirmed for Tuesday, November 17 at 4:30pm with Dr. Okafor. Please bring your current glasses. Need to change",
+    "historyId": "5201928",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2364,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/html",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Lumen Eye Care <appointments@lumen-eyecare.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Appointment confirmed"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002f000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/html; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 385,
+      "data": "PGh0bWw-PGJvZHk-PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48cD5IaSBBbGV4LDwvcD48cD5Zb3VyIGV5ZSBleGFtIGlzIGNvbmZpcm1lZCBmb3IgPGI-VHVlc2RheSwgTm92ZW1iZXIgMTcgYXQgNDozMHBtPC9iPiB3aXRoIERyLiBPa2Fmb3IuPC9wPjxwPlBsZWFzZSBicmluZyB5b3VyIGN1cnJlbnQgZ2xhc3Nlcy4gTmVlZCB0byBjaGFuZ2UgaXQ_IFVzZSB0aGUgbGluayBpbiB5b3VyIHBhdGllbnQgcG9ydGFsLjwvcD48cD5MdW1lbiBFeWUgQ2FyZTwvcD48L2Rpdj48L2JvZHk-PC9odG1sPg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "html_only",
+  "confirmation"
+ ],
+ "note": "HTML-only appointment confirmation, no reply requested."
+}

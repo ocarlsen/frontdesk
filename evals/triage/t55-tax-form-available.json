@@ -1,0 +1,77 @@
+{
+ "id": "t55-tax-form-available",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000037000000",
+  "historyId": "5202255",
+  "messages": [
+   {
+    "id": "1e7a000037000000",
+    "threadId": "1e7a000037000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Your 2026 tax document is now available in online banking under Statements & Documents.",
+    "historyId": "5202256",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2171,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Kestrel Credit Union <statements@kestrel-cu.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your 2026 Form 1099-INT is ready"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000037000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 87,
+      "data": "WW91ciAyMDI2IHRheCBkb2N1bWVudCBpcyBub3cgYXZhaWxhYmxlIGluIG9ubGluZSBiYW5raW5nIHVuZGVyIFN0YXRlbWVudHMgJiBEb2N1bWVudHMu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "finance",
+  "automated"
+ ],
+ "note": "Tax document available; nothing due now."
+}

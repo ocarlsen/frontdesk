@@ -1,0 +1,78 @@
+{
+ "id": "t24-pto-approval",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000018000000",
+  "historyId": "5200984",
+  "messages": [
+   {
+    "id": "1e7a000018000000",
+    "threadId": "1e7a000018000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, I'd like to take Nov 24 to 26 off for the holiday. My on-call shift that week is covered by Ken. Could you approve in the HR tool",
+    "historyId": "5200985",
+    "internalDate": "1793113200000",
+    "sizeEstimate": 2215,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Hana Sato <hana.sato@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "PTO request: Nov 24-26"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000018000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 176,
+      "data": "SGkgQWxleCwKCkknZCBsaWtlIHRvIHRha2UgTm92IDI0IHRvIDI2IG9mZiBmb3IgdGhlIGhvbGlkYXkuIE15IG9uLWNhbGwgc2hpZnQgdGhhdCB3ZWVrIGlzIGNvdmVyZWQgYnkgS2VuLiBDb3VsZCB5b3UgYXBwcm92ZSBpbiB0aGUgSFIgdG9vbCB3aGVuIHlvdSBnZXQgYSBjaGFuY2U_CgpUaGFua3MsCkhhbmE"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "work",
+  "approval"
+ ],
+ "note": "Direct report asks Alex to approve PTO in the HR tool; the action is the approval."
+}

@@ -1,0 +1,78 @@
+{
+ "id": "t27-doc-comment-mention",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00001b000000",
+  "historyId": "5201107",
+  "messages": [
+   {
+    "id": "1e7a00001b000000",
+    "threadId": "1e7a00001b000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Grace Whitlock mentioned you in a comment \"2027 Headcount Plan\" Row 12: @Alex is the 3 contractors for Q1 still right, or did that drop to",
+    "historyId": "5201108",
+    "internalDate": "1793199600000",
+    "sizeEstimate": 2268,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Docs <comments-noreply@docs.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Grace mentioned you in \"2027 Headcount Plan\""
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00001b000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 233,
+      "data": "R3JhY2UgV2hpdGxvY2sgbWVudGlvbmVkIHlvdSBpbiBhIGNvbW1lbnQKCiIyMDI3IEhlYWRjb3VudCBQbGFuIgoKUm93IDEyOiBAQWxleCBpcyB0aGUgMyBjb250cmFjdG9ycyBmb3IgUTEgc3RpbGwgcmlnaHQsIG9yIGRpZCB0aGF0IGRyb3AgdG8gMiBhZnRlciB0aGUgcmVvcmc_IE5lZWQgdG8gbG9jayB0aGlzIHNoZWV0IHRvbW9ycm93LgoKUmVwbHkgdG8gdGhpcyBjb21tZW50IGluIHRoZSBkb2N1bWVudC4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "automated_wrapper_human_ask"
+ ],
+ "note": "An automated notification wrapping a direct question from Grace; answer goes in the doc, not by email."
+}

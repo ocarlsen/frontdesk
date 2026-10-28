@@ -218,7 +218,9 @@ def thread_to_item(thread: dict, account_email: str) -> Item | None:
             sender=sender,
             sent_at=_iso(m.get("internalDate", 0)),
             body=clean_body(payload),
-            is_mine=parseaddr(sender)[1].lower() == me,
+            # From alone is forgeable; Gmail applies SENT only to mail this account sent.
+            is_mine=(parseaddr(sender)[1].lower() == me
+                     and "SENT" in (m.get("labelIds") or [])),
             html=clean_html(payload),
         ))
 

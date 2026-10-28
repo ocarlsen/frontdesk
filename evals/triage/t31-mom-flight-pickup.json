@@ -1,0 +1,78 @@
+{
+ "id": "t31-mom-flight-pickup",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00001f000000",
+  "historyId": "5201271",
+  "messages": [
+   {
+    "id": "1e7a00001f000000",
+    "threadId": "1e7a00001f000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi sweetie, My flight lands at 3:40 on Wednesday the 4th. Can you pick me up or should I take the shuttle? Let me know so I can book it if",
+    "historyId": "5201272",
+    "internalDate": "1793178000000",
+    "sizeEstimate": 2204,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Diane Rivera <diane.rivera@example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Pick up on the 4th?"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 09:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00001f000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 158,
+      "data": "SGkgc3dlZXRpZSwKCk15IGZsaWdodCBsYW5kcyBhdCAzOjQwIG9uIFdlZG5lc2RheSB0aGUgNHRoLiBDYW4geW91IHBpY2sgbWUgdXAgb3Igc2hvdWxkIEkgdGFrZSB0aGUgc2h1dHRsZT8gTGV0IG1lIGtub3cgc28gSSBjYW4gYm9vayBpdCBpZiBuZWVkZWQuCgpMb3ZlLCBNb20"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "family"
+ ],
+ "note": "Mom asks whether Alex can pick her up next week."
+}

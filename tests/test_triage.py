@@ -5,7 +5,7 @@ import pytest
 
 from frontdesk import triage
 from frontdesk.items import Item, Message
-from frontdesk.providers import ProviderError
+from frontdesk.providers import Completion, ProviderError, Usage
 from frontdesk.store import Store
 
 
@@ -22,7 +22,8 @@ class FakeProvider:
         self.users.append(user)
         if any(r in user for r in self.raise_on):
             raise ProviderError("boom")
-        return dict(self.out)
+        return Completion(dict(self.out), Usage(tokens_in=1000, tokens_out=100, cache_read=3000,
+                                                latency_ms=500, model_served="claude-opus-5"))
 
 
 def item(n=1, body="Can we meet Thursday?", updated="2026-10-28T16:00:00Z"):
@@ -102,7 +103,7 @@ def test_refusal_is_terminal_and_errors_are_capped(tmp_path):
                 raise ProviderRefusal("declined")
             if "break-me" in user:
                 raise ProviderError("boom")
-            return dict(self.out)
+            return Completion(dict(self.out))
 
     store = Store(tmp_path / "t.db")
     store.upsert_item(item(1, body="refuse-me"))
@@ -137,3 +138,31 @@ def test_html_kept_out_of_item_rows(tmp_path):
     assert "<p>hello</p>" not in raw
     assert store.message_html("gmail:t1", 0) == "<p>hello</p>"
     assert store.get_item("gmail:t1").messages[0].html == ""
+
+
+def test_provenance_and_cost_round_trip(tmp_path):
+    store = Store(tmp_path / "t.db")
+    store.upsert_item(item(1))
+    done = []
+    triage.run(store, FakeProvider(), log=lambda *_: None, done=done)
+    t = store.ranked()[0][1]
+    assert t.prompt_version == triage.PROMPT_VERSION
+    assert t.model_served == "claude-opus-5"
+    assert (t.tokens_in, t.tokens_out, t.cache_read, t.latency_ms) == (1000, 100, 3000, 500)
+    # opus-5 list: 1000*5 + 100*25 + 3000*0.5 per million
+    assert abs(t.cost_usd - (5000 + 2500 + 1500) / 1e6) < 1e-12
+    sm = triage.summarize(done)
+    assert sm["calls"] == 1 and sm["cache_hit"] == 0.75
+
+
+def test_old_database_gains_new_columns(tmp_path):
+    import sqlite3
+    path = tmp_path / "old.db"
+    db = sqlite3.connect(path)
+    db.executescript("""CREATE TABLE triage (item_id TEXT PRIMARY KEY, bucket TEXT NOT NULL,
+        urgency INTEGER NOT NULL, reason TEXT NOT NULL, proposed_reply TEXT NOT NULL,
+        model TEXT NOT NULL, triaged_at TEXT NOT NULL, item_updated_at TEXT NOT NULL);""")
+    db.close()
+    store = Store(path)
+    cols = {r["name"] for r in store.db.execute("PRAGMA table_info(triage)")}
+    assert {"prompt_version", "model_served", "cost_usd", "cache_read"} <= cols

@@ -1,0 +1,77 @@
+{
+ "id": "t40-office-closed-monday",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000028000000",
+  "historyId": "5201640",
+  "messages": [
+   {
+    "id": "1e7a000028000000",
+    "threadId": "1e7a000028000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi all, The 3rd floor will be closed Monday Nov 2 for HVAC maintenance. Please work from home that day. Badges will not work on that floor.",
+    "historyId": "5201641",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2202,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Facilities <facilities@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "all-sf@example.com"
+      },
+      {
+       "name": "Subject",
+       "value": "Office closed Monday Nov 2 (HVAC work)"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000028000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 152,
+      "data": "SGkgYWxsLAoKVGhlIDNyZCBmbG9vciB3aWxsIGJlIGNsb3NlZCBNb25kYXkgTm92IDIgZm9yIEhWQUMgbWFpbnRlbmFuY2UuIFBsZWFzZSB3b3JrIGZyb20gaG9tZSB0aGF0IGRheS4gQmFkZ2VzIHdpbGwgbm90IHdvcmsgb24gdGhhdCBmbG9vci4KCkZhY2lsaXRpZXM"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "announcement"
+ ],
+ "note": "Broadcast notice; nothing to answer."
+}

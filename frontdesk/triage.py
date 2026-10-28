@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from .items import BUCKETS, Item, Triage
+from .pricing import cost_usd
 from .providers import Provider, ProviderError, ProviderRefusal
 from .store import Store, now
 
@@ -93,25 +94,53 @@ def validate(raw: dict) -> dict:
 
 def triage_item(provider: Provider, item: Item, today: str | None = None) -> Triage:
     today = today or datetime.now(UTC).strftime("%Y-%m-%d")
-    out = validate(provider.complete_json(SYSTEM, render_user(item, today), SCHEMA))
+    res = provider.complete_json(SYSTEM, render_user(item, today), SCHEMA)
+    out = validate(res.data)
+    u = res.usage
+    served = u.model_served or provider.model
     return Triage(item.id, out["bucket"], out["urgency"], out["reason"], out["proposed_reply"],
-                  f"{provider.name}:{provider.model}", now(), item.updated_at)
+                  f"{provider.name}:{provider.model}", now(), item.updated_at,
+                  prompt_version=PROMPT_VERSION, model_served=served,
+                  tokens_in=u.tokens_in, tokens_out=u.tokens_out, cache_read=u.cache_read,
+                  cache_write=u.cache_write, latency_ms=u.latency_ms,
+                  cost_usd=cost_usd(served, u.tokens_in, u.tokens_out, u.cache_read,
+                                    u.cache_write))
+
+
+def summarize(done: list[Triage]) -> dict:
+    """Totals for one run: what it cost and how much of the prompt came from cache."""
+    tin = sum(t.tokens_in for t in done)
+    cread = sum(t.cache_read for t in done)
+    costs = [t.cost_usd for t in done]
+    return {
+        "calls": len(done),
+        "tokens_in": tin, "tokens_out": sum(t.tokens_out for t in done),
+        "cache_hit": round(cread / (tin + cread + sum(t.cache_write for t in done)), 3)
+        if done and (tin + cread) else 0.0,
+        "cost_usd": round(sum(c for c in costs if c is not None), 4)
+        if any(c is not None for c in costs) else None,
+        "p50_latency_ms": sorted(t.latency_ms for t in done)[len(done) // 2] if done else 0,
+    }
 
 
 def run(store: Store, provider: Provider, limit: int | None = None, workers: int = 4,
-        log=print) -> tuple[int, int]:
+        log=print, done: list[Triage] | None = None) -> tuple[int, int]:
     """Triage new, changed or prompt-stale items. Model calls run in a small pool; every write
     happens on this thread because the sqlite connection is not shared across threads. A refusal
     is recorded as terminal and an error is retried on later runs up to a cap, so a Sync click
-    never re-bills the same failure forever. Returns (ok, failed)."""
+    never re-bills the same failure forever. Returns (ok, failed); pass `done` to collect the
+    saved Triage rows (for summarize())."""
     todo = store.items_needing_triage(PROMPT_VERSION)[:limit]
     ok = failed = 0
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(triage_item, provider, it): it for it in todo}
         for fut, item in futures.items():
             try:
-                store.save_triage(fut.result(), PROMPT_VERSION)
+                t = fut.result()
+                store.save_triage(t)
                 ok += 1
+                if done is not None:
+                    done.append(t)
             except ProviderRefusal as e:
                 failed += 1
                 store.record_failure(item, PROMPT_VERSION, "refusal", str(e))

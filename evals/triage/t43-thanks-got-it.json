@@ -1,0 +1,130 @@
+{
+ "id": "t43-thanks-got-it",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002b000000",
+  "historyId": "5201763",
+  "messages": [
+   {
+    "id": "1e7a00002b000000",
+    "threadId": "1e7a00002b000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Hi Hana, attached is the onboarding checklist for next week's new hire. Alex",
+    "historyId": "5201764",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2149,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Hana Sato <hana.sato@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Onboarding checklist"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002b000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 77,
+      "data": "SGkgSGFuYSwgYXR0YWNoZWQgaXMgdGhlIG9uYm9hcmRpbmcgY2hlY2tsaXN0IGZvciBuZXh0IHdlZWsncyBuZXcgaGlyZS4KCkFsZXg"
+     }
+    }
+   },
+   {
+    "id": "1e7a00002b000001",
+    "threadId": "1e7a00002b000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Got it, thanks Alex!",
+    "historyId": "5201765",
+    "internalDate": "1793134800000",
+    "sizeEstimate": 2111,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Hana Sato <hana.sato@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Onboarding checklist"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 21:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002b000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 20,
+      "data": "R290IGl0LCB0aGFua3MgQWxleCE"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "closing_ack"
+ ],
+ "note": "A closing thank-you; the loop is closed."
+}

@@ -1,0 +1,169 @@
+{
+ "id": "t12-multipart-quoted-history-ask",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00000c000000",
+  "historyId": "5200492",
+  "messages": [
+   {
+    "id": "1e7a00000c000000",
+    "threadId": "1e7a00000c000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Tomás, could you take first pass at the postmortem for the Oct 21 outage? Alex",
+    "historyId": "5200493",
+    "internalDate": "1792861200000",
+    "sizeEstimate": 2157,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Tomás Ibarra <tomas.ibarra@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Postmortem draft"
+      },
+      {
+       "name": "Date",
+       "value": "Sat, 24 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000c000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 83,
+      "data": "SGkgVG9tw6FzLCBjb3VsZCB5b3UgdGFrZSBmaXJzdCBwYXNzIGF0IHRoZSBwb3N0bW9ydGVtIGZvciB0aGUgT2N0IDIxIG91dGFnZT8KCkFsZXg"
+     }
+    }
+   },
+   {
+    "id": "1e7a00000c000001",
+    "threadId": "1e7a00000c000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Draft is up. Two open questions only you can answer: 1. Do we name the upstream provider in the external version? 2. Is the remediation",
+    "historyId": "5200494",
+    "internalDate": "1793188800000",
+    "sizeEstimate": 2947,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/alternative",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Tomás Ibarra <tomas.ibarra@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Postmortem draft"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000c000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/alternative; boundary=\"000000000000e7a1b2\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 380,
+        "data": "RHJhZnQgaXMgdXAuIFR3byBvcGVuIHF1ZXN0aW9ucyBvbmx5IHlvdSBjYW4gYW5zd2VyOgoKMS4gRG8gd2UgbmFtZSB0aGUgdXBzdHJlYW0gcHJvdmlkZXIgaW4gdGhlIGV4dGVybmFsIHZlcnNpb24_CjIuIElzIHRoZSByZW1lZGlhdGlvbiBkYXRlIGZvciB0aGUgZmFpbG92ZXIgdGVzdCBOb3YgMTUgb3IgTm92IDMwPwoKV291bGQgbGlrZSB0byBwdWJsaXNoIE1vbmRheS4KClRvbcOhcwoKT24gU2F0LCBPY3QgMjQsIDIwMjYgYXQgOTowMiBBTSBBbGV4IFJpdmVyYSA8YWxleEBleGFtcGxlLmNvbT4gd3JvdGU6Cj4gSGkgVG9tw6FzLCBjb3VsZCB5b3UgdGFrZSBmaXJzdCBwYXNzIGF0IHRoZSBwb3N0bW9ydGVtIGZvciB0aGUgT2N0IDIxIG91dGFnZT8KPgo-IEFsZXg"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "text/html",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/html; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 551,
+        "data": "PGRpdiBkaXI9Imx0ciI-RHJhZnQgaXMgdXAuIFR3byBvcGVuIHF1ZXN0aW9ucyBvbmx5IHlvdSBjYW4gYW5zd2VyOjxvbD48bGk-RG8gd2UgbmFtZSB0aGUgdXBzdHJlYW0gcHJvdmlkZXIgaW4gdGhlIGV4dGVybmFsIHZlcnNpb24_PC9saT48bGk-SXMgdGhlIHJlbWVkaWF0aW9uIGRhdGUgZm9yIHRoZSBmYWlsb3ZlciB0ZXN0IE5vdiAxNSBvciBOb3YgMzA_PC9saT48L29sPldvdWxkIGxpa2UgdG8gcHVibGlzaCBNb25kYXkuPGJyPjxicj5Ub23DoXM8L2Rpdj48YnI-PGRpdiBjbGFzcz0iZ21haWxfcXVvdGUiPjxkaXYgZGlyPSJsdHIiIGNsYXNzPSJnbWFpbF9hdHRyIj5PbiBTYXQsIE9jdCAyNCwgMjAyNiBhdCA5OjAyIEFNIEFsZXggUml2ZXJhICZsdDthbGV4QGV4YW1wbGUuY29tJmd0OyB3cm90ZTo8YnI-PC9kaXY-PGJsb2NrcXVvdGUgY2xhc3M9ImdtYWlsX3F1b3RlIj5IaSBUb23DoXMsIGNvdWxkIHlvdSB0YWtlIGZpcnN0IHBhc3MgYXQgdGhlIHBvc3Rtb3J0ZW0gZm9yIHRoZSBPY3QgMjEgb3V0YWdlPzxicj48YnI-QWxleDwvYmxvY2txdW90ZT48L2Rpdj4"
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "multipart",
+  "quoted_history"
+ ],
+ "note": "Multipart with quoted history; two direct questions before a Monday publish."
+}

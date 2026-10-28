@@ -1,0 +1,79 @@
+{
+ "id": "t03-utility-bill-past-due",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000003000000",
+  "historyId": "5200123",
+  "messages": [
+   {
+    "id": "1e7a000003000000",
+    "threadId": "1e7a000003000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Hello Alex Rivera, We have not received payment for your September statement. Amount past due: $187.42 Original due date: October 15, 2026",
+    "historyId": "5200124",
+    "internalDate": "1793181600000",
+    "sizeEstimate": 2419,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Brightwater Utilities <billing@brightwater-utilities.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your account is past due"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 10:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000003000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 457,
+      "data": "SGVsbG8gQWxleCBSaXZlcmEsCgpXZSBoYXZlIG5vdCByZWNlaXZlZCBwYXltZW50IGZvciB5b3VyIFNlcHRlbWJlciBzdGF0ZW1lbnQuCgpBbW91bnQgcGFzdCBkdWU6ICQxODcuNDIKT3JpZ2luYWwgZHVlIGRhdGU6IE9jdG9iZXIgMTUsIDIwMjYKCkEgbGF0ZSBmZWUgb2YgJDE1LjAwIHdpbGwgYmUgYWRkZWQgaWYgcGF5bWVudCBpcyBub3QgcmVjZWl2ZWQgYnkgTm92ZW1iZXIgNCwgMjAyNi4gVG8gYXZvaWQgc2VydmljZSBpbnRlcnJ1cHRpb24sIHBsZWFzZSBwYXkgb25saW5lIGF0IGh0dHBzOi8vYnJpZ2h0d2F0ZXItdXRpbGl0aWVzLmV4YW1wbGUubmV0L3BheSBvciBjYWxsIHRoZSBudW1iZXIgb24geW91ciBzdGF0ZW1lbnQuCgpJZiB5b3UgaGF2ZSBhbHJlYWR5IHBhaWQsIHBsZWFzZSBkaXNyZWdhcmQgdGhpcyBub3RpY2UuCgpCcmlnaHR3YXRlciBVdGlsaXRpZXMgQ3VzdG9tZXIgU2VydmljZQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "automated_needs_action",
+  "bill"
+ ],
+ "note": "Automated, but a real past-due bill with a fee deadline; the action is paying, not replying."
+}

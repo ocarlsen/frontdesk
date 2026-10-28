@@ -1,0 +1,113 @@
+{
+ "id": "t32-security-questionnaire-customer",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000020000000",
+  "historyId": "5201312",
+  "messages": [
+   {
+    "id": "1e7a000020000000",
+    "threadId": "1e7a000020000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hello Alex, As part of our renewal, procurement needs the attached security questionnaire completed. Could you confirm who on your side",
+    "historyId": "5201313",
+    "internalDate": "1793116800000",
+    "sizeEstimate": 2620,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/mixed",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ilse Brandvold <ilse.brandvold@solvane.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Security questionnaire for the renewal"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 16:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000020000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/mixed; boundary=\"000000000000f00d42\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 244,
+        "data": "SGVsbG8gQWxleCwKCkFzIHBhcnQgb2Ygb3VyIHJlbmV3YWwsIHByb2N1cmVtZW50IG5lZWRzIHRoZSBhdHRhY2hlZCBzZWN1cml0eSBxdWVzdGlvbm5haXJlIGNvbXBsZXRlZC4gQ291bGQgeW91IGNvbmZpcm0gd2hvIG9uIHlvdXIgc2lkZSB3aWxsIGZpbGwgaXQgaW4gYW5kIGFuIGV4cGVjdGVkIGRhdGU_IE91ciBjb250cmFjdCByZXZpZXcgaXMgc2NoZWR1bGVkIGZvciBOb3ZlbWJlciAxMC4KCktpbmQgcmVnYXJkcywKSWxzZQ"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+       "filename": "Vendor-Security-Questionnaire.xlsx",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name=\"Vendor-Security-Questionnaire.xlsx\""
+        },
+        {
+         "name": "Content-Disposition",
+         "value": "attachment; filename=\"Vendor-Security-Questionnaire.xlsx\""
+        }
+       ],
+       "body": {
+        "attachmentId": "ANGjdJVmVuZG9yLVNlY3VyaXR5LVF1",
+        "size": 48213
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "work",
+  "attachment"
+ ],
+ "note": "Customer asks Alex for an owner and date for a security questionnaire."
+}

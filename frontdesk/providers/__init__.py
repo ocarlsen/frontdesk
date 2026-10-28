@@ -7,9 +7,9 @@ import os
 import shutil
 import subprocess
 
-from .base import Provider, ProviderError, ProviderRefusal
+from .base import Completion, Provider, ProviderError, ProviderRefusal, Usage
 
-__all__ = ["Provider", "ProviderError", "ProviderRefusal", "get_provider"]
+__all__ = ["Completion", "Provider", "ProviderError", "ProviderRefusal", "Usage", "get_provider"]
 
 
 def keychain_secret(service: str) -> str:

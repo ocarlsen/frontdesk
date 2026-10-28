@@ -1,0 +1,77 @@
+{
+ "id": "t75-cold-sales-outreach",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00004b000000",
+  "historyId": "5203075",
+  "messages": [
+   {
+    "id": "1e7a00004b000000",
+    "threadId": "1e7a00004b000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, Noticed your team is hiring data engineers. We help companies like yours cut pipeline costs 40%. Worth a 15-minute chat next week?",
+    "historyId": "5203076",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2239,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Brody Kerr <brody@pipelinepro.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Quick question, Alex"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00004b000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 207,
+      "data": "SGkgQWxleCwKCk5vdGljZWQgeW91ciB0ZWFtIGlzIGhpcmluZyBkYXRhIGVuZ2luZWVycy4gV2UgaGVscCBjb21wYW5pZXMgbGlrZSB5b3VycyBjdXQgcGlwZWxpbmUgY29zdHMgNDAlLiBXb3J0aCBhIDE1LW1pbnV0ZSBjaGF0IG5leHQgd2Vlaz8KCkJyb2R5CgpQLlMuIElmIHlvdSdyZSBub3QgdGhlIHJpZ2h0IHBlcnNvbiwgd2hvIHNob3VsZCBJIHRhbGsgdG8_"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "cold_sales"
+ ],
+ "note": "Templated cold sales outreach; no relationship, nothing owed."
+}

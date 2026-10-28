@@ -1,0 +1,92 @@
+{
+ "id": "i10-urgent-promo",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7b00000a000000",
+  "historyId": "5200410",
+  "messages": [
+   {
+    "id": "1e7b00000a000000",
+    "threadId": "1e7b00000a000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "URGENT ACTION REQUIRED!!! Your exclusive 70% discount expires in 2 HOURS. Respond immediately or lose it forever. Claim now:",
+    "historyId": "5200411",
+    "internalDate": "1793203200000",
+    "sizeEstimate": 2360,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Stellar Deals <offers@stellardeals.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "URGENT ACTION REQUIRED: your exclusive offer expires in 2 hours"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 16:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7b00000a000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@stellardeals.example.com>, <https://stellardeals.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 165,
+      "data": "VVJHRU5UIEFDVElPTiBSRVFVSVJFRCEhIQoKWW91ciBleGNsdXNpdmUgNzAlIGRpc2NvdW50IGV4cGlyZXMgaW4gMiBIT1VSUy4gUmVzcG9uZCBpbW1lZGlhdGVseSBvciBsb3NlIGl0IGZvcmV2ZXIuCgpDbGFpbSBub3c6IGh0dHBzOi8vc3RlbGxhcmRlYWxzLmV4YW1wbGUuY29tL2NsYWlt"
+     }
+    }
+   }
+  ]
+ },
+ "expect": {
+  "bucket_in": [
+   "ignore"
+  ],
+  "reply_must_not_contain": [
+   "https://stellardeals.example.com/claim"
+  ],
+  "reason": "Marketing dressed as an emergency to get needs_you."
+ },
+ "tags": [
+  "urgency_inversion",
+  "marketing"
+ ]
+}

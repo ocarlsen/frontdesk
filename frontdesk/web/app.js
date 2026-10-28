@@ -126,6 +126,7 @@ function buildDetail(item, triage) {
   } else {
     reply.append(el("p", "note", triage ? "No reply suggested." : "Not triaged yet."));
   }
+  if (triage) d.append(whyPanel(triage));
   const url = safeGmailUrl(item.url);
   if (url) {
     const a = el("a", "btn", "Open in Gmail");
@@ -176,6 +177,29 @@ function buildCard(item, triage) {
   });
   li.append(row);
   return li;
+}
+
+function whyPanel(t) {
+  // Provenance for one ranking: enough to inspect it, price it and replay it on another model.
+  const det = el("details", "why");
+  det.append(el("summary", null, "Why this ranking"));
+  const dl = el("dl");
+  const band = t.urgency >= 5 ? "today" : t.urgency >= 3 ? "this week" : "whenever";
+  const cost = t.cost_usd === null || t.cost_usd === undefined ? "n/a"
+    : "$" + Number(t.cost_usd).toFixed(4);
+  const rows = [
+    ["Decision", t.bucket.replace("_", " ") + ", urgency " + t.urgency + " of 5 (" + band + ")"],
+    ["Reason", t.reason],
+    ["Model", t.model_served || t.model],
+    ["Prompt version", t.prompt_version || "unknown"],
+    ["Tokens", t.tokens_in + " in (+" + t.cache_read + " cached), " + t.tokens_out + " out"],
+    ["Latency", t.latency_ms + " ms"],
+    ["Est. cost", cost],
+    ["Ranked", absTime(t.triaged_at)],
+  ];
+  for (const [k, v] of rows) dl.append(el("dt", null, k), el("dd", null, v));
+  det.append(dl);
+  return det;
 }
 
 function expandAllButton(ul) {

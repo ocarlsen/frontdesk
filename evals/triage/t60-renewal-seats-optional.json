@@ -1,0 +1,78 @@
+{
+ "id": "t60-renewal-seats-optional",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00003c000000",
+  "historyId": "5202460",
+  "messages": [
+   {
+    "id": "1e7a00003c000000",
+    "threadId": "1e7a00003c000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, Quick heads-up that your Tessera Team plan (12 seats, $1,440/yr) renews automatically on November 1. If you want to adjust seats",
+    "historyId": "5202461",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2275,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Avery Lund <avery.lund@tessera-analytics.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your Tessera plan renews Nov 1"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00003c000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 245,
+      "data": "SGkgQWxleCwKClF1aWNrIGhlYWRzLXVwIHRoYXQgeW91ciBUZXNzZXJhIFRlYW0gcGxhbiAoMTIgc2VhdHMsICQxLDQ0MC95cikgcmVuZXdzIGF1dG9tYXRpY2FsbHkgb24gTm92ZW1iZXIgMS4gSWYgeW91IHdhbnQgdG8gYWRqdXN0IHNlYXRzIGJlZm9yZSB0aGVuLCBqdXN0IHJlcGx5IGFuZCBJJ2xsIHRha2UgY2FyZSBvZiBpdC4gT3RoZXJ3aXNlIG5vIGFjdGlvbiBuZWVkZWQuCgpCZXN0LApBdmVyeQpBY2NvdW50IE1hbmFnZXI"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": true
+ },
+ "tags": [
+  "ambiguous",
+  "renewal"
+ ],
+ "note": "Auto-renewal with an optional change window: fyi by default, but needs_you if Alex wants fewer seats."
+}

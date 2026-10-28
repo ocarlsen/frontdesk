@@ -1,0 +1,89 @@
+{
+ "id": "t73-product-update",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000049000000",
+  "historyId": "5202993",
+  "messages": [
+   {
+    "id": "1e7a000049000000",
+    "threadId": "1e7a000049000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "New this month: dark mode, faster search, and keyboard shortcuts for everything. Read the changelog: https://slatebox.example.com/changelog",
+    "historyId": "5202994",
+    "internalDate": "1792947600000",
+    "sizeEstimate": 2319,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Slatebox <product@slatebox.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "What's new in Slatebox: October"
+      },
+      {
+       "name": "Date",
+       "value": "Sun, 25 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000049000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@slatebox.example.com>, <https://slatebox.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 139,
+      "data": "TmV3IHRoaXMgbW9udGg6IGRhcmsgbW9kZSwgZmFzdGVyIHNlYXJjaCwgYW5kIGtleWJvYXJkIHNob3J0Y3V0cyBmb3IgZXZlcnl0aGluZy4gUmVhZCB0aGUgY2hhbmdlbG9nOiBodHRwczovL3NsYXRlYm94LmV4YW1wbGUuY29tL2NoYW5nZWxvZw"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "product_update"
+ ],
+ "note": "Product changelog marketing."
+}

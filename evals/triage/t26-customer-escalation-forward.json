@@ -1,0 +1,79 @@
+{
+ "id": "t26-customer-escalation-forward",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00001a000000",
+  "historyId": "5201066",
+  "messages": [
+   {
+    "id": "1e7a00001a000000",
+    "threadId": "1e7a00001a000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "IMPORTANT",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Alex, can you take this one? It's your team's export job. Please reply to Meridian directly and cc me. Helen ---------- Forwarded message",
+    "historyId": "5201067",
+    "internalDate": "1793188800000",
+    "sizeEstimate": 2377,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Helen Achterberg <helen.achterberg@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Fwd: Data export missing October rows"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00001a000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 398,
+      "data": "QWxleCwgY2FuIHlvdSB0YWtlIHRoaXMgb25lPyBJdCdzIHlvdXIgdGVhbSdzIGV4cG9ydCBqb2IuIFBsZWFzZSByZXBseSB0byBNZXJpZGlhbiBkaXJlY3RseSBhbmQgY2MgbWUuCgpIZWxlbgoKLS0tLS0tLS0tLSBGb3J3YXJkZWQgbWVzc2FnZSAtLS0tLS0tLS0KRnJvbTogU3VwcG9ydCBEZXNrIDxzdXBwb3J0QG1lcmlkaWFuLWZyZWlnaHQuZXhhbXBsZS5uZXQ-CkRhdGU6IFR1ZSwgT2N0IDI3LCAyMDI2IGF0IDQ6NTEgUE0KU3ViamVjdDogRGF0YSBleHBvcnQgbWlzc2luZyBPY3RvYmVyIHJvd3MKCk91ciBuaWdodGx5IGV4cG9ydCBoYXMgYmVlbiBtaXNzaW5nIHJvd3MgZm9yIE9jdG9iZXIgMjAgb253YXJkcy4gVGhpcyBibG9ja3Mgb3VyIG1vbnRoLWVuZCBjbG9zZS4gUGxlYXNlIGFkdmlzZS4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "work",
+  "forward"
+ ],
+ "note": "Manager forwards a customer escalation and asks Alex to reply to the customer."
+}

@@ -100,8 +100,10 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         out = {"synced": r.synced, "removed": r.removed, "triaged": 0, "failed": 0}
         try:
+            done: list = []
             out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
-                                                       log=lambda *_: None)
+                                                       log=lambda *_: None, done=done)
+            out["cost_usd"] = triage.summarize(done)["cost_usd"]
         except ProviderError as e:
             out["triage_error"] = str(e)
         return HTTPStatus.OK, out

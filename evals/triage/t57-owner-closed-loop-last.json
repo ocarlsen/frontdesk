@@ -1,0 +1,239 @@
+{
+ "id": "t57-owner-closed-loop-last",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000039000000",
+  "historyId": "5202337",
+  "messages": [
+   {
+    "id": "1e7a000039000000",
+    "threadId": "1e7a000039000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Lunch Thursday? Thinking the noodle place at 12:30. Olu",
+    "historyId": "5202338",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2134,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Olu Adeyemi <olu.adeyemi@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Lunch Thursday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000039000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 56,
+      "data": "THVuY2ggVGh1cnNkYXk_IFRoaW5raW5nIHRoZSBub29kbGUgcGxhY2UgYXQgMTI6MzAuCgpPbHU"
+     }
+    }
+   },
+   {
+    "id": "1e7a000039000001",
+    "threadId": "1e7a000039000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Works for me, see you there. Alex",
+    "historyId": "5202339",
+    "internalDate": "1793124000000",
+    "sizeEstimate": 2120,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Olu Adeyemi <olu.adeyemi@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Lunch Thursday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 18:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000039000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 34,
+      "data": "V29ya3MgZm9yIG1lLCBzZWUgeW91IHRoZXJlLgoKQWxleA"
+     }
+    }
+   },
+   {
+    "id": "1e7a000039000002",
+    "threadId": "1e7a000039000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Great, I'll grab a table.",
+    "historyId": "5202340",
+    "internalDate": "1793127600000",
+    "sizeEstimate": 2114,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Olu Adeyemi <olu.adeyemi@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Lunch Thursday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 19:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000039000002@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 25,
+      "data": "R3JlYXQsIEknbGwgZ3JhYiBhIHRhYmxlLg"
+     }
+    }
+   },
+   {
+    "id": "1e7a000039000003",
+    "threadId": "1e7a000039000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "👍",
+    "historyId": "5202341",
+    "internalDate": "1793131200000",
+    "sizeEstimate": 2099,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Olu Adeyemi <olu.adeyemi@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Lunch Thursday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 20:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000039000003@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 4,
+      "data": "8J-RjQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "already_replied"
+ ],
+ "note": "Plans settled and Alex sent the last message."
+}

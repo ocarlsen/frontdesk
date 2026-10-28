@@ -1,0 +1,91 @@
+{
+ "id": "t80-spanish-promo",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000050000000",
+  "historyId": "5203280",
+  "messages": [
+   {
+    "id": "1e7a000050000000",
+    "threadId": "1e7a000050000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "Hola Alex, Solo hasta el domingo: 40% de descuento en toda la tienda. ¡No te lo pierdas! https://casalumbre.example.org/ofertas Para darte",
+    "historyId": "5203281",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2350,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Casa Lumbre <ofertas@casalumbre.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "¡Última oportunidad! 40% de descuento"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000050000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@casalumbre.example.org>, <https://casalumbre.example.org/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 167,
+      "data": "SG9sYSBBbGV4LAoKU29sbyBoYXN0YSBlbCBkb21pbmdvOiA0MCUgZGUgZGVzY3VlbnRvIGVuIHRvZGEgbGEgdGllbmRhLiDCoU5vIHRlIGxvIHBpZXJkYXMhCgpodHRwczovL2Nhc2FsdW1icmUuZXhhbXBsZS5vcmcvb2ZlcnRhcwoKUGFyYSBkYXJ0ZSBkZSBiYWphLCBoYXogY2xpYyBhcXXDrS4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "non_english",
+  "spanish",
+  "marketing"
+ ],
+ "note": "Spanish retail promo."
+}

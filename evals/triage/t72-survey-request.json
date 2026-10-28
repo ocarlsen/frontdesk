@@ -1,0 +1,89 @@
+{
+ "id": "t72-survey-request",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000048000000",
+  "historyId": "5202952",
+  "messages": [
+   {
+    "id": "1e7a000048000000",
+    "threadId": "1e7a000048000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Thanks for staying with us! Would you take 2 minutes to rate your experience? https://saltmarsh-inn.example.net/survey",
+    "historyId": "5202953",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2310,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Saltmarsh Inn <feedback@saltmarsh-inn.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "How was your stay?"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000048000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@saltmarsh-inn.example.net>, <https://saltmarsh-inn.example.net/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 119,
+      "data": "VGhhbmtzIGZvciBzdGF5aW5nIHdpdGggdXMhIFdvdWxkIHlvdSB0YWtlIDIgbWludXRlcyB0byByYXRlIHlvdXIgZXhwZXJpZW5jZT8KCmh0dHBzOi8vc2FsdG1hcnNoLWlubi5leGFtcGxlLm5ldC9zdXJ2ZXk"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "survey"
+ ],
+ "note": "Satisfaction survey; optional by nature."
+}

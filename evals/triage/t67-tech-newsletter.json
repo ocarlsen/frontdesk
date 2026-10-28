@@ -1,0 +1,89 @@
+{
+ "id": "t67-tech-newsletter",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000043000000",
+  "historyId": "5202747",
+  "messages": [
+   {
+    "id": "1e7a000043000000",
+    "threadId": "1e7a000043000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_FORUMS"
+    ],
+    "snippet": "This week: 1. Idempotency keys done right 2. A tour of write-ahead logs 3. Jobs board: 14 new roles Read online:",
+    "historyId": "5202748",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2345,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Systems Weekly <editor@systemsweekly.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Systems Weekly #88: idempotency keys done right"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000043000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@systemsweekly.example.org>, <https://systemsweekly.example.org/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 151,
+      "data": "VGhpcyB3ZWVrOgoKMS4gSWRlbXBvdGVuY3kga2V5cyBkb25lIHJpZ2h0CjIuIEEgdG91ciBvZiB3cml0ZS1haGVhZCBsb2dzCjMuIEpvYnMgYm9hcmQ6IDE0IG5ldyByb2xlcwoKUmVhZCBvbmxpbmU6IGh0dHBzOi8vc3lzdGVtc3dlZWtseS5leGFtcGxlLm9yZy84OA"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "newsletter"
+ ],
+ "note": "Subscribed newsletter."
+}

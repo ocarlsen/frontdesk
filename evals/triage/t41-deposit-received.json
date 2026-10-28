@@ -1,0 +1,78 @@
+{
+ "id": "t41-deposit-received",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000029000000",
+  "historyId": "5201681",
+  "messages": [
+   {
+    "id": "1e7a000029000000",
+    "threadId": "1e7a000029000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "A deposit of $4,212.18 was posted to your checking account ending 0931 on Oct 28. View details in online banking.",
+    "historyId": "5201682",
+    "internalDate": "1793185200000",
+    "sizeEstimate": 2180,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Kestrel Credit Union <alerts@kestrel-cu.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Deposit received"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 11:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000029000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 114,
+      "data": "QSBkZXBvc2l0IG9mICQ0LDIxMi4xOCB3YXMgcG9zdGVkIHRvIHlvdXIgY2hlY2tpbmcgYWNjb3VudCBlbmRpbmcgMDkzMSBvbiBPY3QgMjguCgpWaWV3IGRldGFpbHMgaW4gb25saW5lIGJhbmtpbmcu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "finance",
+  "automated"
+ ],
+ "note": "Paycheck deposit alert."
+}

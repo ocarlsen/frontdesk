@@ -36,7 +36,14 @@ CREATE TABLE IF NOT EXISTS triage (
     model TEXT NOT NULL,
     triaged_at TEXT NOT NULL,
     item_updated_at TEXT NOT NULL,
-    prompt_version TEXT NOT NULL DEFAULT ''
+    prompt_version TEXT NOT NULL DEFAULT '',
+    model_served TEXT NOT NULL DEFAULT '',
+    tokens_in INTEGER NOT NULL DEFAULT 0,
+    tokens_out INTEGER NOT NULL DEFAULT 0,
+    cache_read INTEGER NOT NULL DEFAULT 0,
+    cache_write INTEGER NOT NULL DEFAULT 0,
+    latency_ms INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL
 );
 CREATE TABLE IF NOT EXISTS triage_failures (
     item_id TEXT PRIMARY KEY,
@@ -59,6 +66,20 @@ CREATE TABLE IF NOT EXISTS actions (
 """
 
 MAX_ATTEMPTS = 3
+# Columns added after the first release, applied to older databases on open.
+TRIAGE_ADDED_COLUMNS = [
+    ("prompt_version", "TEXT NOT NULL DEFAULT ''"),
+    ("model_served", "TEXT NOT NULL DEFAULT ''"),
+    ("tokens_in", "INTEGER NOT NULL DEFAULT 0"),
+    ("tokens_out", "INTEGER NOT NULL DEFAULT 0"),
+    ("cache_read", "INTEGER NOT NULL DEFAULT 0"),
+    ("cache_write", "INTEGER NOT NULL DEFAULT 0"),
+    ("latency_ms", "INTEGER NOT NULL DEFAULT 0"),
+    ("cost_usd", "REAL"),
+]
+TRIAGE_FIELDS = ("item_id", "bucket", "urgency", "reason", "proposed_reply", "model",
+                 "triaged_at", "item_updated_at", "prompt_version", "model_served", "tokens_in",
+                 "tokens_out", "cache_read", "cache_write", "latency_ms", "cost_usd")
 
 
 def now() -> str:
@@ -77,10 +98,10 @@ class Store:
 
     def _migrate(self) -> None:
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(triage)")}
-        if "prompt_version" not in cols:
-            with self.db:
-                self.db.execute(
-                    "ALTER TABLE triage ADD COLUMN prompt_version TEXT NOT NULL DEFAULT ''")
+        with self.db:
+            for name, decl in TRIAGE_ADDED_COLUMNS:
+                if name not in cols:
+                    self.db.execute(f"ALTER TABLE triage ADD COLUMN {name} {decl}")
 
     @contextmanager
     def tx(self):
@@ -146,12 +167,12 @@ class Store:
         ).fetchall()
         return [Item.from_dict(json.loads(r["data"])) for r in rows]
 
-    def save_triage(self, t: Triage, prompt_version: str = "") -> None:
+    def save_triage(self, t: Triage) -> None:
         with self.tx() as db:
             db.execute(
-                "INSERT OR REPLACE INTO triage VALUES (?,?,?,?,?,?,?,?,?)",
-                (t.item_id, t.bucket, t.urgency, t.reason, t.proposed_reply, t.model,
-                 t.triaged_at, t.item_updated_at, prompt_version),
+                f"INSERT OR REPLACE INTO triage ({','.join(TRIAGE_FIELDS)}) "
+                f"VALUES ({','.join('?' * len(TRIAGE_FIELDS))})",
+                tuple(getattr(t, f) for f in TRIAGE_FIELDS),
             )
             db.execute("DELETE FROM triage_failures WHERE item_id=?", (t.item_id,))
 
@@ -183,8 +204,6 @@ class Store:
             item = Item.from_dict(json.loads(r["data"]))
             tri = None
             if r["bucket"] is not None:
-                tri = Triage(r["item_id"], r["bucket"], r["urgency"], r["reason"],
-                             r["proposed_reply"], r["model"], r["triaged_at"],
-                             r["item_updated_at"])
+                tri = Triage(**{f: r[f] for f in TRIAGE_FIELDS})
             out.append((item, tri))
         return out

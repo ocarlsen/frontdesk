@@ -1,0 +1,78 @@
+{
+ "id": "t17-insurance-info-before-appointment",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000011000000",
+  "historyId": "5200697",
+  "messages": [
+   {
+    "id": "1e7a000011000000",
+    "threadId": "1e7a000011000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Hi Alex, We have you scheduled tomorrow at 8:00am. Our system shows no insurance on file. Please reply today with your member ID and group",
+    "historyId": "5200698",
+    "internalDate": "1793199600000",
+    "sizeEstimate": 2273,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Cedar Grove Physical Therapy <frontdesk@cedargrove-pt.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Insurance information needed for tomorrow's visit"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000011000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 218,
+      "data": "SGkgQWxleCwKCldlIGhhdmUgeW91IHNjaGVkdWxlZCB0b21vcnJvdyBhdCA4OjAwYW0uIE91ciBzeXN0ZW0gc2hvd3Mgbm8gaW5zdXJhbmNlIG9uIGZpbGUuIFBsZWFzZSByZXBseSB0b2RheSB3aXRoIHlvdXIgbWVtYmVyIElEIGFuZCBncm91cCBudW1iZXIsIG9yIHBsYW4gdG8gcGF5IHRoZSBzZWxmLXBheSByYXRlIG9mICQxNDUgYXQgdGhlIHZpc2l0LgoKQ2VkYXIgR3JvdmUgUFQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "automated_needs_action",
+  "personal"
+ ],
+ "note": "Clinic needs insurance details today before an 8am appointment tomorrow."
+}

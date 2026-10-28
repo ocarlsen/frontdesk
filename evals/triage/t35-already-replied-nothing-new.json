@@ -1,0 +1,131 @@
+{
+ "id": "t35-already-replied-nothing-new",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000023000000",
+  "historyId": "5201435",
+  "messages": [
+   {
+    "id": "1e7a000023000000",
+    "threadId": "1e7a000023000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Alex, is there budget for two of us to attend the storage conference in March? Ken",
+    "historyId": "5201436",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2156,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ken Matsuda <ken.matsuda@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Conference budget question"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000023000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 83,
+      "data": "QWxleCwgaXMgdGhlcmUgYnVkZ2V0IGZvciB0d28gb2YgdXMgdG8gYXR0ZW5kIHRoZSBzdG9yYWdlIGNvbmZlcmVuY2UgaW4gTWFyY2g_CgpLZW4"
+     }
+    }
+   },
+   {
+    "id": "1e7a000023000001",
+    "threadId": "1e7a000023000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Yes, there's room for two. Go ahead and register; use the team cost center. Alex On Mon, Oct 26, 2026 at 11:20 AM Ken Matsuda",
+    "historyId": "5201437",
+    "internalDate": "1793041200000",
+    "sizeEstimate": 2264,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Ken Matsuda <ken.matsuda@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Conference budget question"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 19:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000023000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 241,
+      "data": "WWVzLCB0aGVyZSdzIHJvb20gZm9yIHR3by4gR28gYWhlYWQgYW5kIHJlZ2lzdGVyOyB1c2UgdGhlIHRlYW0gY29zdCBjZW50ZXIuCgpBbGV4CgpPbiBNb24sIE9jdCAyNiwgMjAyNiBhdCAxMToyMCBBTSBLZW4gTWF0c3VkYSA8a2VuLm1hdHN1ZGFAZXhhbXBsZS5jb20-IHdyb3RlOgo-IEFsZXgsIGlzIHRoZXJlIGJ1ZGdldCBmb3IgdHdvIG9mIHVzIHRvIGF0dGVuZCB0aGUgc3RvcmFnZSBjb25mZXJlbmNlIGluIE1hcmNoPw"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "already_replied"
+ ],
+ "note": "Alex already answered and nothing new has arrived since."
+}

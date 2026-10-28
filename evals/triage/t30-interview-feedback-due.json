@@ -1,0 +1,78 @@
+{
+ "id": "t30-interview-feedback-due",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00001e000000",
+  "historyId": "5201230",
+  "messages": [
+   {
+    "id": "1e7a00001e000000",
+    "threadId": "1e7a00001e000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Hi Alex, This is a reminder that your interview feedback for Wen Zhao (system design, Monday) is overdue. The hiring committee meets",
+    "historyId": "5201231",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2267,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Recruiting Coordination <recruiting@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Feedback due: Wen Zhao, system design"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00001e000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 232,
+      "data": "SGkgQWxleCwKClRoaXMgaXMgYSByZW1pbmRlciB0aGF0IHlvdXIgaW50ZXJ2aWV3IGZlZWRiYWNrIGZvciBXZW4gWmhhbyAoc3lzdGVtIGRlc2lnbiwgTW9uZGF5KSBpcyBvdmVyZHVlLiBUaGUgaGlyaW5nIGNvbW1pdHRlZSBtZWV0cyB0b21vcnJvdyBhdCAxMGFtIGFuZCBjYW4ndCByZXZpZXcgdGhlIHBhY2tldCB3aXRob3V0IGl0LgoKUGxlYXNlIHN1Ym1pdCBpdCBpbiB0aGUgcmVjcnVpdGluZyB0b29sLg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "automated_needs_action",
+  "work"
+ ],
+ "note": "Overdue feedback blocks tomorrow-morning committee; needs doing today, in a tool."
+}

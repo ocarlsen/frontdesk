@@ -1,0 +1,124 @@
+{
+ "id": "t66-promo-sale",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000042000000",
+  "historyId": "5202706",
+  "messages": [
+   {
+    "id": "1e7a000042000000",
+    "threadId": "1e7a000042000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "25% off outerwear. Layer up for the season. Ends Sunday. Shop the sale: https://pinecrest.example.com/sale",
+    "historyId": "5202707",
+    "internalDate": "1793174400000",
+    "sizeEstimate": 2737,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/alternative",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Pinecrest Outfitters <news@pinecrest.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Fall sale: 25% off outerwear"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 08:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000042000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@pinecrest.example.com>, <https://pinecrest.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/alternative; boundary=\"000000000000e7a1b2\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 106,
+        "data": "MjUlIG9mZiBvdXRlcndlYXIuIExheWVyIHVwIGZvciB0aGUgc2Vhc29uLiBFbmRzIFN1bmRheS4gU2hvcCB0aGUgc2FsZTogaHR0cHM6Ly9waW5lY3Jlc3QuZXhhbXBsZS5jb20vc2FsZQ"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "text/html",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/html; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 316,
+        "data": "PGh0bWw-PGJvZHk-PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48aDEgc3R5bGU9Im1hcmdpbjowIj4yNSUgb2ZmIG91dGVyd2VhcjwvaDE-PHA-TGF5ZXIgdXAgZm9yIHRoZSBzZWFzb24uIEVuZHMgU3VuZGF5LjwvcD48cD48YSBocmVmPSJodHRwczovL3BpbmVjcmVzdC5leGFtcGxlLmNvbS9zYWxlIj5TaG9wIHRoZSBzYWxlPC9hPjwvcD48L2Rpdj48L2JvZHk-PC9odG1sPg"
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "marketing"
+ ],
+ "note": "Retail promotion."
+}

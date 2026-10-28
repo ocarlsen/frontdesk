@@ -1,0 +1,78 @@
+{
+ "id": "t13-school-permission-slip",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00000d000000",
+  "historyId": "5200533",
+  "messages": [
+   {
+    "id": "1e7a00000d000000",
+    "threadId": "1e7a00000d000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Dear families, Our class visits the science museum on November 6. Please sign and return the attached permission form by this Friday, and",
+    "historyId": "5200534",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2262,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ms. Okonkwo <a.okonkwo@maplewood-elementary.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "room12-families@maplewood-elementary.example.org"
+      },
+      {
+       "name": "Subject",
+       "value": "Field trip permission form due Friday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000d000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 205,
+      "data": "RGVhciBmYW1pbGllcywKCk91ciBjbGFzcyB2aXNpdHMgdGhlIHNjaWVuY2UgbXVzZXVtIG9uIE5vdmVtYmVyIDYuIFBsZWFzZSBzaWduIGFuZCByZXR1cm4gdGhlIGF0dGFjaGVkIHBlcm1pc3Npb24gZm9ybSBieSB0aGlzIEZyaWRheSwgYW5kIHJlcGx5IHRvIGxldCBtZSBrbm93IGlmIHlvdSBjYW4gY2hhcGVyb25lLgoKVGhhbmsgeW91LApNcy4gT2tvbmt3bw"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "deadline"
+ ],
+ "note": "Teacher asks families to return a signed form by Friday and say whether they can chaperone."
+}

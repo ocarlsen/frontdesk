@@ -1,0 +1,82 @@
+{
+ "id": "t63-cc-unless-you-disagree",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00003f000000",
+  "historyId": "5202583",
+  "messages": [
+   {
+    "id": "1e7a00003f000000",
+    "threadId": "1e7a00003f000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Ruth, let's move the release train from Tuesdays to Wednesdays starting next week. Alex cc'd: no action unless you disagree. Helen",
+    "historyId": "5202584",
+    "internalDate": "1793188800000",
+    "sizeEstimate": 2234,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Helen Achterberg <helen.achterberg@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Ruth Coleman <ruth.coleman@example.com>"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Moving the release train to Wednesdays"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00003f000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 131,
+      "data": "UnV0aCwgbGV0J3MgbW92ZSB0aGUgcmVsZWFzZSB0cmFpbiBmcm9tIFR1ZXNkYXlzIHRvIFdlZG5lc2RheXMgc3RhcnRpbmcgbmV4dCB3ZWVrLiBBbGV4IGNjJ2Q6IG5vIGFjdGlvbiB1bmxlc3MgeW91IGRpc2FncmVlLgoKSGVsZW4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": true
+ },
+ "tags": [
+  "ambiguous",
+  "cc_only"
+ ],
+ "note": "Cc'd with 'no action unless you disagree': default fyi, but it invites an objection."
+}

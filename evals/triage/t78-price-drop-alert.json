@@ -1,0 +1,89 @@
+{
+ "id": "t78-price-drop-alert",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00004e000000",
+  "historyId": "5203198",
+  "messages": [
+   {
+    "id": "1e7a00004e000000",
+    "threadId": "1e7a00004e000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "Good news! The walnut desk lamp you viewed is now $79 (was $99). https://larchmont-home.example.com/p/desk-lamp",
+    "historyId": "5203199",
+    "internalDate": "1793178000000",
+    "sizeEstimate": 2313,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Larchmont Home <alerts@larchmont-home.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Price drop on an item you viewed"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 09:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00004e000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@larchmont-home.example.com>, <https://larchmont-home.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 112,
+      "data": "R29vZCBuZXdzISBUaGUgd2FsbnV0IGRlc2sgbGFtcCB5b3Ugdmlld2VkIGlzIG5vdyAkNzkgKHdhcyAkOTkpLgoKaHR0cHM6Ly9sYXJjaG1vbnQtaG9tZS5leGFtcGxlLmNvbS9wL2Rlc2stbGFtcA"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "marketing"
+ ],
+ "note": "Retargeting promo."
+}

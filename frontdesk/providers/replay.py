@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .base import ProviderError
+from .base import Completion, ProviderError, Usage
 
 _OPEN, _CLOSE = "<untrusted_thread>", "</untrusted_thread>"
 
@@ -34,9 +34,10 @@ class ReplayProvider:
             recordings = json.loads(Path(recordings).read_text())
         self.recordings = recordings
 
-    def complete_json(self, system: str, user: str, schema: dict, max_tokens: int = 2048) -> dict:
+    def complete_json(self, system: str, user: str, schema: dict,
+                      max_tokens: int = 2048) -> Completion:
         tid = thread_id_from_prompt(user)
         rec = self.recordings.get(tid)
         if rec is None:
             raise ProviderError(f"replay: no recorded triage for thread {tid}")
-        return dict(rec)
+        return Completion(dict(rec), Usage(model_served=self.model))

@@ -1,0 +1,79 @@
+{
+ "id": "t06-relative-deadline-eod-tomorrow",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000006000000",
+  "historyId": "5200246",
+  "messages": [
+   {
+    "id": "1e7a000006000000",
+    "threadId": "1e7a000006000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "IMPORTANT",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, We're ready to extend the offer to Wen for the backend role. I need your final call on the level (Senior vs. Staff) by EOD",
+    "historyId": "5200247",
+    "internalDate": "1793201400000",
+    "sizeEstimate": 2244,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Grace Whitlock <grace.whitlock@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Offer letter for the backend candidate"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 15:30:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000006000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 201,
+      "data": "SGkgQWxleCwKCldlJ3JlIHJlYWR5IHRvIGV4dGVuZCB0aGUgb2ZmZXIgdG8gV2VuIGZvciB0aGUgYmFja2VuZCByb2xlLiBJIG5lZWQgeW91ciBmaW5hbCBjYWxsIG9uIHRoZSBsZXZlbCAoU2VuaW9yIHZzLiBTdGFmZikgYnkgRU9EIHRvbW9ycm93IHNvIHRoZSByZWNydWl0ZXIgY2FuIHNlbmQgaXQgRnJpZGF5IG1vcm5pbmcuCgpUaGFua3MsCkdyYWNl"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "relative_deadline"
+ ],
+ "note": "Grace needs a level decision 'by EOD tomorrow'; due this week, not today."
+}

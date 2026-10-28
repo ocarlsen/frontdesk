@@ -52,3 +52,12 @@ class Triage:
     model: str             # provider:model that produced it
     triaged_at: str        # ISO 8601 UTC
     item_updated_at: str   # Item.updated_at it was computed from; stale when the thread moves
+    # Provenance, so any decision can be inspected and replayed:
+    prompt_version: str = ""
+    model_served: str = ""     # the model that actually answered (fallbacks can differ)
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cache_read: int = 0
+    cache_write: int = 0
+    latency_ms: int = 0
+    cost_usd: float | None = None
