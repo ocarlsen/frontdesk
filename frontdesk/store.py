@@ -116,10 +116,16 @@ class Store:
 
     def _migrate(self) -> None:
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(triage)")}
-        with self.db:
-            for name, decl in TRIAGE_ADDED_COLUMNS:
-                if name not in cols:
+        for name, decl in TRIAGE_ADDED_COLUMNS:
+            if name in cols:
+                continue
+            try:
+                with self.db:
                     self.db.execute(f"ALTER TABLE triage ADD COLUMN {name} {decl}")
+            except sqlite3.OperationalError as e:
+                # Another process (the server, a CLI run) added it between our read and write.
+                if "duplicate column" not in str(e):
+                    raise
 
     @contextmanager
     def tx(self):

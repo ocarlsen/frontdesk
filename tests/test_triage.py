@@ -195,3 +195,34 @@ def test_owner_profile_reaches_the_system_prompt_and_versions_it(tmp_path):
 def test_profile_never_enters_the_untrusted_block():
     user = triage.render_user(item(1), "2026-10-28")
     assert "job hunting" not in user
+
+
+def test_concurrent_migration_tolerates_a_column_added_by_another_process(tmp_path):
+    """Another process migrated between our PRAGMA read and our ALTER: every ALTER then hits
+    'duplicate column', which must count as success, not crash the open."""
+    import sqlite3
+    path = tmp_path / "race.db"
+    Store(path).db.close()               # fully migrated already
+
+    class Stale(Store):
+        def _migrate(self):
+            real = self.db
+
+            class StaleView:             # reports no triage columns, as if read before B ran
+                def execute(self, sql, *a):
+                    if sql.startswith("PRAGMA table_info"):
+                        return []
+                    return real.execute(sql, *a)
+
+                def __enter__(self):
+                    return real.__enter__()
+
+                def __exit__(self, *exc):
+                    return real.__exit__(*exc)
+            self.db = StaleView()
+            try:
+                super()._migrate()
+            finally:
+                self.db = real
+    Stale(path)                          # must not raise
+    assert sqlite3.connect(path).execute("SELECT summary FROM triage").fetchall() == []
