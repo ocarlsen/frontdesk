@@ -165,3 +165,25 @@ def test_relabel_overrides_ranking_until_a_new_message(tmp_path):
 def test_relabel_rejects_unknown_bucket(tmp_path):
     with pytest.raises(actions.ActionError):
         actions.relabel(store_with_item(tmp_path), "gmail:t1", "urgent")
+
+
+def test_done_hides_until_a_new_message(tmp_path):
+    store = store_with_item(tmp_path)
+    actions.set_done(store, "gmail:t1", True)
+    assert store.ranked() == [] and store.is_hidden("gmail:t1")
+    item = store.get_item("gmail:t1")
+    item.updated_at = "2026-10-28T19:00:00Z"
+    store.upsert_item(item)
+    assert [i.id for i, _ in store.ranked()] == ["gmail:t1"]      # back by itself
+    actions.set_done(store, "gmail:t1", True)
+    actions.set_done(store, "gmail:t1", False)                     # undo
+    assert [i.id for i, _ in store.ranked()] == ["gmail:t1"]
+
+
+def test_archive_stays_hidden_even_if_the_thread_moves(tmp_path):
+    store = store_with_item(tmp_path)
+    actions.set_archived(store, "gmail:t1", True, None, "click-0001")
+    item = store.get_item("gmail:t1")
+    item.updated_at = "2026-10-28T19:00:00Z"
+    store.upsert_item(item)
+    assert store.ranked() == []          # archived threads leave on the next sync, not here

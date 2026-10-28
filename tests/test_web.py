@@ -356,3 +356,33 @@ def test_sync_all_runs_slack_and_survives_its_failure(monkeypatch):
     assert list(sources.sync_all(None, {"slack_keychain_service": "x"}, log=logs.append)) \
         == ["gmail"]
     assert any("slack sync failed" in m for m in logs)
+
+
+def test_status_endpoint_and_autosync_off_by_zero(tmp_path, monkeypatch):
+    import json as _json
+    import urllib.request
+
+    from frontdesk.web import server as srv
+    assert srv.start_autosync(tmp_path / "x.db", 0) is None
+    monkeypatch.setitem(srv._last_sync, "at", "2026-10-28T22:00:00Z")
+    store = Store(tmp_path / "st.db")
+    httpd = srv.make_server(store, "127.0.0.1", 0, settings={})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        s = _json.loads(urllib.request.urlopen(
+            f"http://127.0.0.1:{httpd.server_address[1]}/api/status").read())
+        assert s["at"] == "2026-10-28T22:00:00Z" and "auto_sync_minutes" in s
+    finally:
+        httpd.shutdown()
+
+
+def test_run_sync_records_the_result(tmp_path, monkeypatch):
+    from frontdesk import sources, triage
+    from frontdesk.gmail.sync import SyncResult
+    from frontdesk.web import server as srv
+    monkeypatch.setattr(sources, "sync_all", lambda *a, **k: {"gmail": SyncResult(2, 0)})
+    monkeypatch.setattr(triage, "run", lambda *a, **k: (1, 0))
+    monkeypatch.setattr("frontdesk.providers.get_provider", lambda s: object())
+    status, out = srv.run_sync(tmp_path / "rs.db", {})
+    assert status == 200 and out["synced"] == 2
+    assert srv._last_sync["ok"] is True and srv._last_sync["summary"] == "synced 2, ranked 1"

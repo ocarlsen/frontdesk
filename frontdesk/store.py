@@ -56,9 +56,13 @@ CREATE TABLE IF NOT EXISTS triage_failures (
     last_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS hidden (
-    item_id TEXT PRIMARY KEY,    -- archived from FrontDesk; the next sync prunes it for good
+    -- 'archived': gone from the Gmail inbox; the next sync prunes it for good.
+    -- 'done': handled, hidden in FrontDesk only, and shown again when a new message arrives
+    --         (item_updated_at no longer matches).
+    item_id TEXT PRIMARY KEY,
     reason TEXT NOT NULL,
-    at TEXT NOT NULL
+    at TEXT NOT NULL,
+    item_updated_at TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS labels (
     -- The owner's correction of a ranking: private ground truth for `frontdesk eval --mine`.
@@ -115,6 +119,15 @@ class Store:
         self.path.chmod(0o600)
 
     def _migrate(self) -> None:
+        hcols = {r["name"] for r in self.db.execute("PRAGMA table_info(hidden)")}
+        if "item_updated_at" not in hcols:
+            try:
+                with self.db:
+                    self.db.execute("ALTER TABLE hidden ADD COLUMN item_updated_at "
+                                    "TEXT NOT NULL DEFAULT ''")
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e):
+                    raise
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(triage)")}
         for name, decl in TRIAGE_ADDED_COLUMNS:
             if name in cols:
@@ -244,13 +257,17 @@ class Store:
     def labels(self) -> list[sqlite3.Row]:
         return self.db.execute("SELECT * FROM labels").fetchall()
 
-    def hide(self, item_id: str, reason: str) -> None:
+    def hide(self, item_id: str, reason: str, item_updated_at: str = "") -> None:
         with self.tx() as db:
-            db.execute("INSERT OR REPLACE INTO hidden VALUES (?,?,?)", (item_id, reason, now()))
+            db.execute("INSERT OR REPLACE INTO hidden (item_id, reason, at, item_updated_at) "
+                       "VALUES (?,?,?,?)", (item_id, reason, now(), item_updated_at))
 
     def is_hidden(self, item_id: str) -> bool:
-        return self.db.execute("SELECT 1 FROM hidden WHERE item_id=?",
-                               (item_id,)).fetchone() is not None
+        """Hidden right now: archived, or done and nothing new has arrived since."""
+        return self.db.execute(
+            "SELECT 1 FROM hidden h JOIN items i ON i.id = h.item_id WHERE h.item_id=? AND "
+            "(h.reason='archived' OR h.item_updated_at = i.updated_at)",
+            (item_id,)).fetchone() is not None
 
     def unhide(self, item_id: str) -> None:
         with self.tx() as db:
@@ -266,7 +283,8 @@ class Store:
             "SELECT i.data, t.*, l.owner_bucket FROM items i "
             "LEFT JOIN triage t ON t.item_id = i.id "
             "LEFT JOIN labels l ON l.item_id = i.id AND l.item_updated_at = i.updated_at "
-            "WHERE i.id NOT IN (SELECT item_id FROM hidden) "
+            "WHERE NOT EXISTS (SELECT 1 FROM hidden h WHERE h.item_id = i.id AND "
+            "  (h.reason = 'archived' OR h.item_updated_at = i.updated_at)) "
             "ORDER BY CASE COALESCE(l.owner_bucket, t.bucket) WHEN 'needs_you' THEN 0 "
             "WHEN 'fyi' THEN 1 WHEN 'ignore' THEN 2 ELSE 3 END, t.urgency DESC, "
             "i.updated_at DESC"

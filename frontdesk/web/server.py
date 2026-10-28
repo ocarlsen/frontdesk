@@ -79,6 +79,13 @@ def message_html(store: Store, item_id: str, index: int) -> str | None:
 
 
 _sync_lock = threading.Lock()
+# The latest sync, manual or automatic, for the page's "synced at" line. One server, one process.
+_last_sync: dict = {"at": "", "ok": None, "summary": "", "auto_sync_minutes": 0}
+
+
+def _record_sync(ok: bool, summary: str) -> None:
+    from ..store import now
+    _last_sync.update(at=now(), ok=ok, summary=summary)
 
 
 def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
@@ -98,6 +105,7 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
         try:
             res = sync_all(store, settings, log=lambda *_: None, interactive=False)
         except (AuthError, GmailError) as e:
+            _record_sync(False, str(e))
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         out = {"synced": sum(r.synced for r in res.values()),
                "removed": sum(r.removed for r in res.values()), "triaged": 0, "failed": 0,
@@ -110,10 +118,32 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
             out["cost_usd"] = triage.summarize(done)["cost_usd"]
         except ProviderError as e:
             out["triage_error"] = str(e)
+        _record_sync(True, f"synced {out['synced']}, ranked {out['triaged']}")
         return HTTPStatus.OK, out
     finally:
         store.db.close()
         _sync_lock.release()
+
+
+def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
+    """Sync and rank every `minutes` (0: off). Shares run_sync's lock with the Sync button, so
+    the two never overlap; a busy lock just skips this round. Settings are re-read each round."""
+    if minutes <= 0:
+        return None
+    _last_sync["auto_sync_minutes"] = minutes
+
+    def loop():
+        while True:
+            threading.Event().wait(minutes * 60)
+            try:
+                run_sync(db_path, config.settings())
+            except Exception as e:  # noqa: BLE001 - keep the loop alive; report the type only
+                _record_sync(False, type(e).__name__)
+                print(f"auto-sync: {type(e).__name__}", flush=True)
+
+    t = threading.Thread(target=loop, name="auto-sync", daemon=True)
+    t.start()
+    return t
 
 
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
@@ -136,7 +166,8 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             store.db.close()
     if kind == "profile":
         item_id = key = ""
-    elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare") \
+    elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
+                      "undone") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -148,6 +179,14 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                      f"{config.PROFILE_MAX} characters"}
         config.save_setting("owner_profile", text.strip())
         return HTTPStatus.OK, {"status": "done", "kind": "profile"}
+    if kind in ("done", "undone"):   # local only: hides in FrontDesk, touches no mailbox
+        store = Store(db_path)
+        try:
+            return HTTPStatus.OK, actions.set_done(store, str(item_id), kind == "done")
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
     if kind == "relabel":   # local only: no Gmail token needed
         store = Store(db_path)
         try:
@@ -267,6 +306,9 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 demo = bool((settings or {}).get("demo"))
                 prof = "" if demo else config.settings()["owner_profile"]
                 self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo}).encode(),
+                           "application/json; charset=utf-8")
+            elif path == "/api/status":
+                self._send(HTTPStatus.OK, json.dumps(_last_sync).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/send-status":
                 from .. import actions, sending
@@ -401,6 +443,7 @@ def serve(store: Store, host: str, port: int, settings: dict | None = None) -> N
     s = settings or {}
     if not s.get("demo"):
         start_dispatcher(store.path)
+        start_autosync(store.path, int(s.get("auto_sync_minutes", 0)))
     token = None if host in LOOPBACK else load_token(config.HOME)
     httpd = make_server(store, host, port, s, token)
     shown = host

@@ -199,6 +199,13 @@ function buildDetail(item, triage) {
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
   if (isGmail) actions.append(arch);
+  else {
+    const doneBtn = el("button", "btn btn-archive", "Done");
+    doneBtn.type = "button";
+    doneBtn.title = "Hide it here until someone posts again (nothing changes in Slack)";
+    doneBtn.addEventListener("click", () => markDone(item, doneBtn));
+    actions.append(doneBtn);
+  }
   const url = safeOpenUrl(item.url);
   if (url) {
     const a = el("a", "btn", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
@@ -267,7 +274,8 @@ function clickKey() {
 async function postAction(kind, itemId, extra) {
   if (STATIC) {
     if (kind === "archive") staticHidden.add(itemId);
-    if (kind === "unarchive") staticHidden.delete(itemId);
+    if (kind === "unarchive" || kind === "undone") staticHidden.delete(itemId);
+    if (kind === "done") staticHidden.add(itemId);
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile") throw new Error("demo mode");
     if (kind === "send_prepare") {
@@ -430,6 +438,25 @@ async function relabel(item, bucket, name, btn) {
   } catch (e) {
     btn.disabled = false;
     toast("Move failed: " + e.message);
+  }
+}
+
+async function markDone(item, btn) {
+  btn.disabled = true;
+  try {
+    await postAction("done", item.id);
+    await load();
+    toast("Done: hidden until someone posts again.", "Undo", async () => {
+      try {
+        await postAction("undone", item.id);
+        await load();
+      } catch (e) {
+        toast("Undo failed: " + e.message);
+      }
+    });
+  } catch (e) {
+    btn.disabled = false;
+    toast("Done failed: " + e.message);
   }
 }
 
@@ -652,7 +679,7 @@ const SHORTCUTS = [
   ["j / k", "Next / previous thread"],
   ["o or Enter", "Open or close the thread"],
   ["u", "Close the thread"],
-  ["e", "Archive"],
+  ["e", "Archive (Gmail) or Done (Slack)"],
   ["r", "Reply (jump to the reply box)"],
   ["?", "Show or hide this list"],
   ["Esc", "Leave the reply box / close this list"],
@@ -733,9 +760,10 @@ function onKey(e) {
       break;
     case "e":
       if (li && cardItems.get(li)) {
+        const it = cardItems.get(li);
         const btn = li.querySelector(".actions .btn-archive") || el("button");
         move(1);
-        archive(cardItems.get(li), btn);
+        if (it.source === "slack") markDone(it, btn); else archive(it, btn);
       }
       break;
     case "r":
@@ -751,10 +779,59 @@ function onKey(e) {
   e.preventDefault();
 }
 
+// ---- Auto-sync: the server syncs on its own; the page notices a newer result and refreshes,
+// unless a thread is open or you are typing, in which case it offers a refresh instead.
+let lastSyncSeen = null;
+
+function busy() {
+  const a = document.activeElement;
+  const typing = a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT");
+  const open = document.querySelector('main .row[aria-expanded="true"]');
+  const panel = !document.getElementById("profilepanel").hidden;
+  return typing || open || panel;
+}
+
+function showSyncLine(s) {
+  const note = document.getElementById("syncnote");
+  if (!s.at) {
+    note.textContent = s.auto_sync_minutes ? "Auto-sync every " + s.auto_sync_minutes + " min" : "";
+    return;
+  }
+  const when = new Date(Date.parse(s.at)).toLocaleTimeString(undefined,
+    { hour: "numeric", minute: "2-digit" });
+  note.textContent = (s.ok === false ? "Sync failed " + when + ": " + s.summary : "Synced " + when) +
+    (s.auto_sync_minutes ? ", auto every " + s.auto_sync_minutes + " min" : "");
+}
+
+async function pollStatus() {
+  if (STATIC) return;
+  try {
+    const res = await fetch("/api/status", { cache: "no-store" });
+    if (!res.ok) return;
+    const s = await res.json();
+    const changed = lastSyncSeen !== null && s.at && s.at !== lastSyncSeen;
+    lastSyncSeen = s.at || "";
+    showSyncLine(s);
+    if (changed) {
+      if (!busy()) {
+        await load();
+      } else {
+        const note = document.getElementById("syncnote");
+        const r = el("button", "linkbtn", "New results: refresh");
+        r.type = "button";
+        r.addEventListener("click", () => load());
+        note.append(" ", r);
+      }
+    }
+  } catch (e) { /* the next poll will try again */ }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sync").addEventListener("click", syncNow);
   document.getElementById("profile").addEventListener("click", openProfile);
   buildHelp();
   document.addEventListener("keydown", onKey);
   load();
+  pollStatus();
+  setInterval(pollStatus, 60000);
 });

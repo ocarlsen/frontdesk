@@ -151,3 +151,16 @@ def relabel(store: Store, item_id: str, bucket: str) -> dict:
         raise ActionError("unknown thread (it may have been synced away)")
     store.set_label(item, bucket)
     return {"status": "done", "kind": "relabel", "bucket": bucket}
+
+
+def set_done(store: Store, item_id: str, done: bool) -> dict:
+    """Done: handled, so hide it in FrontDesk only (nothing changes in Gmail or Slack). It
+    comes back by itself when a new message arrives. Undo shows it again."""
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    if done:
+        store.hide(item_id, "done", item.updated_at)
+    else:
+        store.unhide(item_id)
+    return {"status": "done", "kind": "done" if done else "undone"}
