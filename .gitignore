@@ -9,3 +9,4 @@ build/
 dist/
 fixtures/private/
 labels.jsonl
+docs/site/site.css
