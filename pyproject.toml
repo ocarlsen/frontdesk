@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frontdesk"
+version = "0.1.0"
+description = "A local, model-agnostic personal inbox agent: ranks your mail and proposes one-tap replies."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Owen Carlsen" }]
+dependencies = [
+    "anthropic>=2.3.0",
+    "google-auth>=2.62.0",
+    "google-auth-oauthlib>=1.5.0",
+    # google.auth.transport.requests needs it at runtime
+    "requests>=2.34.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.2.0", "ruff"]
+
+[project.scripts]
+frontdesk = "frontdesk.__main__:run"
+
+[tool.setuptools.packages.find]
+include = ["frontdesk*"]
+
+[tool.setuptools.package-data]
+"frontdesk.web" = ["*.html", "*.js", "*.css"]
+"frontdesk" = ["demo_data/*.json", "demo_data/threads/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures embed long literal headers/bodies.
+"tests/**" = ["E501"]

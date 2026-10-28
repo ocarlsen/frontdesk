@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d4000b",
+ "historyId": "9100370",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d400b0",
+   "threadId": "19a2f0c3b1d4000b",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Ines Moreau has accepted this invitation. Design review Thursday 10:00 to 11:00 (Pacific) Room: Juniper / video link in the invite Invitatio",
+   "historyId": "9100015",
+   "internalDate": "1793016600000",
+   "sizeEstimate": 2892,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Ines Moreau <ines.moreau@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Accepted: Design review, Thu 10:00 to 11:00"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d400b0.15@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 166,
+       "data": "SW5lcyBNb3JlYXUgaGFzIGFjY2VwdGVkIHRoaXMgaW52aXRhdGlvbi4KCkRlc2lnbiByZXZpZXcKVGh1cnNkYXkgMTA6MDAgdG8gMTE6MDAgKFBhY2lmaWMpClJvb206IEp1bmlwZXIgLyB2aWRlbyBsaW5rIGluIHRoZSBpbnZpdGUKCkludml0YXRpb24gZnJvbSB0aGUgdGVhbSBjYWxlbmRhcg"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 414,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48cD48Yj5JbmVzIE1vcmVhdTwvYj4gaGFzIGFjY2VwdGVkIHRoaXMgaW52aXRhdGlvbi48L3A-PGRpdiBzdHlsZT0iYm9yZGVyLWxlZnQ6NHB4IHNvbGlkICMxYTczZTg7cGFkZGluZzo4cHggMTJweDtiYWNrZ3JvdW5kOiNmOGZhZmQiPjxwIHN0eWxlPSJtYXJnaW46MDtmb250LXdlaWdodDpib2xkIj5EZXNpZ24gcmV2aWV3PC9wPjxwIHN0eWxlPSJtYXJnaW46NHB4IDAgMCI-VGh1cnNkYXkgMTA6MDAgdG8gMTE6MDAgKFBhY2lmaWMpICZtaWRkb3Q7IFJvb206IEp1bmlwZXI8L3A-PC9kaXY-PC9kaXY-"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

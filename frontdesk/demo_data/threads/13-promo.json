@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d4000d",
+ "historyId": "9100444",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d400d0",
+   "threadId": "19a2f0c3b1d4000d",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PROMOTIONS"
+   ],
+   "snippet": "30% OFF EVERYTHING. 48 hours only. Use code TRAIL30 at checkout. Shop now: https://summitpine.example.com/sale",
+   "historyId": "9100017",
+   "internalDate": "1792999200000",
+   "sizeEstimate": 2960,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Summit & Pine Outfitters <deals@summitpine.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "48 hours only: 30% off everything"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d400d0.17@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 111,
+       "data": "MzAlIE9GRiBFVkVSWVRISU5HLiA0OCBob3VycyBvbmx5LiBVc2UgY29kZSBUUkFJTDMwIGF0IGNoZWNrb3V0LgoKU2hvcCBub3c6IGh0dHBzOi8vc3VtbWl0cGluZS5leGFtcGxlLmNvbS9zYWxl"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 566,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6R2VvcmdpYSxzZXJpZjttYXgtd2lkdGg6NTYwcHg7bWFyZ2luOjAgYXV0bzt0ZXh0LWFsaWduOmNlbnRlcjtiYWNrZ3JvdW5kOiMxZTNhMmY7Y29sb3I6I2YzZWZlNjtwYWRkaW5nOjMycHggMjBweDtib3JkZXItcmFkaXVzOjEwcHgiPjxwIHN0eWxlPSJsZXR0ZXItc3BhY2luZzozcHg7Zm9udC1zaXplOjEycHg7bWFyZ2luOjAiPlNVTU1JVCAmYW1wOyBQSU5FPC9wPjxoMSBzdHlsZT0iZm9udC1zaXplOjQwcHg7bWFyZ2luOjEycHggMCI-MzAlIG9mZiBldmVyeXRoaW5nPC9oMT48cCBzdHlsZT0ibWFyZ2luOjAgMCAyMHB4Ij40OCBob3VycyBvbmx5LiBDb2RlIDxiPlRSQUlMMzA8L2I-PC9wPjxhIGhyZWY9Imh0dHBzOi8vc3VtbWl0cGluZS5leGFtcGxlLmNvbS9zYWxlIiBzdHlsZT0iZGlzcGxheTppbmxpbmUtYmxvY2s7YmFja2dyb3VuZDojZThiMDRiO2NvbG9yOiMxZTNhMmY7cGFkZGluZzoxMnB4IDI4cHg7Ym9yZGVyLXJhZGl1czo2cHg7dGV4dC1kZWNvcmF0aW9uOm5vbmU7Zm9udC13ZWlnaHQ6Ym9sZCI-U2hvcCB0aGUgc2FsZTwvYT48L2Rpdj4"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

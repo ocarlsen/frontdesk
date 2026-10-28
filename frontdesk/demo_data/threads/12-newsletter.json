@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d4000c",
+ "historyId": "9100407",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d400c0",
+   "threadId": "19a2f0c3b1d4000c",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "THE WEEKLY DIFF #212 1. Backpressure is a product decision 2. Why your queue needs a dead-letter budget 3. A 300-line parser, explained Read",
+   "historyId": "9100016",
+   "internalDate": "1792984800000",
+   "sizeEstimate": 3240,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "The Weekly Diff <newsletter@weeklydiff.example.org>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "The Weekly Diff #212: queues, backpressure, and a tiny Rust parser"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d400c0.16@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 232,
+       "data": "VEhFIFdFRUtMWSBESUZGICMyMTIKCjEuIEJhY2twcmVzc3VyZSBpcyBhIHByb2R1Y3QgZGVjaXNpb24KMi4gV2h5IHlvdXIgcXVldWUgbmVlZHMgYSBkZWFkLWxldHRlciBidWRnZXQKMy4gQSAzMDAtbGluZSBwYXJzZXIsIGV4cGxhaW5lZAoKUmVhZCBvbmxpbmU6IGh0dHBzOi8vd2Vla2x5ZGlmZi5leGFtcGxlLm9yZy8yMTIKClVuc3Vic2NyaWJlOiBodHRwczovL3dlZWtseWRpZmYuZXhhbXBsZS5vcmcvdQ"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 843,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48aDEgc3R5bGU9ImZvbnQtc2l6ZToyMnB4O2JvcmRlci1ib3R0b206M3B4IHNvbGlkICMxZjIzMjg7cGFkZGluZy1ib3R0b206NnB4Ij5UaGUgV2Vla2x5IERpZmYgPHNwYW4gc3R5bGU9ImNvbG9yOiM4Yzk1OWYiPiMyMTI8L3NwYW4-PC9oMT48b2wgc3R5bGU9InBhZGRpbmctbGVmdDoyMHB4Ij48bGkgc3R5bGU9Im1hcmdpbjo4cHggMCI-PGEgaHJlZj0iaHR0cHM6Ly93ZWVrbHlkaWZmLmV4YW1wbGUub3JnLzIxMiMxIiBzdHlsZT0iY29sb3I6IzA5NjlkYSI-QmFja3ByZXNzdXJlIGlzIGEgcHJvZHVjdCBkZWNpc2lvbjwvYT48L2xpPjxsaSBzdHlsZT0ibWFyZ2luOjhweCAwIj48YSBocmVmPSJodHRwczovL3dlZWtseWRpZmYuZXhhbXBsZS5vcmcvMjEyIzIiIHN0eWxlPSJjb2xvcjojMDk2OWRhIj5XaHkgeW91ciBxdWV1ZSBuZWVkcyBhIGRlYWQtbGV0dGVyIGJ1ZGdldDwvYT48L2xpPjxsaSBzdHlsZT0ibWFyZ2luOjhweCAwIj48YSBocmVmPSJodHRwczovL3dlZWtseWRpZmYuZXhhbXBsZS5vcmcvMjEyIzMiIHN0eWxlPSJjb2xvcjojMDk2OWRhIj5BIDMwMC1saW5lIHBhcnNlciwgZXhwbGFpbmVkPC9hPjwvbGk-PC9vbD48cCBzdHlsZT0iZm9udC1zaXplOjEycHg7Y29sb3I6IzhjOTU5ZiI-PGEgaHJlZj0iaHR0cHM6Ly93ZWVrbHlkaWZmLmV4YW1wbGUub3JnL3UiIHN0eWxlPSJjb2xvcjojOGM5NTlmIj5VbnN1YnNjcmliZTwvYT48L3A-PC9kaXY-"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

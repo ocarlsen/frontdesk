@@ -1,0 +1,98 @@
+{
+ "id": "19a2f0c3b1d40002",
+ "historyId": "9100037",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40020",
+   "threadId": "19a2f0c3b1d40002",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PERSONAL",
+    "IMPORTANT"
+   ],
+   "snippet": "Alex, Finance needs our pick for the analytics migration by Friday end of day so they can start procurement. Option A: Quillfeather Data. Ch",
+   "historyId": "9100004",
+   "internalDate": "1793028900000",
+   "sizeEstimate": 3729,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Dana Whitfield <dana.whitfield@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Cc",
+      "value": "Ines Moreau <ines.moreau@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Decision needed: analytics vendor by Friday"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40020.4@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 385,
+       "data": "QWxleCwKCkZpbmFuY2UgbmVlZHMgb3VyIHBpY2sgZm9yIHRoZSBhbmFseXRpY3MgbWlncmF0aW9uIGJ5IEZyaWRheSBlbmQgb2YgZGF5IHNvIHRoZXkgY2FuIHN0YXJ0IHByb2N1cmVtZW50LgoKT3B0aW9uIEE6IFF1aWxsZmVhdGhlciBEYXRhLiBDaGVhcGVyLCA2LXdlZWsgbWlncmF0aW9uLCBubyBTU08gdW50aWwgUTIuCk9wdGlvbiBCOiBTdG9uZWJyaWRnZSBNZXRyaWNzLiBBYm91dCAyMCUgbW9yZSwgMy13ZWVrIG1pZ3JhdGlvbiwgU1NPIG9uIGRheSBvbmUuCgpZb3UndmUgYmVlbiBjbG9zZXN0IHRvIHRoZSBldmFsLCBzbyBJJ2xsIGdvIHdpdGggeW91ciByZWNvbW1lbmRhdGlvbi4gQSBzZW50ZW5jZSBvciB0d28gb24gd2h5IGlzIHBsZW50eS4KClRoYW5rcywKRGFuYQ"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 1396,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48cD5BbGV4LDwvcD48cD5GaW5hbmNlIG5lZWRzIG91ciBwaWNrIGZvciB0aGUgYW5hbHl0aWNzIG1pZ3JhdGlvbiBieSA8Yj5GcmlkYXkgZW5kIG9mIGRheTwvYj4gc28gdGhleSBjYW4gc3RhcnQgcHJvY3VyZW1lbnQuPC9wPjx0YWJsZSBzdHlsZT0iYm9yZGVyLWNvbGxhcHNlOmNvbGxhcHNlO3dpZHRoOjEwMCU7bWFyZ2luOjEycHggMCI-PHRyIHN0eWxlPSJiYWNrZ3JvdW5kOiNmNmY4ZmEiPjx0aCBzdHlsZT0idGV4dC1hbGlnbjpsZWZ0O3BhZGRpbmc6NnB4IDEwcHg7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlIj5PcHRpb248L3RoPjx0aCBzdHlsZT0idGV4dC1hbGlnbjpsZWZ0O3BhZGRpbmc6NnB4IDEwcHg7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlIj5Db3N0PC90aD48dGggc3R5bGU9InRleHQtYWxpZ246bGVmdDtwYWRkaW5nOjZweCAxMHB4O2JvcmRlcjoxcHggc29saWQgI2QwZDdkZSI-TWlncmF0aW9uPC90aD48dGggc3R5bGU9InRleHQtYWxpZ246bGVmdDtwYWRkaW5nOjZweCAxMHB4O2JvcmRlcjoxcHggc29saWQgI2QwZDdkZSI-U1NPPC90aD48L3RyPjx0cj48dGQgc3R5bGU9InBhZGRpbmc6NnB4IDEwcHg7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlIj5BOiBRdWlsbGZlYXRoZXIgRGF0YTwvdGQ-PHRkIHN0eWxlPSJwYWRkaW5nOjZweCAxMHB4O2JvcmRlcjoxcHggc29saWQgI2QwZDdkZSI-TG93ZXI8L3RkPjx0ZCBzdHlsZT0icGFkZGluZzo2cHggMTBweDtib3JkZXI6MXB4IHNvbGlkICNkMGQ3ZGUiPjYgd2Vla3M8L3RkPjx0ZCBzdHlsZT0icGFkZGluZzo2cHggMTBweDtib3JkZXI6MXB4IHNvbGlkICNkMGQ3ZGUiPlEyPC90ZD48L3RyPjx0cj48dGQgc3R5bGU9InBhZGRpbmc6NnB4IDEwcHg7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlIj5COiBTdG9uZWJyaWRnZSBNZXRyaWNzPC90ZD48dGQgc3R5bGU9InBhZGRpbmc6NnB4IDEwcHg7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlIj5-MjAlIG1vcmU8L3RkPjx0ZCBzdHlsZT0icGFkZGluZzo2cHggMTBweDtib3JkZXI6MXB4IHNvbGlkICNkMGQ3ZGUiPjMgd2Vla3M8L3RkPjx0ZCBzdHlsZT0icGFkZGluZzo2cHggMTBweDtib3JkZXI6MXB4IHNvbGlkICNkMGQ3ZGUiPkRheSBvbmU8L3RkPjwvdHI-PC90YWJsZT48cD5Zb3UndmUgYmVlbiBjbG9zZXN0IHRvIHRoZSBldmFsLCBzbyBJJ2xsIGdvIHdpdGggeW91ciByZWNvbW1lbmRhdGlvbi4gQSBzZW50ZW5jZSBvciB0d28gb24gd2h5IGlzIHBsZW50eS48L3A-PHA-VGhhbmtzLDxicj5EYW5hPC9wPjwvZGl2Pg"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

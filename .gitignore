@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 .env
 *.db
+*.egg-info/
+build/
+dist/
+fixtures/private/
+labels.jsonl

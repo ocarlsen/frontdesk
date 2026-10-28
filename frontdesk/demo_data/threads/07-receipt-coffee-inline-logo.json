@@ -1,0 +1,135 @@
+{
+ "id": "19a2f0c3b1d40007",
+ "historyId": "9100222",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40070",
+   "threadId": "19a2f0c3b1d40007",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Thanks for your order, Alex! Order #CL-20417 2 x Highland Washed, 12 oz ... $34.00 Shipping ... $4.50 Total ... $38.50 Charged to card endin",
+   "historyId": "9100011",
+   "internalDate": "1792964400000",
+   "sizeEstimate": 3657,
+   "payload": {
+    "mimeType": "multipart/related",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Copperleaf Coffee Roasters <orders@copperleaf.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Your Copperleaf order #CL-20417"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40070.11@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/related; boundary=\"000000000000d4e5f6\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "mimeType": "multipart/alternative",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+       }
+      ],
+      "body": {
+       "size": 0
+      },
+      "parts": [
+       {
+        "partId": "0.0",
+        "mimeType": "text/plain",
+        "filename": "",
+        "headers": [
+         {
+          "name": "Content-Type",
+          "value": "text/plain; charset=\"UTF-8\""
+         },
+         {
+          "name": "Content-Transfer-Encoding",
+          "value": "quoted-printable"
+         }
+        ],
+        "body": {
+         "size": 178,
+         "data": "VGhhbmtzIGZvciB5b3VyIG9yZGVyLCBBbGV4IQoKT3JkZXIgI0NMLTIwNDE3CgoyIHggSGlnaGxhbmQgV2FzaGVkLCAxMiBveiAuLi4gJDM0LjAwClNoaXBwaW5nIC4uLiAkNC41MApUb3RhbCAuLi4gJDM4LjUwCgpDaGFyZ2VkIHRvIGNhcmQgZW5kaW5nIDQyNDIuCgpDb3BwZXJsZWFmIENvZmZlZSBSb2FzdGVycw"
+        }
+       },
+       {
+        "partId": "0.1",
+        "mimeType": "text/html",
+        "filename": "",
+        "headers": [
+         {
+          "name": "Content-Type",
+          "value": "text/html; charset=\"UTF-8\""
+         },
+         {
+          "name": "Content-Transfer-Encoding",
+          "value": "quoted-printable"
+         }
+        ],
+        "body": {
+         "size": 1011,
+         "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48ZGl2IHN0eWxlPSJ0ZXh0LWFsaWduOmNlbnRlcjtwYWRkaW5nOjE2cHggMCI-PGltZyBzcmM9ImNpZDpsb2dvQGNvcHBlcmxlYWYuZXhhbXBsZS5jb20iIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgYWx0PSJDb3BwZXJsZWFmIiBzdHlsZT0iYm9yZGVyLXJhZGl1czo4cHgiPjwvZGl2PjxoMiBzdHlsZT0iZm9udC1zaXplOjE4cHg7bWFyZ2luOjAgMCA4cHgiPlRoYW5rcyBmb3IgeW91ciBvcmRlciwgQWxleCE8L2gyPjxwIHN0eWxlPSJjb2xvcjojNTc2MDZhO21hcmdpbjowIDAgMTZweCI-T3JkZXIgI0NMLTIwNDE3PC9wPjx0YWJsZSBzdHlsZT0id2lkdGg6MTAwJTtib3JkZXItY29sbGFwc2U6Y29sbGFwc2UiPjx0cj48dGQgc3R5bGU9InBhZGRpbmc6NnB4IDA7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgI2VlZSI-MiAmdGltZXM7IEhpZ2hsYW5kIFdhc2hlZCwgMTIgb3o8L3RkPjx0ZCBzdHlsZT0idGV4dC1hbGlnbjpyaWdodDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZWVlIj4kMzQuMDA8L3RkPjwvdHI-PHRyPjx0ZCBzdHlsZT0icGFkZGluZzo2cHggMDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZWVlIj5TaGlwcGluZzwvdGQ-PHRkIHN0eWxlPSJ0ZXh0LWFsaWduOnJpZ2h0O2JvcmRlci1ib3R0b206MXB4IHNvbGlkICNlZWUiPiQ0LjUwPC90ZD48L3RyPjx0cj48dGQgc3R5bGU9InBhZGRpbmc6OHB4IDA7Zm9udC13ZWlnaHQ6Ym9sZCI-VG90YWw8L3RkPjx0ZCBzdHlsZT0idGV4dC1hbGlnbjpyaWdodDtmb250LXdlaWdodDpib2xkIj4kMzguNTA8L3RkPjwvdHI-PC90YWJsZT48cCBzdHlsZT0iY29sb3I6IzU3NjA2YTtmb250LXNpemU6MTJweDttYXJnaW4tdG9wOjE2cHgiPkNoYXJnZWQgdG8gY2FyZCBlbmRpbmcgNDI0Mi48L3A-PC9kaXY-"
+        }
+       }
+      ],
+      "partId": "0"
+     },
+     {
+      "partId": "1",
+      "mimeType": "image/png",
+      "filename": "logo.png",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "image/png"
+       },
+       {
+        "name": "Content-ID",
+        "value": "<logo@copperleaf.example.com>"
+       },
+       {
+        "name": "Content-Disposition",
+        "value": "inline; filename=\"logo.png\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "base64"
+       }
+      ],
+      "body": {
+       "size": 107,
+       "data": "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAMklEQVR42mPYUWz8n5aYYdSCEWxBtp0aSXiEW_Dl8QmseNSCUQtGMxqFFowW16MWEI0B-bRCXC1GlUIAAAAASUVORK5CYII"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

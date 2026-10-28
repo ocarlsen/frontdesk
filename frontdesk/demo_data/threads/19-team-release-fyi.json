@@ -1,0 +1,61 @@
+{
+ "id": "19a2f0c3b1d40013",
+ "historyId": "9100666",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40130",
+   "threadId": "19a2f0c3b1d40013",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hi all, v2.4 shipped to production this morning. Highlights: faster backfills (about 2x on the big tables), retry budget per connector, and ",
+   "historyId": "9100024",
+   "internalDate": "1793008800000",
+   "sizeEstimate": 2452,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Ines Moreau <ines.moreau@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "platform-team@example.com"
+     },
+     {
+      "name": "Cc",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "v2.4 is out"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40130.24@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 241,
+     "data": "SGkgYWxsLAoKdjIuNCBzaGlwcGVkIHRvIHByb2R1Y3Rpb24gdGhpcyBtb3JuaW5nLiBIaWdobGlnaHRzOiBmYXN0ZXIgYmFja2ZpbGxzIChhYm91dCAyeCBvbiB0aGUgYmlnIHRhYmxlcyksIHJldHJ5IGJ1ZGdldCBwZXIgY29ubmVjdG9yLCBhbmQgdGhlIG5ldyBhdWRpdCBsb2cgdmlldy4KCk5vIGFjdGlvbiBuZWVkZWQ7IGZ1bGwgbm90ZXMgYXJlIGluIHRoZSByZWxlYXNlIGRvYy4gVGhhbmtzIGV2ZXJ5b25lIQoKSW5lcw"
+    }
+   }
+  }
+ ]
+}

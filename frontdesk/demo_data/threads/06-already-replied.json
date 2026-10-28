@@ -1,0 +1,107 @@
+{
+ "id": "19a2f0c3b1d40006",
+ "historyId": "9100185",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40060",
+   "threadId": "19a2f0c3b1d40006",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hey Alex, could you share the slides from Tuesday's architecture review? Want to reuse the diagram. Ben",
+   "historyId": "9100009",
+   "internalDate": "1792992000000",
+   "sizeEstimate": 2343,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Ben Yamamoto <ben.yamamoto@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Slides from Tuesday's review?"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40060.9@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 104,
+     "data": "SGV5IEFsZXgsIGNvdWxkIHlvdSBzaGFyZSB0aGUgc2xpZGVzIGZyb20gVHVlc2RheSdzIGFyY2hpdGVjdHVyZSByZXZpZXc_IFdhbnQgdG8gcmV1c2UgdGhlIGRpYWdyYW0uCgpCZW4"
+    }
+   }
+  },
+  {
+   "id": "19a2f0c3b1d40061",
+   "threadId": "19a2f0c3b1d40006",
+   "labelIds": [
+    "SENT"
+   ],
+   "snippet": "Sure, they're in the team drive under Reviews > October. Diagram source is on slide 4. Alex On Wed, Ben Yamamoto <ben.yamamoto@example.com> ",
+   "historyId": "9100010",
+   "internalDate": "1792994400000",
+   "sizeEstimate": 2425,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Ben Yamamoto <ben.yamamoto@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: Slides from Tuesday's review?"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40061.10@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 223,
+     "data": "U3VyZSwgdGhleSdyZSBpbiB0aGUgdGVhbSBkcml2ZSB1bmRlciBSZXZpZXdzID4gT2N0b2Jlci4gRGlhZ3JhbSBzb3VyY2UgaXMgb24gc2xpZGUgNC4KCkFsZXgKCk9uIFdlZCwgQmVuIFlhbWFtb3RvIDxiZW4ueWFtYW1vdG9AZXhhbXBsZS5jb20-IHdyb3RlOgo-IEhleSBBbGV4LCBjb3VsZCB5b3Ugc2hhcmUgdGhlIHNsaWRlcyBmcm9tIFR1ZXNkYXkncyBhcmNoaXRlY3R1cmUgcmV2aWV3Pw"
+    }
+   }
+  }
+ ]
+}

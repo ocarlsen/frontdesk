@@ -1,0 +1,58 @@
+{
+ "id": "19a2f0c3b1d40003",
+ "historyId": "9100074",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40030",
+   "threadId": "19a2f0c3b1d40003",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hi Alex, I'm a recruiter working with Tallowmere Systems. They're hiring a Staff Engineer for their platform team (remote-friendly, US time ",
+   "historyId": "9100005",
+   "internalDate": "1793012400000",
+   "sizeEstimate": 2496,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Sam Ferreira <sam.ferreira@talent.example.org>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Staff Engineer, platform team at Tallowmere Systems"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40030.5@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 311,
+     "data": "SGkgQWxleCwKCkknbSBhIHJlY3J1aXRlciB3b3JraW5nIHdpdGggVGFsbG93bWVyZSBTeXN0ZW1zLiBUaGV5J3JlIGhpcmluZyBhIFN0YWZmIEVuZ2luZWVyIGZvciB0aGVpciBwbGF0Zm9ybSB0ZWFtIChyZW1vdGUtZnJpZW5kbHksIFVTIHRpbWUgem9uZXMpIGFuZCB5b3VyIGJhY2tncm91bmQgaW4gZGF0YSBwaXBlbGluZXMgbG9va3MgbGlrZSBhIHN0cm9uZyBtYXRjaC4KCldvdWxkIHlvdSBiZSBvcGVuIHRvIGEgMjAtbWludXRlIGludHJvIGNhbGwgdGhpcyB3ZWVrIG9yIG5leHQ_CgpCZXN0LApTYW0gRmVycmVpcmEKVGFsZW50IFBhcnRuZXI"
+    }
+   }
+  }
+ ]
+}

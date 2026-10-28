@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d40009",
+ "historyId": "9100296",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40090",
+   "threadId": "19a2f0c3b1d40009",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Your package from Larkspur Home Goods is out for delivery and should arrive by 8pm today. Tracking: PP-7731-0042-9958 No signature required.",
+   "historyId": "9100013",
+   "internalDate": "1793022000000",
+   "sizeEstimate": 2908,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Parcelpoint <tracking@parcelpoint.example.net>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Out for delivery: your package arrives today"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40090.13@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 142,
+       "data": "WW91ciBwYWNrYWdlIGZyb20gTGFya3NwdXIgSG9tZSBHb29kcyBpcyBvdXQgZm9yIGRlbGl2ZXJ5IGFuZCBzaG91bGQgYXJyaXZlIGJ5IDhwbSB0b2RheS4KClRyYWNraW5nOiBQUC03NzMxLTAwNDItOTk1OAoKTm8gc2lnbmF0dXJlIHJlcXVpcmVkLg"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 455,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48ZGl2IHN0eWxlPSJiYWNrZ3JvdW5kOiNlZWY2ZmY7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxNnB4Ij48cCBzdHlsZT0ibWFyZ2luOjA7Zm9udC1zaXplOjE2cHgiPjxiPk91dCBmb3IgZGVsaXZlcnk8L2I-PC9wPjxwIHN0eWxlPSJtYXJnaW46NnB4IDAgMCI-WW91ciBwYWNrYWdlIGZyb20gTGFya3NwdXIgSG9tZSBHb29kcyBzaG91bGQgYXJyaXZlIGJ5IDxiPjhwbSB0b2RheTwvYj4uPC9wPjwvZGl2PjxwIHN0eWxlPSJjb2xvcjojNTc2MDZhIj5UcmFja2luZzogUFAtNzczMS0wMDQyLTk5NTggJm1pZGRvdDsgTm8gc2lnbmF0dXJlIHJlcXVpcmVkLjwvcD48L2Rpdj4"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}
