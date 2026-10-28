@@ -150,7 +150,7 @@ function buildDetail(item, triage) {
   });
   reply.append(label, ta, hint);
   actions.append(save, copy);
-  const arch = el("button", "btn", "Archive");
+  const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
   actions.append(arch);
@@ -168,8 +168,12 @@ function buildDetail(item, triage) {
   return d;
 }
 
+const cardItems = new WeakMap();   // li -> item, for keyboard actions
+
 function buildCard(item, triage) {
   const li = el("li", "card");
+  li.dataset.id = item.id;
+  cardItems.set(li, item);
   const row = el("button", "row");
   row.type = "button";
   row.setAttribute("aria-expanded", "false");
@@ -390,6 +394,8 @@ async function load() {
       });
     }
     render(rows);
+    const again = visibleCards().find(li => li.dataset.id === currentId);
+    if (again) again.classList.add("current");
   } catch (e) {
     status.textContent = "Could not load items: " + e.message;
   }
@@ -422,7 +428,113 @@ async function syncNow() {
   }
 }
 
+// ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open, u close, e archive,
+// r reply, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
+const SHORTCUTS = [
+  ["j / k", "Next / previous thread"],
+  ["o or Enter", "Open or close the thread"],
+  ["u", "Close the thread"],
+  ["e", "Archive"],
+  ["r", "Reply (jump to the reply box)"],
+  ["?", "Show or hide this list"],
+  ["Esc", "Leave the reply box / close this list"],
+];
+let currentId = null;
+
+function visibleCards() {
+  return [...document.querySelectorAll("main .list > li.card")].filter(li => li.offsetParent !== null);
+}
+
+function setCurrent(li) {
+  for (const c of document.querySelectorAll("li.card.current")) c.classList.remove("current");
+  if (!li) { currentId = null; return; }
+  li.classList.add("current");
+  currentId = li.dataset.id;
+  li.scrollIntoView({ block: "nearest" });
+}
+
+function currentCard() {
+  const cards = visibleCards();
+  return cards.find(li => li.dataset.id === currentId) || null;
+}
+
+function move(step) {
+  const cards = visibleCards();
+  if (!cards.length) return;
+  const i = cards.findIndex(li => li.dataset.id === currentId);
+  const next = i < 0 ? (step > 0 ? 0 : cards.length - 1)
+    : Math.max(0, Math.min(cards.length - 1, i + step));
+  setCurrent(cards[next]);
+}
+
+function isOpen(li) {
+  return li.querySelector(":scope > .row").getAttribute("aria-expanded") === "true";
+}
+
+function toggleHelp(force) {
+  const h = document.getElementById("help");
+  h.hidden = force === undefined ? !h.hidden : !force;
+}
+
+function buildHelp() {
+  const h = document.getElementById("help");
+  const box = el("div", "helpbox");
+  box.append(el("h2", null, "Keyboard shortcuts"));
+  const dl = el("dl");
+  for (const [k, v] of SHORTCUTS) dl.append(el("dt", null, k), el("dd", null, v));
+  box.append(dl);
+  h.replaceChildren(box);
+  h.addEventListener("click", e => { if (e.target === h) toggleHelp(false); });
+}
+
+function onKey(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  const typing = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" ||
+                       t.tagName === "SELECT" || t.isContentEditable);
+  if (e.key === "Escape") {
+    if (typing) t.blur();
+    toggleHelp(false);
+    return;
+  }
+  if (typing) return;
+  const li = currentCard();
+  switch (e.key) {
+    case "j": move(1); break;
+    case "k": move(-1); break;
+    case "o":
+      if (li) li.querySelector(":scope > .row").click();
+      break;
+    case "Enter":
+      if (li && !(t && t.tagName === "BUTTON")) li.querySelector(":scope > .row").click();
+      else return;   // a focused button handles Enter itself
+      break;
+    case "u":
+      if (li && isOpen(li)) li.querySelector(":scope > .row").click();
+      break;
+    case "e":
+      if (li && cardItems.get(li)) {
+        const btn = li.querySelector(".actions .btn-archive") || el("button");
+        move(1);
+        archive(cardItems.get(li), btn);
+      }
+      break;
+    case "r":
+      if (li) {
+        if (!isOpen(li)) li.querySelector(":scope > .row").click();
+        const ta = li.querySelector("textarea");
+        if (ta) { ta.focus(); ta.scrollIntoView({ block: "center" }); }
+      }
+      break;
+    case "?": toggleHelp(); break;
+    default: return;
+  }
+  e.preventDefault();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sync").addEventListener("click", syncNow);
+  buildHelp();
+  document.addEventListener("keydown", onKey);
   load();
 });

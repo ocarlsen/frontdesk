@@ -258,5 +258,5 @@ def test_app_js_wires_the_detail_panels():
     """Guards against an edit silently dropping a panel from the thread view."""
     js = (Path(server.__file__).parent / "app.js").read_text()
     for call in ("d.append(whyPanel(triage))", "saveDraft(item, ta, save)",
-                 "archive(item, arch)"):
+                 "archive(item, arch)", 'document.addEventListener("keydown", onKey)'):
         assert call in js, call
