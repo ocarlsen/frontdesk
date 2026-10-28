@@ -38,6 +38,9 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--model", help="override the configured model for this run")
     sb = sub.add_parser("scoreboard", help="compare eval runs and apply the pick rule")
     sb.add_argument("--dir", default="evals")
+    ex = sub.add_parser("export-demo", help="write the demo inbox as static files for hosting")
+    ex.add_argument("out", help="output directory (replaced)")
+    ex.add_argument("--cname", help="custom domain for GitHub Pages, e.g. frontdesk.example.com")
     d = sub.add_parser("demo", help="serve a synthetic inbox: no Google account, key or network")
     d.add_argument("--port", type=int, default=8766)
     args = p.parse_args(argv)
@@ -46,6 +49,13 @@ def main(argv: list[str] | None = None) -> int:
         return demo_main(args.port)
     if args.cmd == "scoreboard":
         return scoreboard_main(args.dir)
+    if args.cmd == "export-demo":
+        from pathlib import Path
+
+        from .export import export_demo
+        n = export_demo(Path(args.out), args.cname)
+        print(f"exported {n} synthetic threads to {args.out}")
+        return 0
 
     config.ensure_home()
     s = config.settings()

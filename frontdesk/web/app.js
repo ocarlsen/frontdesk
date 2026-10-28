@@ -10,6 +10,21 @@ const SECTIONS = [
   { key: "untriaged", title: "Not triaged yet", collapsed: false },
 ];
 const GMAIL_PREFIX = "https://mail.google.com/";
+// Static mode: the exported public demo (frontdesk export-demo). No server: the list and each
+// message's HTML are files, and actions only change this tab's view. Timestamps are shifted by
+// the time since export, so "10m ago" stays "10m ago" whenever someone opens it.
+const STATIC = document.documentElement.dataset.static === "1";
+const EXPORTED = Date.parse(document.documentElement.dataset.exported || "");
+const staticHidden = new Set();
+
+function staticFile(itemId) {
+  return itemId.replace(/[^A-Za-z0-9]/g, "-");
+}
+
+function shiftIso(iso, ms) {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? iso : new Date(t + ms).toISOString();
+}
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -49,7 +64,8 @@ function messageFrame(itemId, index) {
   f.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
   f.setAttribute("referrerpolicy", "no-referrer");
   f.title = "Message";
-  f.src = "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index;
+  f.src = STATIC ? "msg/" + staticFile(itemId) + "-" + index + ".html"
+    : "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index;
   f.addEventListener("load", () => {
     const doc = f.contentDocument;
     if (doc && doc.documentElement) f.style.height = (doc.documentElement.scrollHeight + 4) + "px";
@@ -200,6 +216,12 @@ function clickKey() {
 }
 
 async function postAction(kind, itemId, extra) {
+  if (STATIC) {
+    if (kind === "archive") staticHidden.add(itemId);
+    if (kind === "unarchive") staticHidden.delete(itemId);
+    if (kind === "draft") return { status: "done", demo: true, note: "Demo: nothing was saved to Gmail." };
+    return { status: "done" };
+  }
   const res = await fetch("/api/action", {
     method: "POST",
     headers: { "X-FrontDesk": "action", "Content-Type": "application/json" },
@@ -355,9 +377,19 @@ function render(rows) {
 async function load() {
   const status = document.getElementById("status");
   try {
-    const res = await fetch("/api/items", { cache: "no-store" });
+    const res = await fetch(STATIC ? "api/items.json" : "/api/items", { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    render(await res.json());
+    let rows = await res.json();
+    if (STATIC) {
+      const delta = Number.isNaN(EXPORTED) ? 0 : Date.now() - EXPORTED;
+      rows = rows.filter(r => !staticHidden.has(r.item.id)).map(r => {
+        r.item.updated_at = shiftIso(r.item.updated_at, delta);
+        for (const m of r.item.messages) m.sent_at = shiftIso(m.sent_at, delta);
+        if (r.triage) r.triage.triaged_at = shiftIso(r.triage.triaged_at, delta);
+        return r;
+      });
+    }
+    render(rows);
   } catch (e) {
     status.textContent = "Could not load items: " + e.message;
   }
@@ -366,6 +398,10 @@ async function load() {
 async function syncNow() {
   const btn = document.getElementById("sync");
   const note = document.getElementById("syncnote");
+  if (STATIC) {
+    note.textContent = "Demo: sync is off (synthetic inbox).";
+    return;
+  }
   btn.disabled = true;
   btn.textContent = "Syncing...";
   note.textContent = "";
