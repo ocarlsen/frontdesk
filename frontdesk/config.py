@@ -10,6 +10,7 @@ DB_PATH = HOME / "frontdesk.db"
 SETTINGS_PATH = HOME / "settings.json"
 GMAIL_CLIENT_SECRET = HOME / "client_secret.json"
 GMAIL_TOKEN = HOME / "gmail_token.json"
+GMAIL_ACTIONS_TOKEN = HOME / "gmail_actions_token.json"   # gmail.modify; only actions load it
 
 DEFAULTS = {
     "provider": "anthropic",

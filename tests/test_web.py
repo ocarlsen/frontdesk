@@ -214,3 +214,41 @@ def test_token_gate_and_meta_refresh_strip(tmp_path):
         assert code == 200 and b"http-equiv" not in body and b"<p>hi</p>" in body
     finally:
         httpd.shutdown()
+
+
+def test_action_route_guards_and_demo_archive(tmp_path):
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    from frontdesk.items import Item, Message
+    from frontdesk.web.server import make_server
+    store = Store(tmp_path / "act.db")
+    store.upsert_item(Item(id="gmail:a1", source="gmail", account="o@example.com", subject="s",
+                           participants=[], updated_at="2026-10-28T16:00:00Z",
+                           messages=[Message("a@example.com", "2026-10-28T16:00:00Z", "t")]))
+    httpd = make_server(store, "127.0.0.1", 0, settings={"demo": True})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
+    def post(body, headers):
+        req = urllib.request.Request(base + "/api/action", data=body, method="POST",
+                                     headers=headers)
+        try:
+            r = urllib.request.urlopen(req)
+            return r.status, _json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, None
+    ok = {"X-FrontDesk": "action", "Content-Type": "application/json"}
+    good = _json.dumps({"kind": "archive", "item_id": "gmail:a1", "key": "k" * 16}).encode()
+    try:
+        assert post(good, {"Content-Type": "application/json"})[0] == 403        # no header
+        assert post(good, {**ok, "X-FrontDesk": "sync"})[0] == 403             # wrong route tag
+        assert post(good, {"X-FrontDesk": "action"})[0] == 400                 # not JSON
+        assert post(b"x" * 5000, ok)[0] == 400                                  # too large
+        assert post(_json.dumps({"kind": "delete"}).encode(), ok)[0] == 400     # unknown kind
+        code, out = post(good, ok)
+        assert code == 200 and out["status"] == "done"
+        assert store.ranked() == []
+    finally:
+        httpd.shutdown()

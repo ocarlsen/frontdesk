@@ -37,12 +37,19 @@ class GmailClient:
         self.timeout = timeout
 
     def _get(self, endpoint: str, params: dict | None = None) -> dict:
+        return self._request("GET", endpoint, params=params)
+
+    def _request(self, method: str, endpoint: str, params: dict | None = None,
+                 body: dict | None = None, retry: bool = True) -> dict:
+        """retry=False for calls that are not safe to repeat (creating a draft, sending): a
+        timeout there may have succeeded, so the caller must reconcile, not resend."""
         url = f"{BASE}/{endpoint}"
         for attempt in range(self.retries + 1):
-            resp = self.session.get(url, params=params, timeout=self.timeout)
+            resp = self.session.request(method, url, params=params, json=body,
+                                        timeout=self.timeout)
             if resp.status_code == 200:
                 return resp.json()
-            if resp.status_code in RETRY_STATUSES and attempt < self.retries:
+            if retry and resp.status_code in RETRY_STATUSES and attempt < self.retries:
                 retry_after = resp.headers.get("Retry-After", "")
                 delay = float(retry_after) if retry_after.isdigit() else self.backoff * 2 ** attempt
                 time.sleep(delay)
@@ -69,6 +76,11 @@ class GmailClient:
 
     def get_thread(self, thread_id: str) -> dict:
         return self._get(f"threads/{thread_id}", {"format": "full"})
+
+    def modify_thread(self, thread_id: str, add: list[str] = (), remove: list[str] = ()) -> dict:
+        """Label changes are idempotent (removing INBOX twice is a no-op), so retry is safe."""
+        return self._request("POST", f"threads/{thread_id}/modify",
+                             body={"addLabelIds": list(add), "removeLabelIds": list(remove)})
 
     def get_attachment(self, message_id: str, attachment_id: str) -> str:
         """Base64url data of one attachment (used for inline cid: images)."""

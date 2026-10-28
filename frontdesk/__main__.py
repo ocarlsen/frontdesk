@@ -12,6 +12,8 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="frontdesk")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("sync", help="pull recent Gmail threads (read-only)")
+    sub.add_parser("authorize-actions",
+                   help="grant FrontDesk a SEPARATE token that can archive (gmail.modify)")
     t = sub.add_parser("triage", help="rank new or changed threads with the model")
     t.add_argument("--limit", type=int, help="triage at most N threads")
     sub.add_parser("serve", help="serve the ranked page")
@@ -37,7 +39,12 @@ def main(argv: list[str] | None = None) -> int:
     s = config.settings()
     store = Store()
 
-    if args.cmd == "sync":
+    if args.cmd == "authorize-actions":
+        from .gmail.auth import action_credentials
+        from .gmail.client import GmailClient
+        who = GmailClient(action_credentials(interactive=True)).profile_email()
+        print(f"actions enabled for {who} (token: {config.GMAIL_ACTIONS_TOKEN})")
+    elif args.cmd == "sync":
         from .gmail.sync import sync
         r = sync(store, s)
         print(f"synced {r.synced} threads, removed {r.removed}")

@@ -127,6 +127,10 @@ function buildDetail(item, triage) {
     reply.append(el("p", "note", triage ? "No reply suggested." : "Not triaged yet."));
   }
   if (triage) d.append(whyPanel(triage));
+  const arch = el("button", "btn", "Archive");
+  arch.type = "button";
+  arch.addEventListener("click", () => archive(item, arch));
+  actions.append(arch);
   const url = safeGmailUrl(item.url);
   if (url) {
     const a = el("a", "btn", "Open in Gmail");
@@ -177,6 +181,60 @@ function buildCard(item, triage) {
   });
   li.append(row);
   return li;
+}
+
+function clickKey() {
+  // One key per click, so the server can tell a double-click from a deliberate second action.
+  // getRandomValues works on plain-http pages, where crypto.randomUUID does not.
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+}
+
+async function postAction(kind, itemId) {
+  const res = await fetch("/api/action", {
+    method: "POST",
+    headers: { "X-FrontDesk": "action", "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, item_id: itemId, key: clickKey() }),
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || "HTTP " + res.status);
+  return out;
+}
+
+let toastTimer = null;
+function toast(text, undoLabel, onUndo) {
+  const t = document.getElementById("toast");
+  t.replaceChildren(el("span", null, text));
+  if (onUndo) {
+    const u = el("button", "linkbtn", undoLabel);
+    u.type = "button";
+    u.addEventListener("click", () => { t.hidden = true; onUndo(); });
+    t.append(u);
+  }
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 10000);
+}
+
+async function archive(item, btn) {
+  btn.disabled = true;
+  try {
+    await postAction("archive", item.id);
+    await load();
+    toast("Archived: " + (item.subject || "(no subject)"), "Undo", async () => {
+      try {
+        await postAction("unarchive", item.id);
+        await load();
+        toast("Moved back to the inbox.");
+      } catch (e) {
+        toast("Undo failed: " + e.message);
+      }
+    });
+  } catch (e) {
+    btn.disabled = false;
+    toast("Archive failed: " + e.message);
+  }
 }
 
 function whyPanel(t) {

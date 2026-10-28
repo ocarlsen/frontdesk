@@ -54,6 +54,11 @@ CREATE TABLE IF NOT EXISTS triage_failures (
     last_error TEXT NOT NULL,
     last_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS hidden (
+    item_id TEXT PRIMARY KEY,    -- archived from FrontDesk; the next sync prunes it for good
+    reason TEXT NOT NULL,
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     idem_key TEXT UNIQUE NOT NULL,
@@ -130,7 +135,8 @@ class Store:
         with self.tx() as db:
             for item_id in stale:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
-                                   ("message_html", "item_id"), ("items", "id")):
+                                   ("message_html", "item_id"), ("hidden", "item_id"),
+                                   ("items", "id")):
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
 
@@ -188,6 +194,34 @@ class Store:
                        (item.id, item.updated_at, prompt_version, kind, attempts,
                         error[:300], now()))
 
+    # ---- actions: written BEFORE the side effect, so a crash or a double-click leaves a record
+    def action(self, idem_key: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM actions WHERE idem_key=?", (idem_key,)).fetchone()
+
+    def begin_action(self, idem_key: str, item_id: str, kind: str, payload: dict) -> int:
+        """Insert a pending action; the UNIQUE idem_key makes a concurrent duplicate fail here."""
+        with self.tx() as db:
+            cur = db.execute("INSERT INTO actions (idem_key, item_id, kind, payload, status, "
+                             "created_at) VALUES (?,?,?,?,?,?)",
+                             (idem_key, item_id, kind, json.dumps(payload), "pending", now()))
+            return cur.lastrowid
+
+    def finish_action(self, action_id: int, status: str) -> None:
+        with self.tx() as db:
+            db.execute("UPDATE actions SET status=? WHERE id=?", (status, action_id))
+
+    def hide(self, item_id: str, reason: str) -> None:
+        with self.tx() as db:
+            db.execute("INSERT OR REPLACE INTO hidden VALUES (?,?,?)", (item_id, reason, now()))
+
+    def is_hidden(self, item_id: str) -> bool:
+        return self.db.execute("SELECT 1 FROM hidden WHERE item_id=?",
+                               (item_id,)).fetchone() is not None
+
+    def unhide(self, item_id: str) -> None:
+        with self.tx() as db:
+            db.execute("DELETE FROM hidden WHERE item_id=?", (item_id,))
+
     def failure_count(self) -> int:
         return self.db.execute("SELECT COUNT(*) FROM triage_failures").fetchone()[0]
 
@@ -196,6 +230,7 @@ class Store:
         within a bucket by urgency then recency."""
         rows = self.db.execute(
             "SELECT i.data, t.* FROM items i LEFT JOIN triage t ON t.item_id = i.id "
+            "WHERE i.id NOT IN (SELECT item_id FROM hidden) "
             "ORDER BY CASE t.bucket WHEN 'needs_you' THEN 0 WHEN 'fyi' THEN 1 "
             "WHEN 'ignore' THEN 2 ELSE 3 END, t.urgency DESC, i.updated_at DESC"
         ).fetchall()

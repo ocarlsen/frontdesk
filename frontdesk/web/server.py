@@ -1,6 +1,7 @@
 """Local web UI. Stdlib only: a page, its JS and CSS, a JSON list over Store.ranked(), one
-message-HTML route, and one POST route, /api/sync, which READS Gmail (read-only token) and ranks
-new threads. Nothing reachable from a browser can act on mail.
+message-HTML route, and two POST routes: /api/sync READS Gmail (read-only token) and ranks new
+threads; /api/action archives or un-archives one thread through frontdesk.actions, using the
+separate actions token the owner granted with `frontdesk authorize-actions`.
 
 Access control, in order, on every request:
 1. Host allowlist (DNS-rebinding defence): the Host header must be localhost, an IP literal, or a
@@ -110,6 +111,27 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
     finally:
         store.db.close()
         _sync_lock.release()
+
+
+def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
+    from .. import actions
+    from ..gmail.auth import AuthError, action_credentials
+    from ..gmail.client import GmailClient
+    kind, item_id, key = req.get("kind"), req.get("item_id"), req.get("key")
+    if kind not in ("archive", "unarchive") or not isinstance(item_id, str) \
+            or not isinstance(key, str):
+        return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
+    try:
+        gmail = None if settings.get("demo") else GmailClient(action_credentials())
+    except AuthError as e:
+        return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+    store = Store(db_path)
+    try:
+        return HTTPStatus.OK, actions.set_archived(store, item_id, kind == "archive", gmail, key)
+    except actions.ActionError as e:
+        return HTTPStatus.CONFLICT, {"error": str(e)}
+    finally:
+        store.db.close()
 
 
 def host_allowed(host_header: str, extra_names: set[str]) -> bool:
@@ -233,11 +255,27 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             # which this server never answers, and a browser always sends Origin on POST.
             host = self.headers.get("Host", "")
             origin = self.headers.get("Origin")
-            if (self.path != "/api/sync" or self.headers.get("X-FrontDesk") != "sync"
+            routes = {"/api/sync": "sync", "/api/action": "action"}
+            if (routes.get(self.path) is None
+                    or self.headers.get("X-FrontDesk") != routes[self.path]
                     or (origin is not None and origin != f"http://{host}")):
                 self._send(HTTPStatus.FORBIDDEN, b"Forbidden\n", TEXT)
                 return
-            status, out = run_sync(db_path, settings or config.settings())
+            s = settings or config.settings()
+            if self.path == "/api/sync":
+                status, out = run_sync(db_path, s)
+            else:
+                n = int(self.headers.get("Content-Length") or 0)
+                if not 0 < n <= 4096 or "application/json" not in \
+                        self.headers.get("Content-Type", ""):
+                    self._send(HTTPStatus.BAD_REQUEST, b"Bad request\n", TEXT)
+                    return
+                try:
+                    req = json.loads(self.rfile.read(n))
+                except ValueError:
+                    self._send(HTTPStatus.BAD_REQUEST, b"Bad request\n", TEXT)
+                    return
+                status, out = run_action(db_path, s, req if isinstance(req, dict) else {})
             self._send(status, json.dumps(out).encode(), "application/json; charset=utf-8")
 
         def log_message(self, fmt: str, *args) -> None:

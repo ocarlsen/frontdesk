@@ -16,6 +16,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from .. import config
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+# Actions (archive, drafts, send) use a SEPARATE token in its own file, granted only when the
+# owner runs `frontdesk authorize-actions`. Sync and the read path never load it. gmail.modify
+# covers labels, drafts and send; Gmail has no narrower scope that allows archiving.
+ACTION_SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
 class AuthError(RuntimeError):
@@ -33,13 +37,13 @@ def _stored_scopes(path: Path) -> list[str] | None:
     return scopes if isinstance(scopes, list) else None
 
 
-def _load_token(path: Path) -> Credentials | None:
+def _load_token(path: Path, scopes: list[str] = SCOPES) -> Credentials | None:
     if not path.exists():
         return None
-    if sorted(_stored_scopes(path) or []) != sorted(SCOPES):
+    if sorted(_stored_scopes(path) or []) != sorted(scopes):
         return None
     try:
-        return Credentials.from_authorized_user_file(str(path), SCOPES)
+        return Credentials.from_authorized_user_file(str(path), scopes)
     except (ValueError, KeyError):
         return None
 
@@ -56,21 +60,23 @@ def _write_token(path: Path, creds: Credentials) -> None:
     os.replace(tmp, path)
 
 
-def _run_flow(secret: Path) -> Credentials:
+def _run_flow(secret: Path, scopes: list[str] = SCOPES) -> Credentials:
     if not secret.exists():
         raise AuthError(
             f"Gmail OAuth client secret not found at {secret}. Create a Desktop OAuth client in "
             "Google Cloud Console and save its JSON there."
         )
-    flow = InstalledAppFlow.from_client_secrets_file(str(secret), SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(str(secret), scopes)
     return flow.run_local_server(port=0, open_browser=True)
 
 
 def credentials(token_path: Path | None = None, secret_path: Path | None = None,
-                interactive: bool = True) -> Credentials:
+                interactive: bool = True, scopes: list[str] = SCOPES,
+                how_to_consent: str = "Run 'bin/frontdesk sync' in a Terminal once."
+                ) -> Credentials:
     token_path = token_path or config.GMAIL_TOKEN
     secret_path = secret_path or config.GMAIL_CLIENT_SECRET
-    creds = _load_token(token_path)
+    creds = _load_token(token_path, scopes)
     if creds and creds.valid:
         return creds
     if creds and creds.expired and creds.refresh_token:
@@ -82,7 +88,12 @@ def credentials(token_path: Path | None = None, secret_path: Path | None = None,
             _write_token(token_path, creds)
             return creds
     if not interactive:
-        raise AuthError("Gmail sign-in needed. Run 'bin/frontdesk sync' in a Terminal once.")
-    creds = _run_flow(secret_path)
+        raise AuthError(f"Gmail sign-in needed. {how_to_consent}")
+    creds = _run_flow(secret_path, scopes)
     _write_token(token_path, creds)
     return creds
+
+
+def action_credentials(interactive: bool = False) -> Credentials:
+    return credentials(config.GMAIL_ACTIONS_TOKEN, interactive=interactive, scopes=ACTION_SCOPES,
+                       how_to_consent="Run 'bin/frontdesk authorize-actions' in a Terminal once.")
