@@ -16,6 +16,7 @@ DEFAULTS = {
     "provider": "anthropic",
     "model": "claude-opus-5-5",   # picked by evals/results/SCOREBOARD.md
     "provider_options": {"effort": "medium"},
+    "owner_profile": "",   # a few sentences on what matters to you; added to the model's prompt
     "keychain_service": "frontdesk-anthropic",
     "gmail_query": "in:inbox newer_than:7d",
     "gmail_max_threads": 100,

@@ -166,3 +166,31 @@ def test_old_database_gains_new_columns(tmp_path):
     store = Store(path)
     cols = {r["name"] for r in store.db.execute("PRAGMA table_info(triage)")}
     assert {"prompt_version", "model_served", "cost_usd", "cache_read"} <= cols
+
+
+def test_owner_profile_reaches_the_system_prompt_and_versions_it(tmp_path):
+    seen = []
+
+    class Spy(FakeProvider):
+        def complete_json(self, system, user, schema, max_tokens=2048):
+            seen.append(system)
+            return super().complete_json(system, user, schema, max_tokens)
+
+    assert triage.system_prompt("") == triage.SYSTEM
+    assert triage.prompt_version("") == triage.PROMPT_VERSION
+    v1 = triage.prompt_version("I am job hunting.")
+    assert v1 != triage.PROMPT_VERSION and v1 != triage.prompt_version("I am not.")
+
+    store = Store(tmp_path / "t.db")
+    store.upsert_item(item(1))
+    triage.run(store, Spy(), log=lambda *_: None, profile="I am job hunting.")
+    assert "I am job hunting." in seen[-1] and triage.PROFILE_HEADER.strip() in seen[-1]
+    assert store.ranked()[0][1].prompt_version == v1
+    # editing the profile re-ranks; keeping it does not
+    assert store.items_needing_triage(v1) == []
+    assert [i.id for i in store.items_needing_triage(triage.prompt_version("New."))] == ["gmail:t1"]
+
+
+def test_profile_never_enters_the_untrusted_block():
+    user = triage.render_user(item(1), "2026-10-28")
+    assert "job hunting" not in user

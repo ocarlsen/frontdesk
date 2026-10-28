@@ -78,7 +78,8 @@ def main(argv: list[str] | None = None) -> int:
         provider = get_provider(s)
         print(f"triaging with {provider.name}:{provider.model} ...")
         done: list = []
-        ok, failed = triage.run(store, provider, limit=args.limit, done=done)
+        ok, failed = triage.run(store, provider, limit=args.limit, done=done,
+                                profile=s["owner_profile"])
         sm = triage.summarize(done)
         cost = "n/a" if sm["cost_usd"] is None else f"${sm['cost_usd']:.4f}"
         print(f"triaged {ok}, failed {failed}; est. cost {cost}, cache hit "

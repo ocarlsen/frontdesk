@@ -103,7 +103,8 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
         try:
             done: list = []
             out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
-                                                       log=lambda *_: None, done=done)
+                                                       log=lambda *_: None, done=done,
+                                                       profile=settings.get("owner_profile", ""))
             out["cost_usd"] = triage.summarize(done)["cost_usd"]
         except ProviderError as e:
             out["triage_error"] = str(e)

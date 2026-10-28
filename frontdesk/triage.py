@@ -64,6 +64,26 @@ PROMPT_VERSION = hashlib.sha256(
 REPLY_CAP = 2000
 
 
+PROFILE_HEADER = ("\n\nAbout the inbox owner, written by the owner (trusted; it overrides the "
+                  "generic bucket guidance where they conflict):\n")
+
+
+def system_prompt(profile: str = "") -> str:
+    """The fixed policy, plus the owner's own description of what matters to them. The profile
+    comes from the owner's settings, never from mail, so it sits in the trusted system prompt."""
+    profile = (profile or "").strip()
+    return SYSTEM + (PROFILE_HEADER + profile if profile else "")
+
+
+def prompt_version(profile: str = "") -> str:
+    """PROMPT_VERSION for the bare policy (what evals measure); a profile yields its own version,
+    so editing it re-ranks threads ranked under the old wording."""
+    profile = (profile or "").strip()
+    if not profile:
+        return PROMPT_VERSION
+    return hashlib.sha256((PROMPT_VERSION + profile).encode()).hexdigest()[:12]
+
+
 def render_user(item: Item, today: str) -> str:
     d = item.to_dict()
     for m in d["messages"]:
@@ -92,15 +112,16 @@ def validate(raw: dict) -> dict:
     return out
 
 
-def triage_item(provider: Provider, item: Item, today: str | None = None) -> Triage:
+def triage_item(provider: Provider, item: Item, today: str | None = None,
+                profile: str = "") -> Triage:
     today = today or datetime.now(UTC).strftime("%Y-%m-%d")
-    res = provider.complete_json(SYSTEM, render_user(item, today), SCHEMA)
+    res = provider.complete_json(system_prompt(profile), render_user(item, today), SCHEMA)
     out = validate(res.data)
     u = res.usage
     served = u.model_served or provider.model
     return Triage(item.id, out["bucket"], out["urgency"], out["reason"], out["proposed_reply"],
                   f"{provider.name}:{provider.model}", now(), item.updated_at,
-                  prompt_version=PROMPT_VERSION, model_served=served,
+                  prompt_version=prompt_version(profile), model_served=served,
                   tokens_in=u.tokens_in, tokens_out=u.tokens_out, cache_read=u.cache_read,
                   cache_write=u.cache_write, latency_ms=u.latency_ms,
                   cost_usd=cost_usd(served, u.tokens_in, u.tokens_out, u.cache_read,
@@ -124,16 +145,17 @@ def summarize(done: list[Triage]) -> dict:
 
 
 def run(store: Store, provider: Provider, limit: int | None = None, workers: int = 4,
-        log=print, done: list[Triage] | None = None) -> tuple[int, int]:
+        log=print, done: list[Triage] | None = None, profile: str = "") -> tuple[int, int]:
     """Triage new, changed or prompt-stale items. Model calls run in a small pool; every write
     happens on this thread because the sqlite connection is not shared across threads. A refusal
     is recorded as terminal and an error is retried on later runs up to a cap, so a Sync click
     never re-bills the same failure forever. Returns (ok, failed); pass `done` to collect the
     saved Triage rows (for summarize())."""
-    todo = store.items_needing_triage(PROMPT_VERSION)[:limit]
+    version = prompt_version(profile)
+    todo = store.items_needing_triage(version)[:limit]
     ok = failed = 0
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(triage_item, provider, it): it for it in todo}
+        futures = {pool.submit(triage_item, provider, it, None, profile): it for it in todo}
         for fut, item in futures.items():
             try:
                 t = fut.result()
@@ -143,10 +165,10 @@ def run(store: Store, provider: Provider, limit: int | None = None, workers: int
                     done.append(t)
             except ProviderRefusal as e:
                 failed += 1
-                store.record_failure(item, PROMPT_VERSION, "refusal", str(e))
+                store.record_failure(item, version, "refusal", str(e))
                 log(f"  refused {item.id}: {e}")
             except ProviderError as e:
                 failed += 1
-                store.record_failure(item, PROMPT_VERSION, "error", str(e))
+                store.record_failure(item, version, "error", str(e))
                 log(f"  failed {item.id}: {e}")
     return ok, failed
