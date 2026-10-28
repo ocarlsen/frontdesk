@@ -147,6 +147,7 @@ def audit_raw(raw: bytes) -> dict:
             scanned = True
         if ctype == "text/html":
             links += re.findall(r'href\s*=\s*"([^"]*)"', content, re.I)
+            content = html_to_text(content)   # visible text, entities decoded
         links += URL.findall(content)
     redirects = sorted({u for u in links if REDIRECT.match(u)})
     return {"links": sorted(set(links)), "redirects": redirects,

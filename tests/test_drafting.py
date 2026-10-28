@@ -20,6 +20,7 @@ def test_links_are_byte_identical_in_both_parts():
     assert rep["pass"] and rep["redirects"] == []
     assert LONG in rep["links"] and SHORT in rep["links"]
     assert not any(u.endswith((")", ".")) for u in rep["links"])
+    assert not any("&amp;" in u for u in rep["links"])
 
 
 def test_html_body_kept_verbatim():
