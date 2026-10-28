@@ -321,8 +321,9 @@ def test_send_routes_in_demo_mode_send_nothing(tmp_path):
         assert p["to"] == ["ann@example.com"] and p["demo"] is True
         c = post({"kind": "send_confirm", "action_id": p["action_id"]})
         assert c["demo"] is True
+        assert post({"kind": "send_cancel", "action_id": p["action_id"]})["status"] == "cancelled"
         st = _json.loads(urllib.request.urlopen(
             f"{base}/api/send-status?id={p['action_id']}").read())
-        assert st["status"] == "demo"      # never recorded as sent: nothing reached Gmail
+        assert st["status"] == "cancelled"
     finally:
         httpd.shutdown()

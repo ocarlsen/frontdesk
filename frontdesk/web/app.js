@@ -312,6 +312,7 @@ async function startSend(item, ta, btn) {
     return;
   }
   const panel = document.getElementById("profilepanel");
+  panel.setAttribute("aria-label", "Confirm send");
   const box = el("div", "helpbox");
   box.append(el("h2", null, prep.demo ? "Send (demo: nothing will be sent)" : "Send this reply?"));
   const dl = el("dl", "sendmeta");
@@ -588,6 +589,7 @@ async function syncNow() {
 // ---- Profile: a few sentences in the owner's words that the model treats as trusted context.
 async function openProfile() {
   const panel = document.getElementById("profilepanel");
+  panel.setAttribute("aria-label", "Your profile");
   const box = el("div", "helpbox");
   box.append(el("h2", null, "Your profile"));
   box.append(el("p", "kbdhint",

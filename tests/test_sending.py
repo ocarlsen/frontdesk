@@ -153,8 +153,11 @@ def test_demo_mode_never_sends(tmp_path):
     assert p["demo"] and p["to"] == ["ann@example.com"]
     c = sending.confirm(s, p["action_id"], now=T0)
     assert c["demo"]
-    assert sending.dispatch_due(s, lambda: pytest.fail("demo must not dispatch"),
-                                now=T0 + timedelta(minutes=1)) == []
+    assert sending.dispatch_due(s, lambda: pytest.fail("demo must not reach Gmail"),
+                                now=T0 + timedelta(minutes=1)) == [(p["action_id"], "demo")]
+    p2 = sending.prepare(s, "gmail:t1", "ok", SEEN, None, "click-0002", now=T0)
+    sending.confirm(s, p2["action_id"], now=T0)
+    assert sending.cancel(s, p2["action_id"])["status"] == "cancelled"   # Undo works in demo
 
 
 def test_only_the_send_module_can_send():

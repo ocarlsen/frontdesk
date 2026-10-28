@@ -133,7 +133,7 @@ def confirm(store: Store, action_id: int, now: datetime | None = None) -> dict:
         store.finish_action(action_id, "stale", p)
         raise ActionError("a new message arrived in this thread; reload before sending")
     p["send_at"] = _iso(now + timedelta(seconds=UNDO_SECONDS))
-    store.finish_action(action_id, "demo" if p.get("demo") else "queued", p)
+    store.finish_action(action_id, "queued", p)   # demo too, so Undo behaves the same
     return {"status": "queued", "send_at": p["send_at"], "undo_seconds": UNDO_SECONDS,
             "demo": bool(p.get("demo"))}
 
@@ -168,7 +168,9 @@ def dispatch_due(store: Store, gmail_factory, now: datetime | None = None) -> li
         if not claimed:
             continue
         item = store.get_item(row["item_id"])
-        if now - _parse(p["send_at"]) > STALE_AFTER:
+        if p.get("demo"):
+            result = "demo"                      # never reaches Gmail; never recorded as sent
+        elif now - _parse(p["send_at"]) > STALE_AFTER:
             result = "expired"
         elif item is None or item.updated_at != p["seen_updated_at"]:
             result = "stale"
