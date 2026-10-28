@@ -147,6 +147,9 @@ function buildDetail(item, triage) {
   const hint = el("p", "hint");
   const save = el("button", "btn primary", "Save as Gmail draft");
   save.type = "button";
+  const send = el("button", "btn send", "Send...");
+  send.type = "button";
+  send.addEventListener("click", () => startSend(item, ta, send));
   const refresh = () => {
     // Placeholders like [time that works] mark facts only the owner knows; never save them.
     const open = ta.value.match(/\[[^\]\n]{1,80}\]/g) || [];
@@ -157,9 +160,6 @@ function buildDetail(item, triage) {
   ta.addEventListener("input", refresh);
   refresh();
   save.addEventListener("click", () => saveDraft(item, ta, save));
-  const send = el("button", "btn send", "Send...");
-  send.type = "button";
-  send.addEventListener("click", () => startSend(item, ta, send));
   const copy = el("button", "btn", "Copy");
   copy.type = "button";
   copy.addEventListener("click", async () => {
