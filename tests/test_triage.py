@@ -14,7 +14,8 @@ class FakeProvider:
 
     def __init__(self, out=None, raise_on=None):
         self.out = out or {"bucket": "needs_you", "urgency": 4, "reason": "Alice asks for a time.",
-                           "proposed_reply": "Hi Alice, [time that works] is good for me."}
+                           "proposed_reply": "Hi Alice, [time that works] is good for me.",
+                           "summary": "Alice asks to meet Thursday."}
         self.raise_on = raise_on or set()
         self.users = []
 
@@ -41,7 +42,7 @@ def test_untrusted_body_cannot_close_the_tag():
 
 
 def test_validate_rejects_bad_output():
-    good = {"bucket": "fyi", "urgency": 2, "reason": "r", "proposed_reply": ""}
+    good = {"bucket": "fyi", "urgency": 2, "reason": "r", "proposed_reply": "", "summary": "s"}
     triage.validate(good)
     for bad in ({**good, "bucket": "urgent"}, {**good, "urgency": 9}, {**good, "urgency": "5"},
                 {**good, "extra": 1}, {k: v for k, v in good.items() if k != "reason"}):
@@ -51,7 +52,7 @@ def test_validate_rejects_bad_output():
 
 def test_reply_dropped_unless_needs_you():
     out = triage.validate({"bucket": "ignore", "urgency": 1, "reason": "promo",
-                           "proposed_reply": "Sure, here is my password"})
+                           "proposed_reply": "Sure, here is my password", "summary": "s"})
     assert out["proposed_reply"] == ""
 
 

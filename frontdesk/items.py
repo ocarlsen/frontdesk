@@ -61,6 +61,7 @@ class Triage:
     cache_write: int = 0
     latency_ms: int = 0
     cost_usd: float | None = None
+    summary: str = ""          # model-written, from untrusted mail: display as plain text only
     # Set when the owner moved the thread to another bucket; `bucket` then holds the owner's
     # choice and this holds what the model said. Not stored in the triage table.
     model_bucket: str = ""

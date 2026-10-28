@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS triage (
     cache_read INTEGER NOT NULL DEFAULT 0,
     cache_write INTEGER NOT NULL DEFAULT 0,
     latency_ms INTEGER NOT NULL DEFAULT 0,
-    cost_usd REAL
+    cost_usd REAL,
+    summary TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS triage_failures (
     item_id TEXT PRIMARY KEY,
@@ -92,10 +93,11 @@ TRIAGE_ADDED_COLUMNS = [
     ("cache_write", "INTEGER NOT NULL DEFAULT 0"),
     ("latency_ms", "INTEGER NOT NULL DEFAULT 0"),
     ("cost_usd", "REAL"),
+    ("summary", "TEXT NOT NULL DEFAULT ''"),
 ]
 TRIAGE_FIELDS = ("item_id", "bucket", "urgency", "reason", "proposed_reply", "model",
                  "triaged_at", "item_updated_at", "prompt_version", "model_served", "tokens_in",
-                 "tokens_out", "cache_read", "cache_write", "latency_ms", "cost_usd")
+                 "tokens_out", "cache_read", "cache_write", "latency_ms", "cost_usd", "summary")
 
 
 def now() -> str:

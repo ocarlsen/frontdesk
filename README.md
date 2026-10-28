@@ -6,7 +6,7 @@ that already has all the context.
 
 ![Ranked inbox: Needs you, FYI, Ignore](docs/screenshot-list.jpg)
 
-**Live demo:** https://www.ocarlsen.com/frontdesk-demo/index.html (a synthetic inbox, nothing to install).
+**Live demo:** https://frontdesk.ocarlsen.com/index.html (a synthetic inbox, nothing to install).
 
 ## Try it in 30 seconds (no Google account, no API key, no network)
 
