@@ -186,8 +186,8 @@ function buildDetail(item, triage) {
   reply.append(label, ta, hint);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
-  if (isGmail) actions.append(save, send);
-  actions.append(copy);
+  if (isGmail) actions.append(save);
+  actions.append(send, copy);
   if (triage) {
     const moveTo = el("span", "moveto");
     moveTo.append(el("span", "kbdhint", "Move to"));

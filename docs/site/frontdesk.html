@@ -142,17 +142,24 @@ sends only when you click Send, see the exact message and its recipients, and co
 then waits 30 seconds, during which you can undo it. It never sends on its own, and the model
 never chooses recipients.</p>
 
+<h3>Slack, if you connect it</h3>
+<p>Slack is optional and uses your own Slack app with your user token. FrontDesk reads your direct
+messages, group messages and the channel threads that mention you or that you replied in, from the
+last seven days. It posts a reply only through the same Send flow: you see the exact message and
+where it goes, confirm, and have 30 seconds to undo. The token stays on your computer.</p>
+
 <h3>Where your data goes</h3>
 <p>FrontDesk keeps the threads it syncs, its rankings and your Google sign-in tokens on your
-computer, in a folder only your user account can read. It sends data to two places only: to
-Google, to read your mail and, if you allow it, to archive threads and save drafts; and to the AI
+computer, in a folder only your user account can read. It sends data to these places only: to
+Google, to read your mail and, if you allow it, to archive threads, save drafts and send replies;
+to Slack, if you connect it, to read your conversations and post replies you confirm; and to the AI
 model provider you configure, which receives the plain text of each thread so it can rank it and
 suggest a reply. Message formatting (HTML) and attachments are not sent to the model provider.
 That provider's own data terms apply to what it receives.</p>
 
 <h3>What it never does</h3>
 <p>FrontDesk does not sell, share or advertise with your data, does not use it to train models,
-and does not send it anywhere except the two places above.</p>
+and does not send it anywhere except the places above.</p>
 
 <h3>Google API data</h3>
 <p>FrontDesk's use and transfer of information received from Google APIs to any other app
@@ -191,7 +198,11 @@ Questions at its issues.</p>
 (frontdesk/providers/anthropic_provider.py). No other HTTP client in the package.</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
 (frontdesk/gmail/auth.py).</li>
-<li>Sends only on confirm: frontdesk/sending.py is the only caller of GmailClient.send_message;
+<li>Slack: frontdesk/slack (reads conversations.list/history/replies, users.info; posts only
+chat.postMessage from sending.py). Window slack_days = 7. Token from SLACK_USER_TOKEN or the
+Keychain item frontdesk-slack (frontdesk/sources.py).</li>
+<li>Sends only on confirm: frontdesk/sending.py is the only caller of GmailClient.send_message and
+SlackClient.post_message (tests/test_sending.py pins it);
 prepare derives recipients from the thread (drafting.reply_context), confirm queues it, the
 dispatcher sends after UNDO_SECONDS = 30, cancel works until then. No code path sends without a
 confirmed action row. Tests: tests/test_sending.py.</li>

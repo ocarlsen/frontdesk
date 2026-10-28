@@ -203,8 +203,12 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     try:
         if kind == "send_prepare":
             from .. import sending
-            return HTTPStatus.OK, sending.prepare(store, item_id, req.get("body"),
-                                                  str(req.get("seen_updated_at", "")), gmail, key)
+            from ..slack.client import SlackClient
+            from ..sources import slack_token
+            tok = None if settings.get("demo") else slack_token(config.settings())
+            return HTTPStatus.OK, sending.prepare(
+                store, item_id, req.get("body"), str(req.get("seen_updated_at", "")), gmail,
+                key, slack=SlackClient(tok) if tok else None)
         if kind == "draft":
             return HTTPStatus.OK, actions.save_draft(store, item_id, req.get("body"),
                                                      str(req.get("seen_updated_at", "")),
@@ -415,19 +419,29 @@ def start_dispatcher(db_path: Path, interval: float = 2.0) -> threading.Thread:
     from .. import sending
     from ..gmail.auth import action_credentials
     from ..gmail.client import GmailClient
-    clients: list = []
+    clients: dict = {}
 
     def gmail():
-        if not clients:
-            clients.append(GmailClient(action_credentials()))
-        return clients[0]
+        if "gmail" not in clients:
+            clients["gmail"] = GmailClient(action_credentials())
+        return clients["gmail"]
+
+    def slack():
+        if "slack" not in clients:
+            from ..slack.client import SlackClient
+            from ..sources import slack_token
+            tok = slack_token(config.settings())
+            if not tok:
+                raise RuntimeError("no Slack token")
+            clients["slack"] = SlackClient(tok)
+        return clients["slack"]
 
     def loop():
         while True:
             try:
                 store = Store(db_path)
                 try:
-                    sending.dispatch_due(store, gmail)
+                    sending.dispatch_due(store, gmail, slack_factory=slack)
                 finally:
                     store.db.close()
             except Exception as e:  # noqa: BLE001 - keep the loop alive; report the type only

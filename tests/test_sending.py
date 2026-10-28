@@ -166,5 +166,72 @@ def test_only_the_send_module_can_send():
     import re
     pkg = pathlib.Path(sending.__file__).parent
     callers = sorted(str(p.relative_to(pkg)) for p in pkg.rglob("*.py")
-                     if re.search(r"\.send_message\(", p.read_text()))
+                     if re.search(r"\.(send_message|post_message)\(", p.read_text()))
     assert callers == ["sending.py"]
+
+
+
+class FakeSlack:
+    def __init__(self, host="example-team.slack.com", exc=None):
+        self.host, self.exc, self.posted = host, exc, []
+
+    def auth_test(self):
+        return {"url": f"https://{self.host}/"}
+
+    def post_message(self, channel, text, thread_ts=None):
+        if self.exc:
+            raise self.exc
+        self.posted.append((channel, text, thread_ts))
+        return {"ts": "1730000000.000100"}
+
+
+def slack_store(tmp_path, item_id="slack:C123:1730000000.000001", subject="#partners: hi"):
+    s = Store(tmp_path / "sl.db")
+    s.upsert_item(Item(id=item_id, source="slack", account="example-team.slack.com",
+                       subject=subject, participants=[], updated_at=SEEN,
+                       messages=[Message("Ann", SEEN, "can you approve?")]))
+    return s
+
+
+def test_slack_thread_reply_posts_in_thread_after_undo_window(tmp_path):
+    s, sl = slack_store(tmp_path), FakeSlack()
+    p = sending.prepare(s, "slack:C123:1730000000.000001", "Approved.", SEEN, FakeGmail(),
+                        "click-0001", now=T0, slack=sl)
+    assert p["to"] == ["#partners (thread)"]
+    sending.confirm(s, p["action_id"], now=T0)
+    assert sending.dispatch_due(s, lambda: None, now=T0 + timedelta(seconds=31),
+                                slack_factory=lambda: sl) == [(p["action_id"], "sent")]
+    assert sl.posted == [("C123", "Approved.", "1730000000.000001")]
+
+
+def test_slack_dm_posts_to_the_conversation(tmp_path):
+    s, sl = slack_store(tmp_path, "slack:D9:dm", "Slack DM with Ann"), FakeSlack()
+    p = sending.prepare(s, "slack:D9:dm", "Yes!", SEEN, FakeGmail(), "click-0001", now=T0,
+                        slack=sl)
+    assert p["to"] == ["DM: Ann"]
+    sending.confirm(s, p["action_id"], now=T0)
+    sending.dispatch_due(s, lambda: None, now=T0 + timedelta(seconds=31), slack_factory=lambda: sl)
+    assert sl.posted == [("D9", "Yes!", None)]
+
+
+def test_slack_wrong_workspace_or_missing_token_refused(tmp_path):
+    s = slack_store(tmp_path)
+    with pytest.raises(ActionError, match="Slack token is for"):
+        sending.prepare(s, "slack:C123:1730000000.000001", "ok", SEEN, FakeGmail(), "click-0001",
+                        now=T0, slack=FakeSlack(host="other.slack.com"))
+    with pytest.raises(ActionError, match="not connected"):
+        sending.prepare(s, "slack:C123:1730000000.000001", "ok", SEEN, FakeGmail(), "click-0002",
+                        now=T0, slack=None)
+
+
+def test_slack_post_error_is_failed_and_timeout_unknown(tmp_path):
+    from frontdesk.slack.client import SlackError
+    for exc, want in ((SlackError("chat.postMessage", "not_in_channel"), "failed"),
+                      (requests.Timeout(), "unknown")):
+        s = slack_store(tmp_path / want)
+        p = sending.prepare(s, "slack:C123:1730000000.000001", "ok", SEEN, FakeGmail(),
+                            "click-0001", now=T0, slack=FakeSlack())
+        sending.confirm(s, p["action_id"], now=T0)
+        bad = FakeSlack(exc=exc)
+        assert sending.dispatch_due(s, lambda: None, now=T0 + timedelta(seconds=31),
+                                    slack_factory=lambda b=bad: b) == [(p["action_id"], want)]

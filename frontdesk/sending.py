@@ -20,6 +20,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from email.utils import parseaddr
+from urllib.parse import urlparse
 
 import requests
 
@@ -33,6 +34,7 @@ from .actions import (
     _native_id,
 )
 from .gmail.client import GmailClient, GmailError
+from .slack.client import SlackError
 from .store import Store
 
 UNDO_SECONDS = 30
@@ -68,8 +70,17 @@ def _payload(row) -> dict:
     return json.loads(row["payload"])
 
 
+def _slack_target(item) -> tuple[str, str | None, str]:
+    """(channel, thread_ts or None, label) from a Slack item id 'slack:<channel>:<ts|dm>'."""
+    _, channel, ts = item.id.split(":", 2)
+    if ts == "dm":
+        return channel, None, item.subject.replace("Slack DM with ", "DM: ")
+    return channel, ts, item.subject.split(":", 1)[0] + " (thread)"
+
+
 def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
-            gmail: GmailClient | None, client_key: str, now: datetime | None = None) -> dict:
+            gmail: GmailClient | None, client_key: str, now: datetime | None = None,
+            slack=None) -> dict:
     now = now or _now()
     if not _CLIENT_KEY.fullmatch(client_key or ""):
         raise ActionError("missing or malformed idempotency key")
@@ -94,7 +105,18 @@ def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
         raise ActionError("this send was already handled; reload")
     _check_limits(store, item_id, now)
     sha = hashlib.sha256(body.encode()).hexdigest()
-    if gmail is None:   # demo: derive the visible recipient from the stored thread, send nothing
+    if item.source == "slack" and (slack is not None or gmail is not None):
+        if slack is None:
+            raise ActionError("Slack is not connected (no user token)")
+        host = urlparse(slack.auth_test().get("url", "")).hostname or ""
+        if host != item.account:
+            raise ActionError(f"the Slack token is for {host}, but this thread is in "
+                              f"{item.account}")
+        channel, thread_ts, label = _slack_target(item)
+        p = {"source": "slack", "channel": channel, "thread_ts": thread_ts, "text": body,
+             "to": [label], "cc": [], "subject": item.subject, "body_sha256": sha,
+             "seen_updated_at": seen_updated_at}
+    elif gmail is None:   # demo: derive the visible recipient from the stored thread, send nothing
         inbound = [m for m in item.messages if not m.is_mine]
         to = [parseaddr(inbound[-1].sender)[1]] if inbound else []
         p = {"demo": True, "to": to, "cc": [], "subject": "Re: " + item.subject,
@@ -153,7 +175,8 @@ def status(store: Store, action_id: int) -> dict:
     return {"status": row["status"], "send_at": p.get("send_at", "")}
 
 
-def dispatch_due(store: Store, gmail_factory, now: datetime | None = None) -> list[tuple]:
+def dispatch_due(store: Store, gmail_factory, now: datetime | None = None,
+                 slack_factory=None) -> list[tuple]:
     """Send every queued message whose undo window has passed. Returns (action_id, status)."""
     now = now or _now()
     out = []
@@ -176,10 +199,17 @@ def dispatch_due(store: Store, gmail_factory, now: datetime | None = None) -> li
             result = "stale"
         else:
             try:
-                sent = gmail_factory().send_message(p["raw"], p["thread_id"])
-                p["gmail_id"] = sent.get("id", "")
+                if p.get("source") == "slack":
+                    if slack_factory is None:
+                        raise SlackError("chat.postMessage", "not_connected")
+                    sent = slack_factory().post_message(p["channel"], p["text"],
+                                                        p.get("thread_ts"))
+                    p["slack_ts"] = sent.get("ts", "")
+                else:
+                    sent = gmail_factory().send_message(p["raw"], p["thread_id"])
+                    p["gmail_id"] = sent.get("id", "")
                 result = "sent"
-            except GmailError:
+            except (GmailError, SlackError):
                 result = "failed"
             except requests.RequestException:
                 result = "unknown"   # it may have gone out; never resend blindly

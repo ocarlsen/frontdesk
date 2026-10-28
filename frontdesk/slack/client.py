@@ -67,6 +67,21 @@ class SlackClient:
             if not cursor:
                 return out
 
+    def post_message(self, channel: str, text: str, thread_ts: str | None = None) -> dict:
+        """chat.postMessage as the owner (user token, chat:write). One attempt, never retried:
+        a timeout may already have posted it."""
+        body: dict = {"channel": channel, "text": text}
+        if thread_ts:
+            body["thread_ts"] = thread_ts
+        resp = self.session.post(f"{BASE}/chat.postMessage", json=body, timeout=self.timeout,
+                                 headers={"Authorization": f"Bearer {self._token}"})
+        if resp.status_code != 200:
+            raise SlackError("chat.postMessage", f"http_{resp.status_code}")
+        data = resp.json()
+        if not data.get("ok"):
+            raise SlackError("chat.postMessage", str(data.get("error", "unknown_error"))[:100])
+        return data
+
     def auth_test(self) -> dict:
         data = self._call("auth.test")
         return {k: data.get(k, "") for k in ("user_id", "team_id", "url", "team", "user")}

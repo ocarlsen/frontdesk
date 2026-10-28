@@ -31,6 +31,10 @@ and two prompt-injection attempts so you can see how they are handled:
   only you know the answer they carry a placeholder like `[time that works]`.
 - **Show** a ranked page that leads each thread with a short summary, renders the full thread
   like Gmail (the mail's own HTML, safely sandboxed), and has a Sync button.
+- **Slack (optional):** your own Slack app and user token. DMs, group DMs and channel threads
+  that mention you or that you replied in become threads on the same page; **Done** hides one
+  until someone posts again, and **Send** replies in the thread with the same confirm-and-undo flow.
+- **Auto-sync** every 15 minutes (`auto_sync_minutes`), and Gmail-style keyboard shortcuts (`?`).
 - **Act**, with a second, separate permission (`frontdesk authorize-actions`): archive with undo,
   save the edited reply as a Gmail draft, or send it. Send shows the exact message and its
   recipients (derived from the thread, never from the model), waits 30 seconds for an undo,
