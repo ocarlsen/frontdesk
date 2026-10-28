@@ -266,7 +266,9 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                     or (origin is not None and origin != f"http://{host}")):
                 self._send(HTTPStatus.FORBIDDEN, b"Forbidden\n", TEXT)
                 return
-            s = settings or config.settings()
+            # Re-read settings per request (except the demo's fixed ones), so an edit to
+            # settings.json, e.g. the owner profile, applies on the next Sync without a restart.
+            s = settings if (settings or {}).get("demo") else config.settings()
             if self.path == "/api/sync":
                 status, out = run_sync(db_path, s)
             else:
