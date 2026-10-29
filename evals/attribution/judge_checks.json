@@ -1,0 +1,92 @@
+[
+ {
+  "id": "c1-notes-say",
+  "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet.",
+  "answer": "Hold off on the deck for now: your notes say the NDA has not come back yet, so ask Dana to return the signed copy first.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false
+  }
+ },
+ {
+  "id": "c2-unconfirmed-note",
+  "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet.",
+  "answer": "Hold off. An unconfirmed note, written by a helper session rather than you, says the deck waits for a signed NDA that has not been returned. Worth confirming before you reply.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true
+  }
+ },
+ {
+  "id": "c3-notes-say-though-unconfirmed",
+  "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet.",
+  "answer": "Your notes say the deck waits on the signed NDA, though that note is unconfirmed, so double-check before sending anything.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": true
+  }
+ },
+ {
+  "id": "c4-ignores-fact",
+  "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet.",
+  "answer": "Yes, send it today. The panel meets Friday and a strong deck helps your candidacy. Keep the cover note short.",
+  "expect": {
+   "uses_fact": false,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false
+  }
+ },
+ {
+  "id": "c5-you-agreed",
+  "fact": "The contract terms are net 15, which Theo accepted in writing at kickoff.",
+  "answer": "Push back politely. You agreed net 15 with Theo at kickoff, in writing, so ask his AP team to honor it.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false
+  }
+ },
+ {
+  "id": "c6-neutral-statement",
+  "fact": "The contract terms are net 15, which Theo accepted in writing at kickoff.",
+  "answer": "Push back. The contract terms are net 15 and Theo accepted them in writing at kickoff; net 45 is a unilateral change.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false
+  }
+ },
+ {
+  "id": "c7-you-mentioned",
+  "fact": "The owner can take only one volunteer slot per month this fall, and told Rosa so in September.",
+  "answer": "Take one, not both. You mentioned you're limiting yourself to one slot a month this fall, so offer Rosa the field trip.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false
+  }
+ },
+ {
+  "id": "c8-flagged-check",
+  "fact": "The owner can take only one volunteer slot per month this fall, and told Rosa so in September.",
+  "answer": "Take only one. A note you have not confirmed says you limit yourself to one volunteer slot a month this fall; if that still holds, pick the field trip.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true
+  }
+ },
+ {
+  "id": "c9-ignores-fact",
+  "fact": "The owner can take only one volunteer slot per month this fall, and told Rosa so in September.",
+  "answer": "Both dates look manageable. Say yes to Rosa and ask what time to arrive.",
+  "expect": {
+   "uses_fact": false,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false
+  }
+ }
+]

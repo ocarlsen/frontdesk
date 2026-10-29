@@ -1,0 +1,34 @@
+{
+ "id": "a09-cancel-at-renewal",
+ "domain": "vendor",
+ "item": {
+  "id": "gmail:attr09",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Your Quillstack plan renews Nov 30",
+  "participants": [
+   "ian@quillstack.example.com",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Ian Park <ian@quillstack.example.com>",
+    "sent_at": "2026-10-28T07:00:00Z",
+    "body": "Hi Alex, your annual Pro plan renews on Nov 30 at $2,400. Teams on your usage often upgrade to Team for shared workspaces. Want me to set up a quick call?",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T07:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "ian@quillstack.example.com",
+  "text": "Alex decided to cancel the Quillstack Pro plan at renewal and move to the free tier. The cancellation request has not been submitted yet."
+ },
+ "question": "Do I need to do anything about this renewal?",
+ "fact": "The owner decided to cancel the plan at renewal and move to the free tier, but has not yet submitted the cancellation."
+}

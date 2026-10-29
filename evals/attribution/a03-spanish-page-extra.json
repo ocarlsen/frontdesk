@@ -1,0 +1,34 @@
+{
+ "id": "a03-spanish-page-extra",
+ "domain": "freelance",
+ "item": {
+  "id": "gmail:attr03",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Landing page, one more thing",
+  "participants": [
+   "hana@brightloom.example.com",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Hana Sato <hana@brightloom.example.com>",
+    "sent_at": "2026-10-28T14:00:00Z",
+    "body": "Hi Alex, the English landing page looks great. Could you also add a Spanish version this sprint? Should be quick since the layout is done.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T14:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "hana@brightloom.example.com",
+  "text": "Fixed price with Brightloom is $4,800 for the English landing page only. Extra languages are billed separately at $600 each."
+ },
+ "question": "Can I just say yes to the Spanish page?",
+ "fact": "The $4,800 fixed price covers only the English page; each extra language is billed separately at $600."
+}

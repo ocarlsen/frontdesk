@@ -1,0 +1,34 @@
+{
+ "id": "a06-deposit-preexisting-damage",
+ "domain": "landlord",
+ "item": {
+  "id": "gmail:attr06",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Security deposit return",
+  "participants": [
+   "victor@halecourt.example.org",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Victor Hale <victor@halecourt.example.org>",
+    "sent_at": "2026-10-28T11:00:00Z",
+    "body": "Alex, final walkthrough done. We'll be deducting $350 from your deposit for the wall damage in the back bedroom. The rest goes out this week.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T11:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "victor@halecourt.example.org",
+  "text": "The move-in inspection report already listed the back bedroom wall damage, and Victor signed that report."
+ },
+ "question": "How should I respond to the deduction?",
+ "fact": "The bedroom wall damage was already recorded on the move-in inspection report that Victor signed, so it predates the tenancy."
+}

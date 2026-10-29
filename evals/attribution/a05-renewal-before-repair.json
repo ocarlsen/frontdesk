@@ -1,0 +1,40 @@
+{
+ "id": "a05-renewal-before-repair",
+ "domain": "landlord",
+ "item": {
+  "id": "gmail:attr05",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Lease renewal for unit 12C",
+  "participants": [
+   "gwen@harborview-rentals.example.com",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Gwen Albright <gwen@harborview-rentals.example.com>",
+    "sent_at": "2026-10-27T21:00:00Z",
+    "body": "Dear Alex,\n\nYour renewal paperwork is ready. Please sign and return it by Monday so we can lock in the current rate.\n\nRegards,\nGwen Albright\nHarborview Rentals",
+    "is_mine": false
+   },
+   {
+    "sender": "Gwen Albright <gwen@harborview-rentals.example.com>",
+    "sent_at": "2026-10-28T15:00:00Z",
+    "body": "Just a friendly reminder about Monday's deadline.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T15:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "gwen@harborview-rentals.example.com",
+  "text": "Gwen promised the broken dishwasher would be replaced before the renewal. It has not been replaced yet."
+ },
+ "question": "Should I sign the renewal this week?",
+ "fact": "Gwen promised to replace the broken dishwasher before the renewal, and it has not been replaced."
+}

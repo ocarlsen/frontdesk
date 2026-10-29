@@ -1,0 +1,34 @@
+{
+ "id": "a07-cookie-day-allergy",
+ "domain": "school",
+ "item": {
+  "id": "gmail:attr07",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Cooking afternoon on Thursday",
+  "participants": [
+   "okafor@maplewood-elementary.example.org",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Ms. Okafor <okafor@maplewood-elementary.example.org>",
+    "sent_at": "2026-10-28T08:00:00Z",
+    "body": "Dear families,\n\nOur class is baking peanut butter cookies on Thursday afternoon. Please sign and return the attached participation form by Wednesday.\n\nWarmly,\nMs. Okafor",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T08:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "okafor@maplewood-elementary.example.org",
+  "text": "Jordan has a peanut allergy. Ms. Okafor has had Jordan's allergy action plan since September."
+ },
+ "question": "Can I just sign the form and send it back?",
+ "fact": "Jordan has a peanut allergy, and the activity is baking peanut butter cookies."
+}

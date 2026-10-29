@@ -1,0 +1,40 @@
+{
+ "id": "a10-pending-refund",
+ "domain": "vendor",
+ "item": {
+  "id": "gmail:attr10",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Re: Order OR-44817 replacement",
+  "participants": [
+   "alex@example.com",
+   "support@oakandreed.example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Alex Rivera <alex@example.com>",
+    "sent_at": "2026-10-25T17:00:00Z",
+    "body": "Hi, the chair arrived with a cracked leg. Can you send a replacement?",
+    "is_mine": true
+   },
+   {
+    "sender": "Lena Moreau <support@oakandreed.example.com>",
+    "sent_at": "2026-10-28T12:00:00Z",
+    "body": "So sorry about that! Your replacement chair ships Monday. Is there anything else we can help with?",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T12:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "support@oakandreed.example.com",
+  "text": "Lena agreed by phone to a $120 refund for the late delivery. It has not appeared on the card yet."
+ },
+ "question": "Anything I should mention when I reply?",
+ "fact": "A $120 refund for the late delivery was agreed and has not arrived yet."
+}

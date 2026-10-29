@@ -1,0 +1,46 @@
+{
+ "id": "a02-salary-floor",
+ "domain": "job_search",
+ "item": {
+  "id": "gmail:attr02",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Submission for the Staff Engineer role",
+  "participants": [
+   "marco@talentbridge.example.org",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Marco Bellini <marco@talentbridge.example.org>",
+    "sent_at": "2026-10-27T15:00:00Z",
+    "body": "Hey Alex! Hiring manager loved your profile. Before I submit you, what comp range should I put down? A quick number is fine.",
+    "is_mine": false
+   },
+   {
+    "sender": "Alex Rivera <alex@example.com>",
+    "sent_at": "2026-10-27T16:00:00Z",
+    "body": "Thanks Marco, glad to hear it. Let me get back to you on the number.",
+    "is_mine": true
+   },
+   {
+    "sender": "Marco Bellini <marco@talentbridge.example.org>",
+    "sent_at": "2026-10-28T15:00:00Z",
+    "body": "Sounds good, I need it by tomorrow so I can submit before the slate closes.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T15:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "marco@talentbridge.example.org",
+  "text": "Alex's base salary floor is $210k; Alex will not go below it even with extra equity."
+ },
+ "question": "What number should I give Marco?",
+ "fact": "The owner's minimum base salary is $210k, and equity does not change that floor."
+}
