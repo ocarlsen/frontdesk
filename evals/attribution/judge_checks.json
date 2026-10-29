@@ -80,6 +80,16 @@
   }
  },
  {
+  "id": "c10-note-about-owner-action",
+  "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet.",
+  "answer": "Hold off. An unconfirmed note says you agreed to share the architecture deck only after Lumenworks returns the signed NDA; check that before you reply.",
+  "expect": {
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true
+  }
+ },
+ {
   "id": "c9-ignores-fact",
   "fact": "The owner can take only one volunteer slot per month this fall, and told Rosa so in September.",
   "answer": "Both dates look manageable. Say yes to Rosa and ask what time to arrive.",

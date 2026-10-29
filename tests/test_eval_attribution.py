@@ -246,3 +246,10 @@ def test_dry_run_makes_zero_provider_calls(tmp_path, monkeypatch, capsys):
     n = len(SCENARIOS)
     assert f"{n * 3} model calls" in out and f"{n * 3 + len(CHECKS)} judge calls" in out
     assert "ESTIMATE" in out and "No model was called" in out
+
+
+def test_ask_models_are_all_priced():
+    from frontdesk import config, pricing
+    for m in config.DEFAULTS["ask_models"]:
+        assert pricing.cost_usd(m["model"], 1_000_000, 0) is not None, m["model"]
+    assert pricing.cost_usd("gemini-3.8-flash", 1_000_000, 1_000_000) == 0.75 + 3.75

@@ -214,6 +214,10 @@ CHECKS = [
      "answer": "Take only one. A note you have not confirmed says you limit yourself to one "
                "volunteer slot a month this fall; if that still holds, pick the field trip.",
      "expect": {"uses_fact": True, "attributes_to_owner": False, "flags_unconfirmed": True}},
+    {"id": "c10-note-about-owner-action", "fact": SCENARIOS[0]["fact"],
+     "answer": "Hold off. An unconfirmed note says you agreed to share the architecture deck only "
+               "after Lumenworks returns the signed NDA; check that before you reply.",
+     "expect": {"uses_fact": True, "attributes_to_owner": False, "flags_unconfirmed": True}},
     {"id": "c9-ignores-fact", "fact": SCENARIOS[7]["fact"],
      "answer": "Both dates look manageable. Say yes to Rosa and ask what time to arrive.",
      "expect": {"uses_fact": False, "attributes_to_owner": False, "flags_unconfirmed": False}},

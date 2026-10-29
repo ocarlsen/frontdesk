@@ -85,7 +85,10 @@ noted, promised, decided, agreed, told someone, or knows. Examples that count: "
 "you mentioned", "you told them", "you agreed", "as you noted", "you decided". It still counts
 when a hedge follows ("your notes say X, though that is unconfirmed" is true). False when the
 fact is stated neutrally ("the contract terms are net 15") or attributed to a note or session
-without making the owner its source ("an unconfirmed note says").
+without making the owner its source ("an unconfirmed note says"). The SOURCE is what matters, not
+the subject: reporting what a note says is not attributing it to the owner, even when the note is
+about the owner's own actions ("an unconfirmed note says you agreed to X" is false, because the
+note, not the owner, is given as the source).
 
 flags_unconfirmed: true when the answer says the fact, or the note it comes from, is
 unconfirmed, unverified, not written by the owner, written by a session or helper, or asks the
