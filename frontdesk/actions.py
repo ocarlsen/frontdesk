@@ -164,3 +164,37 @@ def set_done(store: Store, item_id: str, done: bool) -> dict:
     else:
         store.unhide(item_id)
     return {"status": "done", "kind": "done" if done else "undone"}
+
+
+def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None) -> dict:
+    """Mark a thread read where it lives, once the owner has opened it in FrontDesk.
+    Gmail: remove UNREAD from the thread. Slack DMs and group DMs: move the read position to
+    the newest message. Slack channel threads: skipped, because Slack can only mark a whole
+    channel read, which would hide other unread messages there."""
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    if "UNREAD" not in item.labels:
+        return {"status": "already_read"}
+    if item.source == "slack":
+        _, channel, ts = item_id.split(":", 2)
+        if ts != "dm":
+            return {"status": "skipped", "why": "channel thread"}
+        if slack is not None:
+            # A DM's deep link points at its newest message: .../archives/<ch>/p<ts digits>.
+            m = re.search(r"/p(\d{10})(\d{6})", item.url)
+            if not m:
+                raise ActionError("can't find the newest message to mark read")
+            newest = f"{m.group(1)}.{m.group(2)}"
+            try:
+                slack.mark(channel, newest)
+            except Exception as e:  # noqa: BLE001 - surfaced to the owner as a short error
+                raise ActionError(f"Slack would not mark it read ({e})") from e
+    elif gmail is not None:
+        _check_account(gmail, item.account)
+        try:
+            gmail.modify_thread(_native_id(item_id), remove=["UNREAD"])
+        except GmailError as e:
+            raise ActionError(str(e)) from e
+    store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
+    return {"status": "done"}

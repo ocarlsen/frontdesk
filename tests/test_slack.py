@@ -304,3 +304,23 @@ def test_list_conversations_filters_and_user_cache(monkeypatch):
     c.user("U0ANN")
     c.user("U0ANN")
     assert sum("users.info" in u for u in calls) == 1
+
+
+def test_dm_unread_compares_last_read_with_others_messages():
+    from frontdesk.slack.sync import _dm_unread
+
+    class C:
+        def __init__(self, last_read):
+            self.last_read = last_read
+
+        def info(self, ch):
+            return {"last_read": self.last_read}
+    msgs = [{"user": "U0ANN", "ts": "1730000000.000200"},
+            {"user": "U0OWNER", "ts": "1730000000.000300"}]
+    assert _dm_unread(C("1730000000.000100"), "D1", msgs, "U0OWNER") is True
+    assert _dm_unread(C("1730000000.000200"), "D1", msgs, "U0OWNER") is False   # only own after
+
+    class Broken:
+        def info(self, ch):
+            raise RuntimeError("missing_scope")
+    assert _dm_unread(Broken(), "D1", msgs, "U0OWNER") is False

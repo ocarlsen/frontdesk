@@ -172,6 +172,16 @@ class Store:
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
 
+    def set_labels(self, item_id: str, labels: list[str]) -> None:
+        """Change only an item's labels (e.g. UNREAD), leaving its messages and HTML alone."""
+        row = self.db.execute("SELECT data FROM items WHERE id=?", (item_id,)).fetchone()
+        if row is None:
+            return
+        d = json.loads(row["data"])
+        d["labels"] = labels
+        with self.tx() as db:
+            db.execute("UPDATE items SET data=? WHERE id=?", (json.dumps(d), item_id))
+
     def get_item(self, item_id: str) -> Item | None:
         """The item WITHOUT message HTML; use message_html() for display."""
         row = self.db.execute("SELECT data FROM items WHERE id=?", (item_id,)).fetchone()

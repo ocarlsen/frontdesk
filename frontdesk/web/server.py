@@ -167,7 +167,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
-                      "undone") \
+                      "undone", "read") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -179,6 +179,28 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                      f"{config.PROFILE_MAX} characters"}
         config.save_setting("owner_profile", text.strip())
         return HTTPStatus.OK, {"status": "done", "kind": "profile"}
+    if kind == "read":
+        if settings.get("demo") or not config.settings()["mark_read_on_open"]:
+            return HTTPStatus.OK, {"status": "skipped"}
+        from ..slack.client import SlackClient
+        from ..sources import slack_token
+        store = Store(db_path)
+        try:
+            item = store.get_item(str(item_id))
+            gmail = slack = None
+            if item is not None and item.source == "slack":
+                tok = slack_token(config.settings())
+                slack = SlackClient(tok) if tok else None
+            elif item is not None:
+                try:
+                    gmail = GmailClient(action_credentials())
+                except AuthError as e:
+                    return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+            return HTTPStatus.OK, actions.mark_read(store, str(item_id), gmail, slack)
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
     if kind in ("done", "undone"):   # local only: hides in FrontDesk, touches no mailbox
         store = Store(db_path)
         try:

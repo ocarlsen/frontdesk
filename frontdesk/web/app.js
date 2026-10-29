@@ -233,6 +233,7 @@ const openThreads = new Set();
 function buildCard(item, triage) {
   const li = el("li", "card");
   li.dataset.id = item.id;
+  if ((item.labels || []).includes("UNREAD")) li.classList.add("unread");
   cardItems.set(li, item);
   const row = el("button", "row");
   row.type = "button";
@@ -267,6 +268,7 @@ function buildCard(item, triage) {
     row.setAttribute("aria-expanded", String(!open));
     li.classList.toggle("open", !open);
     if (open) openThreads.delete(item.id); else openThreads.add(item.id);
+    if (!open) markReadSoon(item, li, row);
   });
   li.append(row);
   if (openThreads.has(item.id)) {            // reopen after a re-render
@@ -291,6 +293,7 @@ async function postAction(kind, itemId, extra) {
     if (kind === "archive") staticHidden.add(itemId);
     if (kind === "unarchive" || kind === "undone") staticHidden.delete(itemId);
     if (kind === "done") staticHidden.add(itemId);
+    if (kind === "read") return { status: "done" };
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile") throw new Error("demo mode");
     if (kind === "send_prepare") {
@@ -454,6 +457,21 @@ async function relabel(item, bucket, name, btn) {
     btn.disabled = false;
     toast("Move failed: " + e.message);
   }
+}
+
+// Opening a thread for ~2 seconds marks it read (Gmail, Slack DMs); skimming with j/k does not.
+function markReadSoon(item, li, row) {
+  if (!(item.labels || []).includes("UNREAD")) return;
+  setTimeout(async () => {
+    if (row.getAttribute("aria-expanded") !== "true") return;
+    try {
+      const out = await postAction("read", item.id);
+      if (out.status === "done" || out.status === "already_read") {
+        item.labels = item.labels.filter(l => l !== "UNREAD");
+        li.classList.remove("unread");
+      }
+    } catch (e) { /* stays bold; the next open tries again */ }
+  }, 2000);
 }
 
 async function markDone(item, btn) {

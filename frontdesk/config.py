@@ -26,6 +26,7 @@ DEFAULTS = {
     "serve_host": "127.0.0.1",
     "serve_port": 8765,
     "auto_sync_minutes": 15,    # the server syncs and ranks on its own; 0 turns it off
+    "mark_read_on_open": True,  # open ~2 s: mark read in Gmail / Slack DMs
     "serve_display_host": "",   # address to print when serve_host is 0.0.0.0
     "serve_allowed_hosts": [],  # extra Host names to accept besides localhost and IP literals
 }

@@ -82,6 +82,21 @@ class SlackClient:
             raise SlackError("chat.postMessage", str(data.get("error", "unknown_error"))[:100])
         return data
 
+    def info(self, channel: str) -> dict:
+        """conversations.info: for a DM this carries the owner's read position (last_read)."""
+        return self._call("conversations.info", {"channel": channel})["channel"]
+
+    def mark(self, channel: str, ts: str) -> dict:
+        """conversations.mark: move the owner's read position in a DM or group DM to ts
+        (needs im:write / mpim:write). Idempotent, so retrying is harmless."""
+        resp = self.session.post(f"{BASE}/conversations.mark", json={"channel": channel, "ts": ts},
+                                 timeout=self.timeout,
+                                 headers={"Authorization": f"Bearer {self._token}"})
+        data = resp.json() if resp.status_code == 200 else {"error": f"http_{resp.status_code}"}
+        if not data.get("ok"):
+            raise SlackError("conversations.mark", str(data.get("error", "unknown_error"))[:100])
+        return data
+
     def auth_test(self) -> dict:
         data = self._call("auth.test")
         return {k: data.get(k, "") for k in ("user_id", "team_id", "url", "team", "user")}

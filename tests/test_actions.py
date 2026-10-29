@@ -187,3 +187,52 @@ def test_archive_stays_hidden_even_if_the_thread_moves(tmp_path):
     item.updated_at = "2026-10-28T19:00:00Z"
     store.upsert_item(item)
     assert store.ranked() == []          # archived threads leave on the next sync, not here
+
+
+def test_mark_read_gmail_removes_unread_everywhere(tmp_path):
+    store = store_with_item(tmp_path)
+    item = store.get_item("gmail:t1")
+    item.labels = ["INBOX", "UNREAD"]
+    item.messages[0].html = "<p>keep me</p>"
+    store.upsert_item(item)
+    g = FakeGmail()
+    assert actions.mark_read(store, "gmail:t1", g, None)["status"] == "done"
+    assert g.calls == [("t1", (), ("UNREAD",))]
+    assert "UNREAD" not in store.get_item("gmail:t1").labels
+    assert store.message_html("gmail:t1", 0) == "<p>keep me</p>"     # labels-only update
+    assert actions.mark_read(store, "gmail:t1", g, None)["status"] == "already_read"
+    assert len(g.calls) == 1
+
+
+class FakeSlackMark:
+    def __init__(self):
+        self.marked = []
+
+    def mark(self, channel, ts):
+        self.marked.append((channel, ts))
+
+
+def _slack_item(store, item_id, url):
+    store.upsert_item(Item(id=item_id, source="slack", account="example-team.slack.com",
+                           subject="s", participants=[], updated_at="2026-10-28T16:00:00Z",
+                           labels=["slack", "dm", "UNREAD"], url=url,
+                           messages=[Message("Ann", "2026-10-28T16:00:00Z", "hi")]))
+
+
+def test_mark_read_slack_dm_moves_read_position_to_newest(tmp_path):
+    store = Store(tmp_path / "sr.db")
+    _slack_item(store, "slack:D9:dm",
+                "https://example-team.slack.com/archives/D9/p1730000000000100")
+    sl = FakeSlackMark()
+    assert actions.mark_read(store, "slack:D9:dm", None, sl)["status"] == "done"
+    assert sl.marked == [("D9", "1730000000.000100")]
+    assert "UNREAD" not in store.get_item("slack:D9:dm").labels
+
+
+def test_mark_read_skips_slack_channel_threads(tmp_path):
+    store = Store(tmp_path / "sc.db")
+    _slack_item(store, "slack:C1:1730000000.000001",
+                "https://example-team.slack.com/archives/C1/p1730000000000001")
+    sl = FakeSlackMark()
+    assert actions.mark_read(store, "slack:C1:1730000000.000001", None, sl)["status"] == "skipped"
+    assert sl.marked == []

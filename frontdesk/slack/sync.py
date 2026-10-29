@@ -64,6 +64,16 @@ def _candidates(conv: dict, history: list[dict], owner: str) -> list[_Candidate]
     return out
 
 
+def _dm_unread(client, channel: str, raw: list[dict], owner: str) -> bool:
+    """True when someone else posted after the owner's read position. Best effort: if Slack
+    won't say, report read rather than guess."""
+    try:
+        last_read = float(client.info(channel).get("last_read") or 0)
+    except Exception:  # noqa: BLE001 - unread is a display hint, never worth failing the sync
+        return False
+    return any(m.get("user") != owner and float(m.get("ts", 0)) > last_read for m in raw)
+
+
 def sync(store: Store, settings: dict, token: str, log=print,
          client: SlackClient | None = None) -> SyncResult:
     """One bad conversation (a history error, a missing scope on one channel) is logged and
@@ -98,6 +108,8 @@ def sync(store: Store, settings: dict, token: str, log=print,
         try:
             if c.item_id.endswith(":dm"):
                 item = dm_to_item(c.conv, c.messages, owner, host, name_of)
+                if item is not None and _dm_unread(client, c.conv["id"], c.messages, owner):
+                    item.labels.append("UNREAD")
             else:
                 raw = (client.replies(c.conv["id"], c.messages[0]["ts"])
                        if c.fetch_replies else c.messages)

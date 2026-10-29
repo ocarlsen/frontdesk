@@ -177,3 +177,6 @@ li.card.current { box-shadow: inset 3px 0 0 var(--accent); }
   border-radius: 6px; padding: 10px; max-height: 40vh; overflow: auto; margin: 0 0 8px; }
 
 li.card.leaving { opacity: .45; transition: opacity .15s; }
+
+li.card.unread .sender, li.card.unread .subject { font-weight: 700; }
+li.card:not(.unread) .sender { font-weight: 500; }
