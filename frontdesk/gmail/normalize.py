@@ -72,15 +72,31 @@ def _find_part(part: dict, mime: str) -> dict | None:
     return None
 
 
+URL_CAP = 160   # long tracking links keep their host and path start; the host is the signal
+
+
+def _link_target(href: str) -> str:
+    """The address a link really points to, for the model to weigh (a "View invoice" link to an
+    unrelated host is a phishing signal). Only web and mail links; never javascript:, cid: or
+    in-page anchors."""
+    href = (href or "").strip()
+    if not re.match(r"(?i)(https?:|mailto:)", href):
+        return ""
+    return href if len(href) <= URL_CAP else href[:URL_CAP] + "..."
+
+
 class _HTMLText(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.out: list[str] = []
         self._skip = 0
+        self._links: list[tuple[str, int]] = []   # (target, index in out where the text began)
 
     def handle_starttag(self, tag, attrs):
         if tag in ("script", "style", "head", "title"):
             self._skip += 1
+        elif tag == "a":
+            self._links.append((_link_target(dict(attrs).get("href", "")), len(self.out)))
         elif tag in _BLOCK_TAGS:
             self.out.append("\n")
 
@@ -91,6 +107,12 @@ class _HTMLText(HTMLParser):
     def handle_endtag(self, tag):
         if tag in ("script", "style", "head", "title"):
             self._skip = max(0, self._skip - 1)
+        elif tag == "a" and self._links:
+            target, start = self._links.pop()
+            text = "".join(self.out[start:]).strip()
+            bare = target.removeprefix("mailto:")
+            if target and not self._skip and bare not in text:
+                self.out.append(f" ({target})")
         elif tag in _BLOCK_TAGS:
             self.out.append("\n")
 
