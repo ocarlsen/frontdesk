@@ -57,9 +57,10 @@
 @media (max-width: 480px) { .fd .facts { grid-template-columns: 1fr; } }
 </style>
 
-<p class="lede">An open-source inbox agent. It reads your Gmail, ranks what actually needs you,
-says why in one line, and has a reply drafted for the threads that want one. It runs on your
-computer, with the model you choose.</p>
+<p class="lede">An open-source inbox agent. It reads your Gmail and Slack, ranks what actually
+needs you, says why in one line, and has a reply drafted for the threads that want one. Ask it
+about any thread and it answers with your history and notes in mind. It runs on your computer,
+with the model you choose.</p>
 
 <p class="actions">
   <a class="primary" href="https://frontdesk.ocarlsen.com/index.html">Try the live demo</a>
@@ -70,7 +71,7 @@ computer, with the model you choose.</p>
   <li><b>Local-first</b><span>No server, no account, no analytics. Your mail stays on your machine.</span></li>
   <li><b>Read-only by default</b><span>Archive, drafts and sending need a second, separate permission. Mail goes out only when you click Send and confirm.</span></li>
   <li><b>Measured</b><span>Labeled test set and a 32-attack prompt-injection suite, scored per model.</span></li>
-  <li><b>Bring your own model</b><span>One small adapter per vendor; switching is a setting.</span></li>
+  <li><b>Bring your own model</b><span>Adapters for Anthropic, OpenAI and Gemini; switching is a setting, and Ask can put one question to all of them.</span></li>
 </ul>
 
 <figure>
@@ -83,12 +84,22 @@ computer, with the model you choose.</p>
 <h2>How it works</h2>
 <ol class="steps">
   <li><b>Sync.</b> A read-only Gmail token pulls recent threads and normalizes them: charset
-  fixes, quoted history stripped, inline images embedded for display.</li>
+  fixes, quoted history stripped, inline images embedded for display, and the real address
+  behind every link. If you connect Slack, your direct and group messages, and channel threads
+  that mention you or that you replied in, come in the same way.</li>
   <li><b>Triage.</b> Each thread goes to the model as quoted data it cannot break out of, and
   comes back in a fixed format that the code validates again. Every ranking records its model,
   prompt version, tokens and cost.</li>
-  <li><b>Act.</b> You read the thread rendered like Gmail, edit the suggested reply, and save it
-  as a Gmail draft, or archive the thread with one click and undo.</li>
+  <li><b>Ask.</b> Open any thread and ask what to do. FrontDesk answers with the thread, your
+  other threads with the same people, your profile and your notes, and can draft the reply.
+  Second opinion has a stronger model check the answer; Polish tightens your own draft.</li>
+  <li><b>Remember.</b> Notes on people and a short "What's going on" list carry context from one
+  thread to the next. Ask suggests additions and you save them with a click. Every memory
+  records who wrote it and when, and anything you did not write yourself is marked unconfirmed,
+  to you and to the model.</li>
+  <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
+  or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
+  Archive or mark done with one click, with keyboard shortcuts like Gmail's.</li>
 </ol>
 
 <figure>
@@ -117,6 +128,25 @@ to talk the model into misfiling it, or into putting the attacker's words into m
 thread that needed you as ignore, and never carry an attacker's text into a reply. Sonnet 5 is
 cheaper but copied a forged payment commitment into one reply, so it fails that floor. The full
 report, with confidence intervals, is in the repository.</p>
+
+<p>Memory gets its own test: 12 synthetic threads whose answer depends on a note, asked once with
+a note you wrote and once with the same note written by a helper session on your behalf. Without
+authorship labels, every model credited the helper's note to you most of the time. With them,
+none did without saying it was unconfirmed, and all still used your own notes without
+hedging.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Model</th><th>Helper's note credited to you, no labels</th><th>With labels</th><th>Your own notes used, no false hedge</th></tr></thead>
+  <tbody>
+    <tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+    <tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+    <tr><td>Gemini 3.8 Flash</td><td class="num">9 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="note">Judged by a separate model that is checked against hand-labelled answers on
+every run. "With labels" counts answers that credited the note to you without flagging it as
+unconfirmed.</p>
 
 <div class="callout"><p><b>What it doesn't claim.</b> Prompt injection is not solved. FrontDesk
 limits what a malicious email can do (it cannot make anything send, run code in the page, or
