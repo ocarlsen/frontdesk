@@ -15,7 +15,16 @@ GMAIL_ACTIONS_TOKEN = HOME / "gmail_actions_token.json"   # gmail.modify; only a
 DEFAULTS = {
     "provider": "anthropic",
     "model": "claude-opus-5-5",   # picked by evals/results/SCOREBOARD.md
-    "provider_options": {"effort": "medium"},
+    "provider_options": {"anthropic": {"effort": "medium"}},   # per vendor
+    "openai_keychain_service": "frontdesk-openai",    # or OPENAI_API_KEY
+    "gemini_keychain_service": "frontdesk-gemini",    # or GEMINI_API_KEY
+    # Models offered in Ask (shown only when that vendor has a key). Labels are display names.
+    "ask_models": [
+        {"provider": "anthropic", "model": "claude-opus-5-5", "label": "Opus 5.5"},
+        {"provider": "anthropic", "model": "claude-fable-5-1", "label": "Fable 5.1"},
+        {"provider": "openai", "model": "gpt-6.1-sol", "label": "GPT-6.1"},
+        {"provider": "gemini", "model": "gemini-3.8-flash", "label": "Gemini 3.8 Flash"},
+    ],
     "review_model": "claude-fable-5-1",   # Ask's Second opinion and Polish draft
     "owner_profile": "",   # a few sentences on what matters to you; added to the model's prompt
     "keychain_service": "frontdesk-anthropic",

@@ -203,10 +203,21 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                     or not isinstance(draft, str) or len(q) > 4000 or len(draft) > 8000:
                 return HTTPStatus.BAD_REQUEST, {"error": "expected question/draft text and a mode"}
             s = config.settings()
+            choice = req.get("model")
             if mode != "ask":            # the reviewer is a different, stronger model
-                s = {**s, "model": s["review_model"]}
+                s = {**s, "provider": "anthropic", "model": s["review_model"]}
+                return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
+                                                 s["owner_profile"], mode=mode, draft=draft)
+            available = available_models(s)
+            if choice == "all":
+                return HTTPStatus.OK, ask_all(db_path, s, available, str(item_id), q)
+            if isinstance(choice, int) and 0 <= choice < len(available):
+                m = available[choice]
+                s = {**s, "provider": m["provider"], "model": m["model"]}
+                return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
+                                                 s["owner_profile"], label=m["label"])
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
-                                             s["owner_profile"], mode=mode, draft=draft)
+                                             s["owner_profile"])
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:
@@ -272,6 +283,49 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         return HTTPStatus.CONFLICT, {"error": str(e)}
     finally:
         store.db.close()
+
+
+def available_models(settings: dict) -> list[dict]:
+    """The Ask model list, minus vendors with no key configured."""
+    from ..providers import has_key
+    have: dict[str, bool] = {}
+    out = []
+    for m in settings["ask_models"]:
+        if m["provider"] not in have:
+            have[m["provider"]] = has_key(settings, m["provider"])
+        if have[m["provider"]]:
+            out.append(m)
+    return out
+
+
+def ask_all(db_path: Path, settings: dict, models: list[dict], item_id: str,
+            question: str) -> dict:
+    """The same question to every available model in parallel, each answer saved under its
+    model's label. A model that fails is reported, not fatal."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from .. import assist
+    from ..providers import ProviderError, get_provider
+    q = (question or "").strip() or assist.ADVISE
+    store = Store(db_path)
+    try:
+        store.add_ask(item_id, "owner", q + "  [asked: all models]")
+    finally:
+        store.db.close()
+
+    def one(m: dict) -> dict:
+        st = Store(db_path)      # one connection per thread (sqlite)
+        try:
+            s = {**settings, "provider": m["provider"], "model": m["model"]}
+            return assist.ask(st, get_provider(s), item_id, q, settings["owner_profile"],
+                              record_question=False, label=m["label"])
+        except ProviderError as e:
+            return {"model": m["label"], "error": str(e)}
+        finally:
+            st.db.close()
+    with ThreadPoolExecutor(max_workers=max(1, len(models))) as pool:
+        answers = list(pool.map(one, models))
+    return {"answers": answers}
 
 
 def host_allowed(host_header: str, extra_names: set[str]) -> bool:
@@ -382,6 +436,11 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 else:
                     self._send(HTTPStatus.OK, json.dumps(out).encode(),
                                "application/json; charset=utf-8")
+            elif path == "/api/models":
+                body = [{"index": i, "label": m["label"], "provider": m["provider"]}
+                        for i, m in enumerate(available_models(config.settings()))]
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/status":
                 self._send(HTTPStatus.OK, json.dumps(_last_sync).encode(),
                            "application/json; charset=utf-8")

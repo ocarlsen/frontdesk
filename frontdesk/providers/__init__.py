@@ -33,11 +33,38 @@ def api_key(env_var: str, keychain_service: str) -> str:
     return os.environ.get(env_var, "").strip() or keychain_secret(keychain_service)
 
 
+# provider -> (environment variable, settings key naming its Keychain item, adapter path)
+VENDORS = {
+    "anthropic": ("ANTHROPIC_API_KEY", "keychain_service", "anthropic_provider:AnthropicProvider"),
+    "openai": ("OPENAI_API_KEY", "openai_keychain_service", "openai_provider:OpenAIProvider"),
+    "gemini": ("GEMINI_API_KEY", "gemini_keychain_service", "gemini_provider:GeminiProvider"),
+}
+
+
+def has_key(settings: dict, name: str) -> bool:
+    """Whether a key for this vendor is available, without returning it."""
+    env, kc, _ = VENDORS[name]
+    if os.environ.get(env, "").strip():
+        return True
+    try:
+        return bool(keychain_secret(settings[kc]))
+    except ProviderError:
+        return False
+
+
 def get_provider(settings: dict) -> Provider:
+    """settings['provider'] and settings['model'] pick the adapter. Vendor-specific knobs live in
+    settings['provider_options'][<provider>], so one vendor's options never reach another."""
     name = settings["provider"]
-    opts = settings["provider_options"]
-    if name == "anthropic":
-        from .anthropic_provider import AnthropicProvider
-        return AnthropicProvider(api_key("ANTHROPIC_API_KEY", settings["keychain_service"]),
-                                 settings["model"], **opts)
-    raise ValueError(f"unknown provider '{name}' (known: anthropic)")
+    if name not in VENDORS:
+        raise ValueError(f"unknown provider '{name}' (known: {', '.join(VENDORS)})")
+    env, kc, path = VENDORS[name]
+    module, cls = path.split(":")
+    import importlib
+    try:
+        adapter = getattr(importlib.import_module(f".{module}", __name__), cls)
+    except ImportError as e:   # the vendor SDK is an optional extra
+        raise ProviderError(f"{name} support is not installed: pip install 'frontdesk[{name}]'") \
+            from e
+    opts = (settings.get("provider_options") or {}).get(name, {})
+    return adapter(api_key(env, settings[kc]), settings["model"], **opts)

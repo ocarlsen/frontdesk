@@ -191,3 +191,6 @@ li.card:not(.unread) .sender { font-weight: 500; }
 .answertext { white-space: pre-wrap; margin: 0 0 8px; }
 .notes > summary { cursor: pointer; font-size: .88em; color: var(--muted); }
 .notewho { margin: 8px 0 2px; font-size: .88em; font-weight: 600; }
+
+.modelpick { font: inherit; font-size: .9em; padding: 4px 6px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--card); color: var(--text); }

@@ -588,7 +588,17 @@ async function buildAsk(item, replyBox, body) {
   polish.title = "Review and tighten the draft in the reply box (or the last suggested draft)";
   const status = el("p", "kbdhint");
   const row = el("div", "actions");
-  row.append(advise, askBtn, second, polish);
+  const pick = el("select", "modelpick");
+  pick.title = "Model for Advise and Ask";
+  pick.append(Object.assign(el("option", null, "Default model"), { value: "" }));
+  const all = el("button", "btn", "Ask all");
+  all.type = "button";
+  all.title = "Same question to every model you have a key for, answers side by side";
+  fetch("/api/models", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(ms => {
+    for (const m of ms) pick.append(Object.assign(el("option", null, m.label), { value: String(m.index) }));
+    if (ms.length < 2) all.hidden = true;
+  }).catch(() => { all.hidden = true; });
+  row.append(pick, advise, askBtn, all, second, polish);
   body.append(notesBox, history, q, row, status);
 
   let people = [];
@@ -624,15 +634,28 @@ async function buildAsk(item, replyBox, body) {
   }
   let lastDraft = "";
   for (const h of (data && data.history) || []) if (h.draft_reply) lastDraft = h.draft_reply;
-  const buttons = [advise, askBtn, second, polish];
-  const go = async (question, mode, draft) => {
+  const buttons = [advise, askBtn, all, second, polish];
+  const go = async (question, mode, draft, model) => {
     buttons.forEach(b => { b.disabled = true; });
     status.textContent = mode === "ask" ? "Thinking..." : "Asking the review model (slower)...";
     try {
-      const out = await postAction("ask", item.id, { question, mode: mode || "ask", draft: draft || "" });
-      if (out.draft_reply) lastDraft = out.draft_reply;
+      const chosen = model !== undefined ? model : (pick.value === "" ? undefined : Number(pick.value));
+      const out = await postAction("ask", item.id, { question, mode: mode || "ask",
+                                                     draft: draft || "", model: chosen });
       history.append(el("p", "askq", mode === "second" ? "Second opinion" :
-        mode === "polish" ? "Polish draft" : (question || "Advise me")));
+        mode === "polish" ? "Polish draft" : (question || "Advise me") +
+        (chosen === "all" ? "  [all models]" : "")));
+      if (out.answers) {                       // Ask all: one answer per model
+        for (const a of out.answers) {
+          if (a.error) { history.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
+          if (a.draft_reply) lastDraft = a.draft_reply;
+          renderAnswer(history, a, replyBox, refreshNotes);
+        }
+        q.value = "";
+        status.textContent = "";
+        return;
+      }
+      if (out.draft_reply) lastDraft = out.draft_reply;
       renderAnswer(history, out, replyBox, refreshNotes);
       q.value = "";
       status.textContent = "";
@@ -644,6 +667,7 @@ async function buildAsk(item, replyBox, body) {
   };
   advise.addEventListener("click", () => go("", "ask"));
   askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value, "ask"); });
+  all.addEventListener("click", () => go(q.value, "ask", "", "all"));
   second.addEventListener("click", () => go("", "second"));
   polish.addEventListener("click", () => {
     const d = replyBox.value.trim() || lastDraft;

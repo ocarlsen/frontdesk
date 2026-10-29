@@ -130,7 +130,8 @@ def validate(raw: dict) -> dict:
 
 
 def ask(store: Store, provider: Provider, item_id: str, question: str, profile: str = "",
-        mode: str = "ask", draft: str = "") -> dict:
+        mode: str = "ask", draft: str = "", record_question: bool = True,
+        label: str = "") -> dict:
     """mode 'ask' answers `question` (Advise when empty); 'second' asks the provider (normally the
     stronger review model) to check the previous answer; 'polish' reviews and rewrites `draft`."""
     item = store.get_item(item_id)
@@ -153,7 +154,10 @@ def ask(store: Store, provider: Provider, item_id: str, question: str, profile: 
     served = u.model_served or provider.model
     out["model"] = served
     out["cost_usd"] = cost_usd(served, u.tokens_in, u.tokens_out, u.cache_read, u.cache_write)
-    store.add_ask(item_id, "owner", question)
+    if label:
+        out["model"] = f"{label} ({served})"
+    if record_question:
+        store.add_ask(item_id, "owner", question)
     store.add_ask(item_id, "assistant", out["answer"],
                   {k: out[k] for k in ("draft_reply", "note_suggestions", "model", "cost_usd")})
     return out
