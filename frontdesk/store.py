@@ -64,6 +64,22 @@ CREATE TABLE IF NOT EXISTS hidden (
     at TEXT NOT NULL,
     item_updated_at TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS notes (
+    -- The owner's own notes about a person (keyed by their address or Slack name, lowercase).
+    -- Trusted context for Ask; written only by the owner (a model may only suggest).
+    who TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS asks (
+    -- One Ask conversation per thread: the owner's questions and the model's answers.
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id TEXT NOT NULL,
+    role TEXT NOT NULL,              -- 'owner' | 'assistant'
+    text TEXT NOT NULL,
+    extra TEXT NOT NULL DEFAULT '{}', -- assistant: {draft_reply, note_suggestions, model, cost}
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS labels (
     -- The owner's correction of a ranking: private ground truth for `frontdesk eval --mine`.
     item_id TEXT NOT NULL,
@@ -181,6 +197,48 @@ class Store:
         d["labels"] = labels
         with self.tx() as db:
             db.execute("UPDATE items SET data=? WHERE id=?", (json.dumps(d), item_id))
+
+    # ---- notes and Ask history
+    def notes_for(self, people: list[str]) -> dict[str, str]:
+        keys = [p.lower() for p in people if p]
+        if not keys:
+            return {}
+        rows = self.db.execute(f"SELECT who, text FROM notes WHERE who IN "
+                               f"({','.join('?' * len(keys))})", keys).fetchall()
+        return {r["who"]: r["text"] for r in rows}
+
+    def save_note(self, who: str, text: str) -> None:
+        who = who.strip().lower()
+        with self.tx() as db:
+            if text.strip():
+                db.execute("INSERT OR REPLACE INTO notes VALUES (?,?,?)",
+                           (who, text.strip(), now()))
+            else:
+                db.execute("DELETE FROM notes WHERE who=?", (who,))
+
+    def ask_history(self, item_id: str) -> list[dict]:
+        return [{"role": r["role"], "text": r["text"], **json.loads(r["extra"])}
+                for r in self.db.execute("SELECT * FROM asks WHERE item_id=? ORDER BY id",
+                                         (item_id,))]
+
+    def add_ask(self, item_id: str, role: str, text: str, extra: dict | None = None) -> None:
+        with self.tx() as db:
+            db.execute("INSERT INTO asks (item_id, role, text, extra, at) VALUES (?,?,?,?,?)",
+                       (item_id, role, text, json.dumps(extra or {}), now()))
+
+    def related(self, item: Item, limit: int = 5) -> list[tuple[Item, str]]:
+        """Other stored threads (including archived or done ones) that share a participant with
+        `item`, newest first, each with its triage summary if any."""
+        mine = {p.lower() for p in item.participants} - {item.account.lower()}
+        out = []
+        for r in self.db.execute("SELECT i.data, t.summary FROM items i LEFT JOIN triage t "
+                                 "ON t.item_id = i.id WHERE i.id != ?", (item.id,)):
+            other = Item.from_dict(json.loads(r["data"]))
+            theirs = {p.lower() for p in other.participants} - {other.account.lower()}
+            if mine & theirs:
+                out.append((other, r["summary"] or ""))
+        out.sort(key=lambda it: it[0].updated_at, reverse=True)
+        return out[:limit]
 
     def get_item(self, item_id: str) -> Item | None:
         """The item WITHOUT message HTML; use message_html() for display."""

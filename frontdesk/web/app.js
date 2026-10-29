@@ -221,6 +221,7 @@ function buildDetail(item, triage) {
   }
   if (actions.childNodes.length) reply.append(actions);
   if (triage) d.append(whyPanel(triage));
+  d.append(askPanel(item, ta));
   d.append(reply);
   return d;
 }
@@ -511,6 +512,127 @@ async function archive(item, btn) {
     btn.disabled = false;
     toast("Archive failed: " + e.message);
   }
+}
+
+// ---- Ask: reason about this thread with the context (history with these people, your notes).
+// Answers are model text from untrusted mail: shown as plain text; a draft only fills the box.
+function askPanel(item, replyBox) {
+  const det = el("details", "ask");
+  det.append(el("summary", null, "Ask FrontDesk about this thread"));
+  const body = el("div", "askbody");
+  det.append(body);
+  let loaded = false;
+  det.addEventListener("toggle", () => {
+    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body); }
+  });
+  return det;
+}
+
+function renderAnswer(box, a, replyBox, refreshNotes) {
+  const ans = el("div", "answer");
+  ans.append(el("p", "answertext", a.text || a.answer || ""));
+  const row = el("div", "actions");
+  const draft = a.draft_reply || "";
+  if (draft) {
+    const use = el("button", "btn small", "Use as reply");
+    use.type = "button";
+    use.addEventListener("click", () => {
+      replyBox.value = draft;
+      replyBox.dispatchEvent(new Event("input"));
+      replyBox.focus();
+      toast("Draft is in the reply box: edit it, then Save or Send.");
+    });
+    row.append(use);
+    ans.append(el("pre", "sendbody", draft));
+  }
+  for (const n of a.note_suggestions || []) {
+    const b = el("button", "btn small", "Save note for " + n.who + ": " + n.text);
+    b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        await postAction("note", "", { who: n.who, text: n.text, append: true });
+        b.textContent = "Saved note for " + n.who;
+        refreshNotes();
+      } catch (e) { b.disabled = false; toast("Save failed: " + e.message); }
+    });
+    row.append(b);
+  }
+  if (row.childNodes.length) ans.append(row);
+  if (a.model) {
+    ans.append(el("p", "kbdhint", a.model + (a.cost_usd != null ? ", $" + Number(a.cost_usd).toFixed(3) : "")));
+  }
+  box.append(ans);
+}
+
+async function buildAsk(item, replyBox, body) {
+  if (STATIC) {
+    body.append(el("p", "kbdhint", "Demo: Ask needs a live model. In your own copy it reads this " +
+      "thread, your other threads with the same people and your notes, then advises."));
+    return;
+  }
+  const history = el("div", "askhistory");
+  const notesBox = el("div", "asknotes");
+  const q = el("textarea");
+  q.rows = 2;
+  q.placeholder = "Ask about this thread (or click Advise me)";
+  const advise = el("button", "btn primary", "Advise me");
+  advise.type = "button";
+  const askBtn = el("button", "btn", "Ask");
+  askBtn.type = "button";
+  const status = el("p", "kbdhint");
+  const row = el("div", "actions");
+  row.append(advise, askBtn);
+  body.append(notesBox, history, q, row, status);
+
+  let people = [];
+  const refreshNotes = async () => {
+    const res = await fetch("/api/ask?item=" + encodeURIComponent(item.id), { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    people = data.people || [];
+    notesBox.replaceChildren();
+    const nd = el("details", "notes");
+    nd.append(el("summary", null, "Your notes on these people (" +
+      Object.keys(data.notes || {}).length + ")"));
+    for (const p of people) {
+      const t = el("textarea");
+      t.rows = 2;
+      t.value = (data.notes || {})[p.toLowerCase()] || "";
+      t.placeholder = "What should FrontDesk remember about " + p + "?";
+      const sv = el("button", "btn small", "Save");
+      sv.type = "button";
+      sv.addEventListener("click", async () => {
+        try { await postAction("note", "", { who: p, text: t.value }); toast("Note saved."); }
+        catch (e) { toast("Save failed: " + e.message); }
+      });
+      nd.append(el("p", "notewho", p), t, sv);
+    }
+    notesBox.append(nd);
+    return data;
+  };
+  const data = await refreshNotes();
+  for (const h of (data && data.history) || []) {
+    if (h.role === "owner") history.append(el("p", "askq", h.text));
+    else renderAnswer(history, h, replyBox, refreshNotes);
+  }
+  const go = async (question) => {
+    advise.disabled = askBtn.disabled = true;
+    status.textContent = "Thinking...";
+    try {
+      const out = await postAction("ask", item.id, { question });
+      history.append(el("p", "askq", question || "Advise me"));
+      renderAnswer(history, out, replyBox, refreshNotes);
+      q.value = "";
+      status.textContent = "";
+    } catch (e) {
+      status.textContent = "Ask failed: " + e.message;
+    } finally {
+      advise.disabled = askBtn.disabled = false;
+    }
+  };
+  advise.addEventListener("click", () => go(""));
+  askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value); });
 }
 
 function whyPanel(t) {

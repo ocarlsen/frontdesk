@@ -166,8 +166,10 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             store.db.close()
     if kind == "profile":
         item_id = key = ""
+    elif kind == "note":
+        key = item_id = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
-                      "undone", "read") \
+                      "undone", "read", "ask") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -179,6 +181,33 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                      f"{config.PROFILE_MAX} characters"}
         config.save_setting("owner_profile", text.strip())
         return HTTPStatus.OK, {"status": "done", "kind": "profile"}
+    if kind in ("ask", "note"):
+        if settings.get("demo"):
+            return HTTPStatus.CONFLICT, {"error": "Demo mode: Ask needs a live model."}
+        from .. import assist
+        from ..providers import ProviderError, get_provider
+        store = Store(db_path)
+        try:
+            if kind == "note":
+                who, text = req.get("who"), req.get("text")
+                if not isinstance(who, str) or not who.strip() or not isinstance(text, str) \
+                        or len(text) > 2000:
+                    return HTTPStatus.BAD_REQUEST, {"error": "expected {who, text<=2000}"}
+                if req.get("append"):   # a suggestion adds to the note, never replaces it
+                    old = store.notes_for([who]).get(who.strip().lower(), "")
+                    text = (old + "\n" + text.strip()).strip() if old else text
+                store.save_note(who, text)
+                return HTTPStatus.OK, {"status": "done"}
+            q = req.get("question")
+            if not isinstance(q, str) or len(q) > 4000:
+                return HTTPStatus.BAD_REQUEST, {"error": "question must be text, <= 4000 chars"}
+            s = config.settings()
+            return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
+                                             s["owner_profile"])
+        except ProviderError as e:
+            return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+        finally:
+            store.db.close()
     if kind == "read":
         if settings.get("demo") or not config.settings()["mark_read_on_open"]:
             return HTTPStatus.OK, {"status": "skipped"}
@@ -333,6 +362,23 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 prof = "" if demo else config.settings()["owner_profile"]
                 self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo}).encode(),
                            "application/json; charset=utf-8")
+            elif path == "/api/ask":
+                item_id = parse_qs(query).get("item", [""])[0]
+                store = Store(db_path)
+                try:
+                    item = store.get_item(item_id)
+                    out = None if item is None else {
+                        "history": store.ask_history(item_id),
+                        "notes": store.notes_for(item.participants),
+                        "people": [p for p in item.participants
+                                   if p.lower() != item.account.lower()]}
+                finally:
+                    store.db.close()
+                if out is None:
+                    self._send(HTTPStatus.NOT_FOUND, b"Not found\n", TEXT)
+                else:
+                    self._send(HTTPStatus.OK, json.dumps(out).encode(),
+                               "application/json; charset=utf-8")
             elif path == "/api/status":
                 self._send(HTTPStatus.OK, json.dumps(_last_sync).encode(),
                            "application/json; charset=utf-8")

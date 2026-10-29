@@ -180,3 +180,14 @@ li.card.leaving { opacity: .45; transition: opacity .15s; }
 
 li.card.unread .sender, li.card.unread .subject { font-weight: 700; }
 li.card:not(.unread) .sender { font-weight: 500; }
+
+.ask { margin: 12px 0 4px; }
+.ask > summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .92em; }
+.askbody { margin-top: 8px; }
+.askbody textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.askq { font-weight: 600; margin: 10px 0 4px; }
+.answer { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; margin: 0 0 12px; }
+.answertext { white-space: pre-wrap; margin: 0 0 8px; }
+.notes > summary { cursor: pointer; font-size: .88em; color: var(--muted); }
+.notewho { margin: 8px 0 2px; font-size: .88em; font-weight: 600; }
