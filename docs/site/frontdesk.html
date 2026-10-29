@@ -11,7 +11,7 @@
 <body>
 <main class="post">
   <p class="back"><a href="index.html">&larr; Owen Carlsen</a></p>
-<!-- DRAFT for ocarlsen.com/frontdesk.html. build.py publishes the text between <h1> and <hr>;
+<!-- DRAFT for ocarlsen.ai/frontdesk.html. The site publishes the text between <h1> and <hr>;
      everything after the <hr> is draft notes and never reaches the site. Page-only styles live in
      the <style> block below, scoped to .fd so site.css and every other page are untouched. -->
 <h1>FrontDesk</h1>
@@ -125,7 +125,7 @@ the attack suite measures how often one still sways a ranking or a draft.</p></d
 
 <section id="privacy" aria-labelledby="privacy-title">
 <h2 id="privacy-title">Privacy policy</h2>
-<p class="updated">Last updated <time datetime="2026-10-28">October 28, 2026</time></p>
+<p class="updated">Last updated <time datetime="2026-10-29">October 29, 2026</time></p>
 
 <h3>What FrontDesk is</h3>
 <p>FrontDesk is software you run on your own computer. There is no FrontDesk server, no
@@ -149,13 +149,17 @@ last seven days. It posts a reply only through the same Send flow: you see the e
 where it goes, confirm, and have 30 seconds to undo. The token stays on your computer.</p>
 
 <h3>Where your data goes</h3>
-<p>FrontDesk keeps the threads it syncs, its rankings and your Google sign-in tokens on your
-computer, in a folder only your user account can read. It sends data to these places only: to
+<p>FrontDesk keeps the threads it syncs, its rankings, your Google and Slack sign-in tokens, and
+what you tell it (your profile, your notes on people, your "What's going on" list and your Ask
+conversations) on your computer, in a folder only your user account can read. It sends data to these places only: to
 Google, to read your mail and, if you allow it, to archive threads, save drafts and send replies;
 to Slack, if you connect it, to read your conversations and post replies you confirm; and to the AI
-model provider you configure, which receives the plain text of each thread so it can rank it and
-suggest a reply. Message formatting (HTML) and attachments are not sent to the model provider.
-That provider's own data terms apply to what it receives.</p>
+model provider you configure, which receives the text of each thread so it can rank it and
+suggest a reply. For HTML mail that text includes where its links point, but not its markup,
+images or attachments. When you use Ask, the provider also receives your profile, your "What's
+going on" list, your notes on the people in that thread, your other threads with them, and the
+conversation so far. Ask all sends the same question to each provider you have set up. Each
+provider's own data terms apply to what it receives.</p>
 
 <h3>What it never does</h3>
 <p>FrontDesk does not sell, share or advertise with your data, does not use it to train models,
@@ -182,20 +186,27 @@ To revoke its access to your Google account, remove it at
 <h2>Draft notes (not published)</h2>
 <p><b>Purpose.</b> Google requires a public homepage URL and privacy policy URL before the FrontDesk
 OAuth app (project frontdesk-513018) can move from Testing to In production; Testing-mode refresh
-tokens expire every 7 days. Homepage: https://www.ocarlsen.com/frontdesk.html. Privacy policy:
-https://www.ocarlsen.com/frontdesk.html#privacy.</p>
-<p><b>Integration (Profile scope):</b> add slug <code>frontdesk</code> to ESSAYS in build.py, and
-<code>frontdesk.html</code>, <code>frontdesk-list.jpg</code>, <code>frontdesk-thread.jpg</code> to deploy.sh FILES and public_guard.py
-PAGES/PUBLIC. The page carries its own scoped <code>&lt;style&gt;</code> block inside the published
-region; confirm build.py keeps it. No email or phone on the page (the guard refuses them).</p>
+tokens expire every 7 days. Homepage: https://ocarlsen.ai/frontdesk.html. Privacy policy:
+https://ocarlsen.ai/frontdesk.html#privacy. Owen decided ocarlsen.ai on 2026-10-29; the
+ocarlsen.ai site and its Search Console verification must be live before these go on the consent
+screen, because changing them after approval forces brand re-verification.</p>
+<p><b>Hosting:</b> the ocarlsen.ai site (its own Pages repo) hosts this page from this draft,
+with <code>frontdesk-list.jpg</code> and <code>frontdesk-thread.jpg</code>. The page carries its own
+scoped <code>&lt;style&gt;</code> block inside the published region; keep it. No email or phone on
+the page.</p>
 <p><b>Depends on:</b> the live demo (LIVE at https://frontdesk.ocarlsen.com/index.html,
 repo ocarlsen/frontdesk-demo; www.ocarlsen.com/frontdesk-demo only forwards there). When the FrontDesk repo goes public, add a "Source on GitHub" button and point
 Questions at its issues.</p>
-<p><b>Claims traced to code (FrontDesk repo, branch phase-a):</b></p>
+<p><b>Claims traced to code (FrontDesk repo, main at 32a0f31 plus this branch):</b></p>
 <ul>
-<li>Only two outbound destinations: Gmail API via google-auth AuthorizedSession
-(frontdesk/gmail/client.py) plus Google OAuth, and the Anthropic client
-(frontdesk/providers/anthropic_provider.py). No other HTTP client in the package.</li>
+<li>Outbound destinations: Gmail API via google-auth AuthorizedSession
+(frontdesk/gmail/client.py) plus Google OAuth; Slack (frontdesk/slack/client.py); and the model
+providers, each only when configured with a key (frontdesk/providers/anthropic_provider.py,
+openai_provider.py, gemini_provider.py). actions.py and sending.py import requests only for its
+exception types. No other HTTP client in the package.</li>
+<li>Ask's prompt carries profile, What's going on, notes, related threads and Ask history
+(frontdesk/assist.py build_prompt); HTML mail reaches the model as text with link addresses
+(frontdesk/gmail/normalize.py html_to_text).</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
 (frontdesk/gmail/auth.py).</li>
 <li>Slack: frontdesk/slack (reads conversations.list/history/replies, users.info; posts only
