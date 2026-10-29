@@ -76,6 +76,27 @@ Gmail API ──► normalize ──► Item ──► SQLite ──► triage �
   versioned by hash). A refusal is never retried; an error is retried at most 3 times, so a Sync
   click never re-bills the same failure.
 
+### Memory
+
+Ask ("Ask FrontDesk about this thread") works from four kinds of owner-side memory: your
+**profile** (a few sentences in `settings.json`), **What's going on** (up to 50 short items on
+what is live for you now: decisions, open matters), **notes** on each person, and the **Ask
+history** of each thread. All of it is local SQLite (the profile is local settings), assembled
+into every call; the model keeps no state between calls, so any vendor's model gets the same
+context. Triage does not use What's going on or notes.
+
+Every note, What's going on item and Ask question records its author: `owner` when you typed or
+clicked it in the page (a model's suggestion counts as yours once you click it), `session:<name>`
+when a tool or agent session wrote it on your behalf (`frontdesk note WHO TEXT --by NAME`,
+`frontdesk situation add TEXT --by NAME`; this path can never write `owner`), or `unrecorded` for
+rows from before authors were recorded. Only `owner` counts as confirmed: the prompt labels every
+other line "not confirmed", and the model is told to say so when it relies on one instead of
+writing "you said". The page shows who wrote each item, and **Confirm** (or editing and saving)
+makes it yours.
+
+This is a record for honest writers, not a security boundary: any process on your machine can
+open the database or call the local API and claim any author.
+
 ## Threat model
 
 The design assumes **inbound mail is hostile**: anyone can email you, and the text is read by a model.
@@ -140,6 +161,14 @@ only reserved `example.*` domains.
 
 1. **More sources and models:** Slack (your own internal app), a second model adapter with a
    parity test.
+
+## Provenance
+
+FrontDesk was written from scratch for this repository. Its design draws on general patterns
+that are common in agent tooling: a deterministic ingestion layer, untrusted content kept
+separate from the owner's own instructions, model output validated against a schema, and every
+action an idempotent, audited command behind an explicit approval. No code, data or credentials
+from other projects are included, and the evaluation and demo threads are synthetic.
 
 ## License
 

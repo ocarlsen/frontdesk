@@ -198,3 +198,66 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
             raise ActionError(str(e)) from e
     store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
     return {"status": "done"}
+
+
+# ---- owner-side memory: notes and "What's going on". Local only. Every write names its author
+# ('owner' from the page, 'session:<name>' from the CLI); there is no default. A record for
+# honest writers, not a security boundary (see store.check_author).
+def _memory(fn, *args) -> dict:
+    from .store import InvalidMemory
+    try:
+        fn(*args)
+    except InvalidMemory as e:
+        raise ActionError(str(e)) from e
+    return {"status": "done"}
+
+
+def _author(author) -> str:
+    from .store import InvalidMemory, check_author
+    try:
+        return check_author(author)
+    except InvalidMemory as e:
+        raise ActionError(str(e)) from e
+
+
+def _confirmer(author) -> None:
+    from .store import OWNER
+    if _author(author) != OWNER:
+        raise ActionError("only the owner can confirm")
+
+
+def _situation_id(value) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ActionError("expected a situation item id")
+    return value
+
+
+def save_note(store: Store, who, text, author, append: bool = False) -> dict:
+    if not isinstance(who, str) or not isinstance(text, str):
+        raise ActionError("expected {who, text, author}")
+    return _memory(store.save_note, who, text, author, bool(append))
+
+
+def confirm_note(store: Store, who, author) -> dict:
+    _confirmer(author)
+    if not isinstance(who, str):
+        raise ActionError("expected {who, author}")
+    return _memory(store.confirm_note, who)
+
+
+def situation_add(store: Store, text, author) -> dict:
+    return _memory(store.add_situation, text, author)
+
+
+def situation_update(store: Store, item_id, text, author) -> dict:
+    return _memory(store.update_situation, _situation_id(item_id), text, author)
+
+
+def situation_confirm(store: Store, item_id, author) -> dict:
+    _confirmer(author)
+    return _memory(store.confirm_situation, _situation_id(item_id))
+
+
+def situation_delete(store: Store, item_id, author) -> dict:
+    _author(author)
+    return _memory(store.delete_situation, _situation_id(item_id))

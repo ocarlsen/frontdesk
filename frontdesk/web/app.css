@@ -194,3 +194,15 @@ li.card:not(.unread) .sender { font-weight: 500; }
 
 .modelpick { font: inherit; font-size: .9em; padding: 4px 6px; border-radius: 6px;
   border: 1px solid var(--line); background: var(--card); color: var(--text); }
+
+/* Memory authorship and "What's going on" */
+.authorlabel { margin: 2px 0 4px; font-size: .82em; }
+.askq + .authorlabel { margin-top: -2px; }
+.situation { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 8px; }
+.situation h3 { font-size: 1em; margin: 4px 0; }
+.situationitem { background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; margin: 8px 0; }
+.situationtext { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Text boxes size to their content (app.js fitText is the fallback); long ones scroll. */
+textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-y: auto; }

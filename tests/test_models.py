@@ -34,7 +34,7 @@ class Fake:
         if self.fail:
             raise ProviderError("quota")
         return Completion({"answer": f"{self.name} says hold off", "draft_reply": "",
-                           "note_suggestions": []})
+                           "note_suggestions": [], "situation_suggestions": []})
 
 
 def test_ask_all_fans_out_and_reports_a_failure(tmp_path, monkeypatch):
@@ -46,12 +46,13 @@ def test_ask_all_fans_out_and_reports_a_failure(tmp_path, monkeypatch):
                        messages=[Message("F <f@example.com>", "2026-10-28T16:00:00Z", "hi")]))
     monkeypatch.setattr(providers, "get_provider",
                         lambda st: Fake(st["provider"], st["model"], fail=st["provider"] == "gemini"))
-    out = server.ask_all(db, settings(), MODELS, "gmail:t1", "Thoughts?")
+    out = server.ask_all(db, settings(), MODELS, "gmail:t1", "Thoughts?", "owner")
     got = {a["model"].split(" ")[0]: a for a in out["answers"]}
     assert got["A"]["answer"].startswith("anthropic") and got["O"]["answer"].startswith("openai")
     assert got["G"]["error"] == "quota"
     hist = Store(db).ask_history("gmail:t1")
     assert [h["role"] for h in hist] == ["owner", "assistant", "assistant"]   # question once
+    assert hist[0]["author"] == "owner"
 
 
 def test_vendor_options_stay_with_their_vendor(monkeypatch):

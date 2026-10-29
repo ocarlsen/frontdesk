@@ -1,4 +1,4 @@
-"""CLI: frontdesk sync | triage | serve | status | smoke."""
+"""CLI: frontdesk sync | triage | serve | status | smoke | note | situation | ..."""
 from __future__ import annotations
 
 import argparse
@@ -45,6 +45,19 @@ def main(argv: list[str] | None = None) -> int:
     ex.add_argument("--cname", help="custom domain for GitHub Pages, e.g. frontdesk.example.com")
     d = sub.add_parser("demo", help="serve a synthetic inbox: no Google account, key or network")
     d.add_argument("--port", type=int, default=8766)
+    # Memory writes for tools and agent sessions. --by is required and always records
+    # 'session:<NAME>': this path can never write as the owner (only the page's clicks do).
+    nt = sub.add_parser("note", help="set (replace) the note on a person, as a session; "
+                                     "empty TEXT deletes it")
+    nt.add_argument("who", metavar="WHO", help="their address or Slack name")
+    nt.add_argument("text", metavar="TEXT")
+    nt.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
+    si = sub.add_parser("situation", help="What's going on: list, or add an item as a session")
+    ss = si.add_subparsers(dest="situation_cmd", required=True)
+    ss.add_parser("list")
+    sa = ss.add_parser("add")
+    sa.add_argument("text", metavar="TEXT")
+    sa.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
     args = p.parse_args(argv)
 
     if args.cmd == "demo":
@@ -65,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd in ("draft", "audit-draft"):
         return draft_main(args)
+    if args.cmd in ("note", "situation"):
+        return memory_main(args, store)
     if args.cmd == "authorize-actions":
         from .gmail.auth import action_credentials
         from .gmail.client import GmailClient
@@ -147,6 +162,26 @@ def draft_main(args) -> int:
         return 2
     print(json.dumps({"draftId": d.draft_id, "messageId": d.message_id,
                       "threadId": d.thread_id, "url": d.url}, indent=1))
+    return 0
+
+
+def memory_main(args, store: Store) -> int:
+    from .assist import provenance
+    from .store import InvalidMemory
+    try:
+        if args.cmd == "note":
+            store.save_note(args.who, args.text, f"session:{args.by}")
+            print(f"note on {args.who.strip().lower()} saved as session:{args.by} "
+                  "(not confirmed until the owner confirms it)")
+        elif args.situation_cmd == "add":
+            n = store.add_situation(args.text, f"session:{args.by}")
+            print(f"added #{n} as session:{args.by} (not confirmed until the owner confirms it)")
+        else:
+            for it in store.situation():
+                print(f"#{it['id']} {provenance(it['author'], it['updated_at'])} {it['text']}")
+    except InvalidMemory as e:
+        print(f"frontdesk: {e}", file=sys.stderr)
+        return 2
     return 0
 
 
