@@ -198,12 +198,15 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                     text = (old + "\n" + text.strip()).strip() if old else text
                 store.save_note(who, text)
                 return HTTPStatus.OK, {"status": "done"}
-            q = req.get("question")
-            if not isinstance(q, str) or len(q) > 4000:
-                return HTTPStatus.BAD_REQUEST, {"error": "question must be text, <= 4000 chars"}
+            q, mode, draft = req.get("question", ""), req.get("mode", "ask"), req.get("draft", "")
+            if mode not in ("ask", "second", "polish") or not isinstance(q, str) \
+                    or not isinstance(draft, str) or len(q) > 4000 or len(draft) > 8000:
+                return HTTPStatus.BAD_REQUEST, {"error": "expected question/draft text and a mode"}
             s = config.settings()
+            if mode != "ask":            # the reviewer is a different, stronger model
+                s = {**s, "model": s["review_model"]}
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
-                                             s["owner_profile"])
+                                             s["owner_profile"], mode=mode, draft=draft)
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:

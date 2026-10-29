@@ -88,3 +88,26 @@ def test_notes_save_replace_and_delete(tmp_path):
     assert s.notes_for(["fab@example.com"]) == {"fab@example.com": "one"}
     s.save_note("fab@example.com", "")
     assert s.notes_for(["fab@example.com"]) == {}
+
+
+def test_second_opinion_needs_a_first_and_sees_it(tmp_path):
+    s = Store(tmp_path / "e.db")
+    mk(s, 1)
+    f = Fake()
+    with pytest.raises(ProviderError, match="first one"):
+        assist.ask(s, f, "gmail:t1", "", "", mode="second")
+    assist.ask(s, f, "gmail:t1", "", "")
+    assist.ask(s, f, "gmail:t1", "", "", mode="second")
+    user = f.seen[-1][1]
+    assert "second opinion" in user and "Hold off" in user     # the first answer is in context
+
+
+def test_polish_carries_the_draft_and_requires_one(tmp_path):
+    s = Store(tmp_path / "f.db")
+    mk(s, 1)
+    f = Fake()
+    with pytest.raises(ProviderError, match="no draft"):
+        assist.ask(s, f, "gmail:t1", "", "", mode="polish", draft="  ")
+    assist.ask(s, f, "gmail:t1", "", "", mode="polish", draft="Hi Fab, let's align on a call.")
+    assert "Hi Fab, let's align on a call." in f.seen[-1][1]
+    assert s.ask_history("gmail:t1")[-2]["text"].startswith("Review this draft")

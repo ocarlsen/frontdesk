@@ -23,6 +23,21 @@ ADVISE = ("What do you think? Read what this person is really asking for, how it
           "and my history with them, and tell me what I should do next. Be candid. If a reply "
           "is warranted, draft it.")
 
+SECOND_OPINION = ("Give me a second opinion on your colleague's last answer above: where you "
+                  "agree, where you differ, and anything it missed or got wrong (check every "
+                  "fact it states against the thread and my notes). Then give your own "
+                  "recommendation and, if a reply is warranted, your best draft.")
+
+
+def polish_question(draft: str) -> str:
+    return ("Review this draft reply against my goals and my history with this person, then "
+            "improve it. Flag any line that reads cold, defensive, ambiguous or demanding, and "
+            "any wording the other side could use to stall, or to get more from me without "
+            "giving anything. Keep what already works. Put your critique in the answer (one "
+            "short bullet per change, with the reason) and the improved draft in draft_reply.\n\n"
+            "Draft:\n" + draft.strip())
+
+
 SYSTEM = """You are the inbox owner's chief of staff. You help them think about one conversation:
 what the other side wants, how it fits the owner's goals, and what to do next.
 
@@ -114,11 +129,23 @@ def validate(raw: dict) -> dict:
                                  for n in notes]}
 
 
-def ask(store: Store, provider: Provider, item_id: str, question: str, profile: str = "") -> dict:
+def ask(store: Store, provider: Provider, item_id: str, question: str, profile: str = "",
+        mode: str = "ask", draft: str = "") -> dict:
+    """mode 'ask' answers `question` (Advise when empty); 'second' asks the provider (normally the
+    stronger review model) to check the previous answer; 'polish' reviews and rewrites `draft`."""
     item = store.get_item(item_id)
     if item is None:
         raise ProviderError("unknown thread")
-    question = (question or "").strip() or ADVISE
+    if mode == "second":
+        if not any(h["role"] == "assistant" for h in store.ask_history(item_id)):
+            raise ProviderError("ask a question first; a second opinion needs a first one")
+        question = SECOND_OPINION
+    elif mode == "polish":
+        if not draft.strip():
+            raise ProviderError("there is no draft to polish")
+        question = polish_question(draft)
+    else:
+        question = (question or "").strip() or ADVISE
     res = provider.complete_json(SYSTEM, build_prompt(store, item, question, profile), SCHEMA,
                                  max_tokens=8000)
     out = validate(res.data)

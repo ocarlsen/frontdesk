@@ -580,9 +580,15 @@ async function buildAsk(item, replyBox, body) {
   advise.type = "button";
   const askBtn = el("button", "btn", "Ask");
   askBtn.type = "button";
+  const second = el("button", "btn", "Second opinion");
+  second.type = "button";
+  second.title = "Have the review model check the last answer";
+  const polish = el("button", "btn", "Polish draft");
+  polish.type = "button";
+  polish.title = "Review and tighten the draft in the reply box (or the last suggested draft)";
   const status = el("p", "kbdhint");
   const row = el("div", "actions");
-  row.append(advise, askBtn);
+  row.append(advise, askBtn, second, polish);
   body.append(notesBox, history, q, row, status);
 
   let people = [];
@@ -616,23 +622,34 @@ async function buildAsk(item, replyBox, body) {
     if (h.role === "owner") history.append(el("p", "askq", h.text));
     else renderAnswer(history, h, replyBox, refreshNotes);
   }
-  const go = async (question) => {
-    advise.disabled = askBtn.disabled = true;
-    status.textContent = "Thinking...";
+  let lastDraft = "";
+  for (const h of (data && data.history) || []) if (h.draft_reply) lastDraft = h.draft_reply;
+  const buttons = [advise, askBtn, second, polish];
+  const go = async (question, mode, draft) => {
+    buttons.forEach(b => { b.disabled = true; });
+    status.textContent = mode === "ask" ? "Thinking..." : "Asking the review model (slower)...";
     try {
-      const out = await postAction("ask", item.id, { question });
-      history.append(el("p", "askq", question || "Advise me"));
+      const out = await postAction("ask", item.id, { question, mode: mode || "ask", draft: draft || "" });
+      if (out.draft_reply) lastDraft = out.draft_reply;
+      history.append(el("p", "askq", mode === "second" ? "Second opinion" :
+        mode === "polish" ? "Polish draft" : (question || "Advise me")));
       renderAnswer(history, out, replyBox, refreshNotes);
       q.value = "";
       status.textContent = "";
     } catch (e) {
       status.textContent = "Ask failed: " + e.message;
     } finally {
-      advise.disabled = askBtn.disabled = false;
+      buttons.forEach(b => { b.disabled = false; });
     }
   };
-  advise.addEventListener("click", () => go(""));
-  askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value); });
+  advise.addEventListener("click", () => go("", "ask"));
+  askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value, "ask"); });
+  second.addEventListener("click", () => go("", "second"));
+  polish.addEventListener("click", () => {
+    const d = replyBox.value.trim() || lastDraft;
+    if (!d) { status.textContent = "Write or generate a draft first."; return; }
+    go("", "polish", d);
+  });
 }
 
 function whyPanel(t) {
