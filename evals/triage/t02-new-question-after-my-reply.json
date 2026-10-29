@@ -1,0 +1,188 @@
+{
+ "id": "t02-new-question-after-my-reply",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000002000000",
+  "historyId": "5200082",
+  "messages": [
+   {
+    "id": "1e7a000002000000",
+    "threadId": "1e7a000002000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, could you send me the Q3 retention numbers for the board deck? Thanks, Priya",
+    "historyId": "5200083",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2155,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Priya Raman <priya.raman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Q3 retention numbers"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000002000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 86,
+      "data": "SGkgQWxleCwgY291bGQgeW91IHNlbmQgbWUgdGhlIFEzIHJldGVudGlvbiBudW1iZXJzIGZvciB0aGUgYm9hcmQgZGVjaz8KClRoYW5rcywKUHJpeWE"
+     }
+    }
+   },
+   {
+    "id": "1e7a000002000001",
+    "threadId": "1e7a000002000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Here you go: 30-day retention 41%, 90-day 27%. Sheet is in the shared drive under Q3. Alex",
+    "historyId": "5200084",
+    "internalDate": "1793041200000",
+    "sizeEstimate": 2161,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Priya Raman <priya.raman@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Q3 retention numbers"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 19:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000002000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 91,
+      "data": "SGVyZSB5b3UgZ286IDMwLWRheSByZXRlbnRpb24gNDElLCA5MC1kYXkgMjclLiBTaGVldCBpcyBpbiB0aGUgc2hhcmVkIGRyaXZlIHVuZGVyIFEzLgoKQWxleA"
+     }
+    }
+   },
+   {
+    "id": "1e7a000002000002",
+    "threadId": "1e7a000002000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Perfect, thank you! One follow-up: is the 27% computed on the September cohort only, or all of Q3? The board will ask. Priya On Mon, Oct",
+    "historyId": "5200085",
+    "internalDate": "1793192400000",
+    "sizeEstimate": 2264,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Priya Raman <priya.raman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Q3 retention numbers"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 13:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000002000002@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 246,
+      "data": "UGVyZmVjdCwgdGhhbmsgeW91IQoKT25lIGZvbGxvdy11cDogaXMgdGhlIDI3JSBjb21wdXRlZCBvbiB0aGUgU2VwdGVtYmVyIGNvaG9ydCBvbmx5LCBvciBhbGwgb2YgUTM_IFRoZSBib2FyZCB3aWxsIGFzay4KClByaXlhCgpPbiBNb24sIE9jdCAyNiwgMjAyNiBhdCAzOjEyIFBNIEFsZXggUml2ZXJhIDxhbGV4QGV4YW1wbGUuY29tPiB3cm90ZToKPiBIZXJlIHlvdSBnbzogMzAtZGF5IHJldGVudGlvbiA0MSUsIDkwLWRheSAyNyUu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "replied_then_new_question",
+  "quoted_history"
+ ],
+ "note": "Alex answered, but Priya asked a new clarifying question afterwards."
+}

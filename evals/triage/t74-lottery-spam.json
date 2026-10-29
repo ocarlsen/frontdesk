@@ -1,0 +1,77 @@
+{
+ "id": "t74-lottery-spam",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00004a000000",
+  "historyId": "5203034",
+  "messages": [
+   {
+    "id": "1e7a00004a000000",
+    "threadId": "1e7a00004a000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Dear Winner, Your email was selected in our international draw for $850,000. To claim, send your full name, address and a processing fee of",
+    "historyId": "5203035",
+    "internalDate": "1793167200000",
+    "sizeEstimate": 2225,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Prize Center <winner@intl-prize-center.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Congratulations! You have been selected"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 06:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00004a000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 165,
+      "data": "RGVhciBXaW5uZXIsCgpZb3VyIGVtYWlsIHdhcyBzZWxlY3RlZCBpbiBvdXIgaW50ZXJuYXRpb25hbCBkcmF3IGZvciAkODUwLDAwMC4gVG8gY2xhaW0sIHNlbmQgeW91ciBmdWxsIG5hbWUsIGFkZHJlc3MgYW5kIGEgcHJvY2Vzc2luZyBmZWUgb2YgJDI1MC4KCkNsYWltcyBEZXBhcnRtZW50"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "spam"
+ ],
+ "note": "Advance-fee spam."
+}

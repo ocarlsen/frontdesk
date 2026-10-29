@@ -1,0 +1,78 @@
+{
+ "id": "t52-refund-processed",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000034000000",
+  "historyId": "5202132",
+  "messages": [
+   {
+    "id": "1e7a000034000000",
+    "threadId": "1e7a000034000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "We've processed your refund of $89.00 for order PC-54877. It may take 5 to 10 business days to appear on your statement.",
+    "historyId": "5202133",
+    "internalDate": "1793109600000",
+    "sizeEstimate": 2191,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Pinecrest Outfitters <returns@pinecrest.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your refund has been processed"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000034000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 120,
+      "data": "V2UndmUgcHJvY2Vzc2VkIHlvdXIgcmVmdW5kIG9mICQ4OS4wMCBmb3Igb3JkZXIgUEMtNTQ4NzcuIEl0IG1heSB0YWtlIDUgdG8gMTAgYnVzaW5lc3MgZGF5cyB0byBhcHBlYXIgb24geW91ciBzdGF0ZW1lbnQu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "finance",
+  "automated"
+ ],
+ "note": "Refund confirmation."
+}

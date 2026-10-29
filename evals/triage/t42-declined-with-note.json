@@ -1,0 +1,77 @@
+{
+ "id": "t42-declined-with-note",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002a000000",
+  "historyId": "5201722",
+  "messages": [
+   {
+    "id": "1e7a00002a000000",
+    "threadId": "1e7a00002a000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Marcus Bell has declined this invitation. Note: Sorry, I'm out Thursday. Go ahead without me; Ruth has my input. Roadmap review Thursday",
+    "historyId": "5201723",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2218,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Marcus Bell <marcus.bell@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Declined: Roadmap review @ Thu Oct 29 2pm"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002a000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 163,
+      "data": "TWFyY3VzIEJlbGwgaGFzIGRlY2xpbmVkIHRoaXMgaW52aXRhdGlvbi4KCk5vdGU6IFNvcnJ5LCBJJ20gb3V0IFRodXJzZGF5LiBHbyBhaGVhZCB3aXRob3V0IG1lOyBSdXRoIGhhcyBteSBpbnB1dC4KClJvYWRtYXAgcmV2aWV3ClRodXJzZGF5IE9jdCAyOSwgMnBtIHRvIDNwbSAoUERUKQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "calendar"
+ ],
+ "note": "Decline with a note that says to proceed; nothing to do."
+}

@@ -1,0 +1,78 @@
+{
+ "id": "t11-html-only-outlook-ask",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00000b000000",
+  "historyId": "5200451",
+  "messages": [
+   {
+    "id": "1e7a00000b000000",
+    "threadId": "1e7a00000b000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "p{margin:0} Hi Alex, &nbsp; Could you approve my access request for the reporting workspace? I need it to finish the October KPI pack,",
+    "historyId": "5200452",
+    "internalDate": "1793185200000",
+    "sizeEstimate": 2411,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/html",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Olu Adeyemi <olu.adeyemi@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Access request for the reporting workspace"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 11:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000b000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/html; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 454,
+      "data": "PGh0bWw-PGhlYWQ-PHN0eWxlPnB7bWFyZ2luOjB9PC9zdHlsZT48L2hlYWQ-PGJvZHk-PGRpdiBjbGFzcz0iV29yZFNlY3Rpb24xIj48cCBjbGFzcz0iTXNvTm9ybWFsIj5IaSBBbGV4LDwvcD48cCBjbGFzcz0iTXNvTm9ybWFsIj4mbmJzcDs8L3A-PHAgY2xhc3M9Ik1zb05vcm1hbCI-Q291bGQgeW91IGFwcHJvdmUgbXkgYWNjZXNzIHJlcXVlc3QgZm9yIHRoZSByZXBvcnRpbmcgd29ya3NwYWNlPyBJIG5lZWQgaXQgdG8gZmluaXNoIHRoZSBPY3RvYmVyIEtQSSBwYWNrLCB3aGljaCBpcyBkdWUgRnJpZGF5LjwvcD48cCBjbGFzcz0iTXNvTm9ybWFsIj4mbmJzcDs8L3A-PHAgY2xhc3M9Ik1zb05vcm1hbCI-VGhhbmtzLDwvcD48cCBjbGFzcz0iTXNvTm9ybWFsIj5PbHUgQWRleWVtaTwvcD48cCBjbGFzcz0iTXNvTm9ybWFsIj5GaW5hbmNlIEFuYWx5dGljczwvcD48L2Rpdj48L2JvZHk-PC9odG1sPg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "html_only"
+ ],
+ "note": "HTML-only Outlook mail; Olu needs an access approval to meet Friday's deadline."
+}

@@ -1,0 +1,131 @@
+{
+ "id": "t46-contractor-status-done",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002e000000",
+  "historyId": "5201886",
+  "messages": [
+   {
+    "id": "1e7a00002e000000",
+    "threadId": "1e7a00002e000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Hi Ben, could you let me know when the gutters are done? Alex",
+    "historyId": "5201887",
+    "internalDate": "1792947600000",
+    "sizeEstimate": 2147,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Ben Castellano <ben@castellano-carpentry.example.net>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Gutter cleaning"
+      },
+      {
+       "name": "Date",
+       "value": "Sun, 25 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002e000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 62,
+      "data": "SGkgQmVuLCBjb3VsZCB5b3UgbGV0IG1lIGtub3cgd2hlbiB0aGUgZ3V0dGVycyBhcmUgZG9uZT8KCkFsZXg"
+     }
+    }
+   },
+   {
+    "id": "1e7a00002e000001",
+    "threadId": "1e7a00002e000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, all done this morning. No damage found, downspouts are clear. I'll put it on the next invoice with the deck work, nothing needed",
+    "historyId": "5201888",
+    "internalDate": "1793192400000",
+    "sizeEstimate": 2210,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ben Castellano <ben@castellano-carpentry.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Gutter cleaning"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 13:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002e000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 156,
+      "data": "SGkgQWxleCwgYWxsIGRvbmUgdGhpcyBtb3JuaW5nLiBObyBkYW1hZ2UgZm91bmQsIGRvd25zcG91dHMgYXJlIGNsZWFyLiBJJ2xsIHB1dCBpdCBvbiB0aGUgbmV4dCBpbnZvaWNlIHdpdGggdGhlIGRlY2sgd29yaywgbm90aGluZyBuZWVkZWQgZnJvbSB5b3Ugbm93LgoKQmVu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "status_update_requested"
+ ],
+ "note": "The update Alex asked for; explicitly nothing needed."
+}

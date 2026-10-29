@@ -1,0 +1,79 @@
+{
+ "id": "t09-french-same-day-ask",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000009000000",
+  "historyId": "5200369",
+  "messages": [
+   {
+    "id": "1e7a000009000000",
+    "threadId": "1e7a000009000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Bonjour Alex, Pourriez-vous me confirmer aujourd'hui si vous acceptez le devis de 640 € pour la traduction de la documentation ? Sans",
+    "historyId": "5200370",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2270,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Claire Fontaine <claire.fontaine@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Devis pour la traduction"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000009000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 249,
+      "data": "Qm9uam91ciBBbGV4LAoKUG91cnJpZXotdm91cyBtZSBjb25maXJtZXIgYXVqb3VyZCdodWkgc2kgdm91cyBhY2NlcHRleiBsZSBkZXZpcyBkZSA2NDAg4oKsIHBvdXIgbGEgdHJhZHVjdGlvbiBkZSBsYSBkb2N1bWVudGF0aW9uID8gU2FucyByw6lwb25zZSBkZSB2b3RyZSBwYXJ0IGF2YW50IDE3aCwgamUgbmUgcG91cnJhaSBwYXMgY29tbWVuY2VyIGNldHRlIHNlbWFpbmUuCgpCaWVuIGNvcmRpYWxlbWVudCwKQ2xhaXJlIEZvbnRhaW5l"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "non_english",
+  "french"
+ ],
+ "note": "French: translator needs Alex to accept a quote today before 5pm."
+}

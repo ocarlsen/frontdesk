@@ -1,0 +1,89 @@
+{
+ "id": "t70-webinar-invite",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000046000000",
+  "historyId": "5202870",
+  "messages": [
+   {
+    "id": "1e7a000046000000",
+    "threadId": "1e7a000046000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "Join our product experts on Nov 12 for a live session on scaling data teams. Seats are limited! Register:",
+    "historyId": "5202871",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2348,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Quanta Cloud Events <events@quantacloud.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Live webinar: scaling your data team in 2027"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000046000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@quantacloud.example.com>, <https://quantacloud.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 158,
+      "data": "Sm9pbiBvdXIgcHJvZHVjdCBleHBlcnRzIG9uIE5vdiAxMiBmb3IgYSBsaXZlIHNlc3Npb24gb24gc2NhbGluZyBkYXRhIHRlYW1zLiBTZWF0cyBhcmUgbGltaXRlZCEKClJlZ2lzdGVyOiBodHRwczovL3F1YW50YWNsb3VkLmV4YW1wbGUuY29tL3dlYmluYXJzL3NjYWxlLTIwMjc"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "marketing"
+ ],
+ "note": "Vendor webinar marketing."
+}

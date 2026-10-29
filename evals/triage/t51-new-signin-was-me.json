@@ -1,0 +1,77 @@
+{
+ "id": "t51-new-signin-was-me",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000033000000",
+  "historyId": "5202091",
+  "messages": [
+   {
+    "id": "1e7a000033000000",
+    "threadId": "1e7a000033000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "New sign-in on Mac (Safari) near San Francisco, CA at 9:41am today. If this was you, you don't need to do anything. If not, secure your",
+    "historyId": "5202092",
+    "internalDate": "1793205600000",
+    "sizeEstimate": 2224,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Cobaltvault Security <security@cobaltvault.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "New sign-in to your account"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 16:40:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000033000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 170,
+      "data": "TmV3IHNpZ24taW4gb24gTWFjIChTYWZhcmkpIG5lYXIgU2FuIEZyYW5jaXNjbywgQ0EgYXQgOTo0MWFtIHRvZGF5LgoKSWYgdGhpcyB3YXMgeW91LCB5b3UgZG9uJ3QgbmVlZCB0byBkbyBhbnl0aGluZy4gSWYgbm90LCBzZWN1cmUgeW91ciBhY2NvdW50IGZyb20gU2V0dGluZ3MgPiBTZWN1cml0eS4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "security_notice"
+ ],
+ "note": "Routine sign-in notice matching Alex's location; no action unless it wasn't Alex."
+}

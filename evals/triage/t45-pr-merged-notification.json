@@ -1,0 +1,77 @@
+{
+ "id": "t45-pr-merged-notification",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002d000000",
+  "historyId": "5201845",
+  "messages": [
+   {
+    "id": "1e7a00002d000000",
+    "threadId": "1e7a00002d000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Merged #418 into main. -- You are receiving this because you authored the thread. View it on CodeHost:",
+    "historyId": "5201846",
+    "internalDate": "1793181600000",
+    "sizeEstimate": 2222,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Sam Okafor <notifications@codehost.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: [alex/ledger-sync] Retry with jitter (#418)"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 10:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002d000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 158,
+      "data": "TWVyZ2VkICM0MTggaW50byBtYWluLgoKLS0KWW91IGFyZSByZWNlaXZpbmcgdGhpcyBiZWNhdXNlIHlvdSBhdXRob3JlZCB0aGUgdGhyZWFkLgpWaWV3IGl0IG9uIENvZGVIb3N0OiBodHRwczovL2NvZGVob3N0LmV4YW1wbGUuY29tL2FsZXgvbGVkZ2VyLXN5bmMvcHVsbC80MTg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "dev_notification"
+ ],
+ "note": "Alex's own PR was merged."
+}

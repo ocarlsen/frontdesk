@@ -1,0 +1,82 @@
+{
+ "id": "t56-meeting-notes-actions-to-others",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000038000000",
+  "historyId": "5202296",
+  "messages": [
+   {
+    "id": "1e7a000038000000",
+    "threadId": "1e7a000038000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Thanks for joining. Action items: - Ken: finalize the load test plan (Fri) - Priya: draft customer comms (Mon) - Sam: confirm on-call",
+    "historyId": "5202297",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2281,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ruth Coleman <ruth.coleman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "platform-eng@example.com"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Notes + action items: launch readiness"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000038000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 219,
+      "data": "VGhhbmtzIGZvciBqb2luaW5nLiBBY3Rpb24gaXRlbXM6CgotIEtlbjogZmluYWxpemUgdGhlIGxvYWQgdGVzdCBwbGFuIChGcmkpCi0gUHJpeWE6IGRyYWZ0IGN1c3RvbWVyIGNvbW1zIChNb24pCi0gU2FtOiBjb25maXJtIG9uLWNhbGwgY292ZXJhZ2UgZm9yIGxhdW5jaCB3ZWVrIChUaHUpCgpBbGV4IGFuZCBIZWxlbiwgbm8gYWN0aW9ucyBmb3IgeW91IHRoaXMgcm91bmQuCgpSdXRo"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "someone_else_owns"
+ ],
+ "note": "Action-item mail where every action is owned by someone else and Alex is told explicitly none."
+}

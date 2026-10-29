@@ -1,0 +1,89 @@
+{
+ "id": "t77-forum-digest",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00004d000000",
+  "historyId": "5203157",
+  "messages": [
+   {
+    "id": "1e7a00004d000000",
+    "threadId": "1e7a00004d000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_FORUMS"
+    ],
+    "snippet": "Top threads today: - Water chemistry for stouts (42 replies) - Cheap fermentation chamber builds (17 replies) Manage email preferences:",
+    "historyId": "5203158",
+    "internalDate": "1793185200000",
+    "sizeEstimate": 2358,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Homebrewers Forum <digest@homebrewers.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your daily digest from the Homebrewers forum"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 11:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00004d000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@homebrewers.example.org>, <https://homebrewers.example.org/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 175,
+      "data": "VG9wIHRocmVhZHMgdG9kYXk6CgotIFdhdGVyIGNoZW1pc3RyeSBmb3Igc3RvdXRzICg0MiByZXBsaWVzKQotIENoZWFwIGZlcm1lbnRhdGlvbiBjaGFtYmVyIGJ1aWxkcyAoMTcgcmVwbGllcykKCk1hbmFnZSBlbWFpbCBwcmVmZXJlbmNlczogaHR0cHM6Ly9ob21lYnJld2Vycy5leGFtcGxlLm9yZy9wcmVmcw"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "digest"
+ ],
+ "note": "Forum digest."
+}

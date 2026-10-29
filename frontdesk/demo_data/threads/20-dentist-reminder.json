@@ -1,0 +1,58 @@
+{
+ "id": "19a2f0c3b1d40014",
+ "historyId": "9100703",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40140",
+   "threadId": "19a2f0c3b1d40014",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Hi Alex, This is a reminder of your cleaning with Dr. Patel on Monday at 8:30am. Please reply to confirm, or call us to reschedule. Cancella",
+   "historyId": "9100025",
+   "internalDate": "1792981200000",
+   "sizeEstimate": 2430,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Oakridge Dental <appointments@oakridgedental.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Reminder: cleaning on Monday at 8:30am"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40140.25@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 213,
+     "data": "SGkgQWxleCwKClRoaXMgaXMgYSByZW1pbmRlciBvZiB5b3VyIGNsZWFuaW5nIHdpdGggRHIuIFBhdGVsIG9uIE1vbmRheSBhdCA4OjMwYW0uCgpQbGVhc2UgcmVwbHkgdG8gY29uZmlybSwgb3IgY2FsbCB1cyB0byByZXNjaGVkdWxlLiBDYW5jZWxsYXRpb25zIHdpdGggbGVzcyB0aGFuIDI0IGhvdXJzJyBub3RpY2UgbWF5IGluY3VyIGEgZmVlLgoKT2FrcmlkZ2UgRGVudGFs"
+    }
+   }
+  }
+ ]
+}

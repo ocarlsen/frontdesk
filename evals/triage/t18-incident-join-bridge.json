@@ -1,0 +1,79 @@
+{
+ "id": "t18-incident-join-bridge",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000012000000",
+  "historyId": "5200738",
+  "messages": [
+   {
+    "id": "1e7a000012000000",
+    "threadId": "1e7a000012000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "IMPORTANT",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Alex, checkout p99 is at 4s since 09:40 and the payments queue is backing up. You own the connection pool change from yesterday; can you",
+    "historyId": "5200739",
+    "internalDate": "1793206200000",
+    "sizeEstimate": 2244,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Priya Raman <priya.raman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "SEV2: checkout latency, need you on the bridge"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 16:50:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000012000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 199,
+      "data": "QWxleCwgY2hlY2tvdXQgcDk5IGlzIGF0IDRzIHNpbmNlIDA5OjQwIGFuZCB0aGUgcGF5bWVudHMgcXVldWUgaXMgYmFja2luZyB1cC4gWW91IG93biB0aGUgY29ubmVjdGlvbiBwb29sIGNoYW5nZSBmcm9tIHllc3RlcmRheTsgY2FuIHlvdSBqb2luIHRoZSBpbmNpZGVudCBicmlkZ2Ugbm93PyBMaW5rIGlzIGluICNpbmMtY2hlY2tvdXQuCgpQcml5YQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "work",
+  "incident"
+ ],
+ "note": "Live incident tied to Alex's change; the action is joining the bridge now, not writing a reply."
+}

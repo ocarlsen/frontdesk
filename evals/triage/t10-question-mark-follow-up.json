@@ -1,0 +1,133 @@
+{
+ "id": "t10-question-mark-follow-up",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00000a000000",
+  "historyId": "5200410",
+  "messages": [
+   {
+    "id": "1e7a00000a000000",
+    "threadId": "1e7a00000a000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hey Alex, did you get a chance to look at the venue contract for the reunion? I have to tell them by Friday whether we're signing. J",
+    "historyId": "5200411",
+    "internalDate": "1792947600000",
+    "sizeEstimate": 2184,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Jordan Pike <jordan.pike@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Venue contract"
+      },
+      {
+       "name": "Date",
+       "value": "Sun, 25 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000a000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 133,
+      "data": "SGV5IEFsZXgsIGRpZCB5b3UgZ2V0IGEgY2hhbmNlIHRvIGxvb2sgYXQgdGhlIHZlbnVlIGNvbnRyYWN0IGZvciB0aGUgcmV1bmlvbj8gSSBoYXZlIHRvIHRlbGwgdGhlbSBieSBGcmlkYXkgd2hldGhlciB3ZSdyZSBzaWduaW5nLgoKSg"
+     }
+    }
+   },
+   {
+    "id": "1e7a00000a000001",
+    "threadId": "1e7a00000a000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "?",
+    "historyId": "5200412",
+    "internalDate": "1793199600000",
+    "sizeEstimate": 2097,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Jordan Pike <jordan.pike@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Venue contract"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000a000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 1,
+      "data": "Pw"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "short_followup"
+ ],
+ "note": "A bare '?' nudging an unanswered question with a Friday deadline."
+}

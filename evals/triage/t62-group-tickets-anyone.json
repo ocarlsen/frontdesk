@@ -1,0 +1,78 @@
+{
+ "id": "t62-group-tickets-anyone",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00003e000000",
+  "historyId": "5202542",
+  "messages": [
+   {
+    "id": "1e7a00003e000000",
+    "threadId": "1e7a00003e000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hey all, I've got two extra tickets for the Ravenswood show Friday. Anyone want them? First come first served. J",
+    "historyId": "5202543",
+    "internalDate": "1793192400000",
+    "sizeEstimate": 2179,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Jordan Pike <jordan.pike@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Climbing crew <climbing-crew@example.org>"
+      },
+      {
+       "name": "Subject",
+       "value": "Extra tickets Friday"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 13:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00003e000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 113,
+      "data": "SGV5IGFsbCwgSSd2ZSBnb3QgdHdvIGV4dHJhIHRpY2tldHMgZm9yIHRoZSBSYXZlbnN3b29kIHNob3cgRnJpZGF5LiBBbnlvbmUgd2FudCB0aGVtPyBGaXJzdCBjb21lIGZpcnN0IHNlcnZlZC4KCko"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": true
+ },
+ "tags": [
+  "ambiguous",
+  "group_broadcast"
+ ],
+ "note": "Group offer with no one named; Alex only acts if interested."
+}

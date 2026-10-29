@@ -1,0 +1,260 @@
+{
+ "id": "t01-buried-ask-in-status-thread",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000001000000",
+  "historyId": "5200041",
+  "messages": [
+   {
+    "id": "1e7a000001000000",
+    "threadId": "1e7a000001000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Notes from today's sync: - Postgres upgrade: staging done, prod scheduled for next Tuesday. - Log retention: moving to 30 days, no",
+    "historyId": "5200042",
+    "internalDate": "1792774800000",
+    "sizeEstimate": 2263,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Sam Okafor <sam.okafor@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "platform-eng@example.com"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Weekly infra sync notes"
+      },
+      {
+       "name": "Date",
+       "value": "Fri, 23 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000001000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 207,
+      "data": "Tm90ZXMgZnJvbSB0b2RheSdzIHN5bmM6CgotIFBvc3RncmVzIHVwZ3JhZGU6IHN0YWdpbmcgZG9uZSwgcHJvZCBzY2hlZHVsZWQgZm9yIG5leHQgVHVlc2RheS4KLSBMb2cgcmV0ZW50aW9uOiBtb3ZpbmcgdG8gMzAgZGF5cywgbm8gb2JqZWN0aW9ucy4KLSBPbi1jYWxsOiByb3RhdGlvbiB1bmNoYW5nZWQuCgpObyBhY3Rpb24gaXRlbXMgdGhpcyB3ZWVrLgoKU2Ft"
+     }
+    }
+   },
+   {
+    "id": "1e7a000001000001",
+    "threadId": "1e7a000001000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Thanks Sam. Small correction: the prod upgrade window is 22:00 to 23:00, not 21:00. Priya",
+    "historyId": "5200043",
+    "internalDate": "1792785600000",
+    "sizeEstimate": 2188,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Priya Raman <priya.raman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "platform-eng@example.com"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Weekly infra sync notes"
+      },
+      {
+       "name": "Date",
+       "value": "Fri, 23 Oct 2026 20:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000001000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 90,
+      "data": "VGhhbmtzIFNhbS4gU21hbGwgY29ycmVjdGlvbjogdGhlIHByb2QgdXBncmFkZSB3aW5kb3cgaXMgMjI6MDAgdG8gMjM6MDAsIG5vdCAyMTowMC4KClByaXlh"
+     }
+    }
+   },
+   {
+    "id": "1e7a000001000002",
+    "threadId": "1e7a000001000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Updated the notes. Also: capacity graphs for October are in the usual folder. Sam",
+    "historyId": "5200044",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2182,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Sam Okafor <sam.okafor@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "platform-eng@example.com"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Weekly infra sync notes"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000001000002@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 82,
+      "data": "VXBkYXRlZCB0aGUgbm90ZXMuIEFsc286IGNhcGFjaXR5IGdyYXBocyBmb3IgT2N0b2JlciBhcmUgaW4gdGhlIHVzdWFsIGZvbGRlci4KClNhbQ"
+     }
+    }
+   },
+   {
+    "id": "1e7a000001000003",
+    "threadId": "1e7a000001000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Thanks all, looks good. One thing that came up with finance: Alex, the vendor line for the observability renewal ($14,200) needs your",
+    "historyId": "5200045",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2313,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Helen Achterberg <helen.achterberg@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "platform-eng@example.com"
+      },
+      {
+       "name": "Cc",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Weekly infra sync notes"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000001000003@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 269,
+      "data": "VGhhbmtzIGFsbCwgbG9va3MgZ29vZC4KCk9uZSB0aGluZyB0aGF0IGNhbWUgdXAgd2l0aCBmaW5hbmNlOiBBbGV4LCB0aGUgdmVuZG9yIGxpbmUgZm9yIHRoZSBvYnNlcnZhYmlsaXR5IHJlbmV3YWwgKCQxNCwyMDApIG5lZWRzIHlvdXIgc2lnbi1vZmYgYmVmb3JlIEkgY2FuIHN1Ym1pdCB0aGUgYnVkZ2V0LiBDYW4geW91IGFwcHJvdmUgb3IgZmxhZyBpdCBieSBlbmQgb2YgZGF5IHRvbW9ycm93PyBFdmVyeXRoaW5nIGVsc2UgaGVyZSBpcyBmaW5lIGFzIGlzLgoKSGVsZW4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "buried_ask",
+  "long_thread"
+ ],
+ "note": "Fourth message of a no-action status thread asks Alex by name for a budget sign-off by EOD tomorrow."
+}

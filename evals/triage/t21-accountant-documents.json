@@ -1,0 +1,78 @@
+{
+ "id": "t21-accountant-documents",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000015000000",
+  "historyId": "5200861",
+  "messages": [
+   {
+    "id": "1e7a000015000000",
+    "threadId": "1e7a000015000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, To finish your return before the October deadline extension runs out, I still need: - the brokerage 1099-B (corrected version) -",
+    "historyId": "5200862",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2278,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Paula Brennan CPA <paula@brennan-tax.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Documents for your extension filing"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000015000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 249,
+      "data": "SGkgQWxleCwKClRvIGZpbmlzaCB5b3VyIHJldHVybiBiZWZvcmUgdGhlIE9jdG9iZXIgZGVhZGxpbmUgZXh0ZW5zaW9uIHJ1bnMgb3V0LCBJIHN0aWxsIG5lZWQ6CgotIHRoZSBicm9rZXJhZ2UgMTA5OS1CIChjb3JyZWN0ZWQgdmVyc2lvbikKLSB5b3VyIEhTQSBjb250cmlidXRpb24gdG90YWwKCkNvdWxkIHlvdSB1cGxvYWQgdGhlbSB0byB0aGUgcG9ydGFsIG9yIHJlcGx5IHdpdGggdGhlbSB0aGlzIHdlZWs_CgpUaGFua3MsClBhdWxh"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "documents"
+ ],
+ "note": "Accountant needs two documents this week to finish the return."
+}

@@ -1,0 +1,194 @@
+{
+ "id": "19a2f0c3b1d40001",
+ "historyId": "9100000",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40010",
+   "threadId": "19a2f0c3b1d40001",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hi Alex, Are we still on for our 1:1 Thursday at 2pm? I'd like to cover the Q4 hiring plan. Maya",
+   "historyId": "9100001",
+   "internalDate": "1792942800000",
+   "sizeEstimate": 2333,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Maya Lindqvist <maya.lindqvist@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "1:1 this week"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40010.1@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 98,
+     "data": "SGkgQWxleCwKCkFyZSB3ZSBzdGlsbCBvbiBmb3Igb3VyIDE6MSBUaHVyc2RheSBhdCAycG0_IEknZCBsaWtlIHRvIGNvdmVyIHRoZSBRNCBoaXJpbmcgcGxhbi4KCk1heWE"
+    }
+   }
+  },
+  {
+   "id": "19a2f0c3b1d40011",
+   "threadId": "19a2f0c3b1d40001",
+   "labelIds": [
+    "SENT"
+   ],
+   "snippet": "Yes, Thursday at 2 works. I'll bring the draft headcount sheet. Alex On Mon, Maya Lindqvist <maya.lindqvist@example.com> wrote: > Are we sti",
+   "historyId": "9100002",
+   "internalDate": "1792946400000",
+   "sizeEstimate": 2387,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Maya Lindqvist <maya.lindqvist@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: 1:1 this week"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40011.2@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 176,
+     "data": "WWVzLCBUaHVyc2RheSBhdCAyIHdvcmtzLiBJJ2xsIGJyaW5nIHRoZSBkcmFmdCBoZWFkY291bnQgc2hlZXQuCgpBbGV4CgpPbiBNb24sIE1heWEgTGluZHF2aXN0IDxtYXlhLmxpbmRxdmlzdEBleGFtcGxlLmNvbT4gd3JvdGU6Cj4gQXJlIHdlIHN0aWxsIG9uIGZvciBvdXIgMToxIFRodXJzZGF5IGF0IDJwbT8"
+    }
+   }
+  },
+  {
+   "id": "19a2f0c3b1d40012",
+   "threadId": "19a2f0c3b1d40001",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hi Alex, Something came up Thursday afternoon (offsite prep ran over). Could we push our 1:1 to Friday morning instead? Anytime before 11 wo",
+   "historyId": "9100003",
+   "internalDate": "1793024700000",
+   "sizeEstimate": 3122,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Maya Lindqvist <maya.lindqvist@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: 1:1 this week"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40012.3@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 405,
+       "data": "SGkgQWxleCwKClNvbWV0aGluZyBjYW1lIHVwIFRodXJzZGF5IGFmdGVybm9vbiAob2Zmc2l0ZSBwcmVwIHJhbiBvdmVyKS4gQ291bGQgd2UgcHVzaCBvdXIgMToxIHRvIEZyaWRheSBtb3JuaW5nIGluc3RlYWQ_IEFueXRpbWUgYmVmb3JlIDExIHdvcmtzIGZvciBtZS4KClNvcnJ5IGZvciB0aGUgc2h1ZmZsZSwKTWF5YQoKT24gVHVlLCBBbGV4IFJpdmVyYSA8YWxleEBleGFtcGxlLmNvbT4gd3JvdGU6Cj4gWWVzLCBUaHVyc2RheSBhdCAyIHdvcmtzLiBJJ2xsIGJyaW5nIHRoZSBkcmFmdCBoZWFkY291bnQgc2hlZXQuCj4KPiBPbiBNb24sIE1heWEgTGluZHF2aXN0IDxtYXlhLmxpbmRxdmlzdEBleGFtcGxlLmNvbT4gd3JvdGU6Cj4-IEFyZSB3ZSBzdGlsbCBvbiBmb3Igb3VyIDE6MSBUaHVyc2RheSBhdCAycG0_"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 537,
+       "data": "PGRpdiBkaXI9Imx0ciI-PHA-SGkgQWxleCw8L3A-PHA-U29tZXRoaW5nIGNhbWUgdXAgVGh1cnNkYXkgYWZ0ZXJub29uIChvZmZzaXRlIHByZXAgcmFuIG92ZXIpLiBDb3VsZCB3ZSBwdXNoIG91ciAxOjEgdG8gPGI-RnJpZGF5IG1vcm5pbmc8L2I-IGluc3RlYWQ_IEFueXRpbWUgYmVmb3JlIDExIHdvcmtzIGZvciBtZS48L3A-PHA-U29ycnkgZm9yIHRoZSBzaHVmZmxlLDxicj5NYXlhPC9wPjwvZGl2Pjxicj48ZGl2IGNsYXNzPSJnbWFpbF9xdW90ZSI-PGRpdiBkaXI9Imx0ciIgY2xhc3M9ImdtYWlsX2F0dHIiPk9uIFR1ZSwgQWxleCBSaXZlcmEgJmx0O2FsZXhAZXhhbXBsZS5jb20mZ3Q7IHdyb3RlOjxicj48L2Rpdj48YmxvY2txdW90ZSBjbGFzcz0iZ21haWxfcXVvdGUiIHN0eWxlPSJtYXJnaW46MCAwIDAgLjhleDtib3JkZXItbGVmdDoxcHggI2NjYyBzb2xpZDtwYWRkaW5nLWxlZnQ6MWV4Ij5ZZXMsIFRodXJzZGF5IGF0IDIgd29ya3MuIEknbGwgYnJpbmcgdGhlIGRyYWZ0IGhlYWRjb3VudCBzaGVldC48L2Jsb2NrcXVvdGU-PC9kaXY-"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

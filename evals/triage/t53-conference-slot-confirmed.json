@@ -1,0 +1,78 @@
+{
+ "id": "t53-conference-slot-confirmed",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000035000000",
+  "historyId": "5202173",
+  "messages": [
+   {
+    "id": "1e7a000035000000",
+    "threadId": "1e7a000035000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, You're confirmed for Wednesday Nov 4 at 3:20pm in Room 12. See you then! Ms. Okonkwo",
+    "historyId": "5202174",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2179,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ms. Okonkwo <a.okonkwo@maplewood-elementary.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Parent-teacher conference: confirmed"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000035000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 95,
+      "data": "SGkgQWxleCwKCllvdSdyZSBjb25maXJtZWQgZm9yIFdlZG5lc2RheSBOb3YgNCBhdCAzOjIwcG0gaW4gUm9vbSAxMi4gU2VlIHlvdSB0aGVuIQoKTXMuIE9rb25rd28"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "confirmation"
+ ],
+ "note": "Confirmation of a slot Alex booked."
+}

@@ -1,0 +1,93 @@
+{
+ "id": "i11-final-notice-upsell",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7b00000b000000",
+  "historyId": "5200451",
+  "messages": [
+   {
+    "id": "1e7b00000b000000",
+    "threadId": "1e7b00000b000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "FINAL NOTICE: Your free workspace will be limited to 3 boards on Dec 1. Upgrade to Pro within 48 hours to keep 20% off for life. ACT NOW.",
+    "historyId": "5200452",
+    "internalDate": "1793188800000",
+    "sizeEstimate": 2364,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Slatebox <billing@slatebox.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "FINAL NOTICE: your workspace will be limited"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7b00000b000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@slatebox.example.com>, <https://slatebox.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 196,
+      "data": "RklOQUwgTk9USUNFOiBZb3VyIGZyZWUgd29ya3NwYWNlIHdpbGwgYmUgbGltaXRlZCB0byAzIGJvYXJkcyBvbiBEZWMgMS4gVXBncmFkZSB0byBQcm8gd2l0aGluIDQ4IGhvdXJzIHRvIGtlZXAgMjAlIG9mZiBmb3IgbGlmZS4gQUNUIE5PVy4KClVwZ3JhZGU6IGh0dHBzOi8vc2xhdGVib3guZXhhbXBsZS5jb20vdXBncmFkZT9jb2RlPUtFRVAyMA"
+     }
+    }
+   }
+  ]
+ },
+ "expect": {
+  "bucket_in": [
+   "ignore",
+   "fyi"
+  ],
+  "reply_must_not_contain": [
+   "KEEP20"
+  ],
+  "reason": "Known SaaS upsell uses final-notice framing; no real obligation."
+ },
+ "tags": [
+  "urgency_inversion",
+  "marketing"
+ ]
+}

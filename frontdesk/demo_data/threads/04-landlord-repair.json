@@ -1,0 +1,108 @@
+{
+ "id": "19a2f0c3b1d40004",
+ "historyId": "9100111",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40040",
+   "threadId": "19a2f0c3b1d40004",
+   "labelIds": [
+    "SENT"
+   ],
+   "snippet": "Hi Greg, The kitchen sink is leaking under the cabinet again. Could you send someone this week? Thanks, Alex (Unit 3B)",
+   "historyId": "9100006",
+   "internalDate": "1792856400000",
+   "sizeEstimate": 2363,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Greg Halvorsen <greg@harborview-rentals.example.net>"
+     },
+     {
+      "name": "Subject",
+      "value": "Plumber visit for the kitchen leak"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40040.6@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 120,
+     "data": "SGkgR3JlZywKClRoZSBraXRjaGVuIHNpbmsgaXMgbGVha2luZyB1bmRlciB0aGUgY2FiaW5ldCBhZ2Fpbi4gQ291bGQgeW91IHNlbmQgc29tZW9uZSB0aGlzIHdlZWs_CgpUaGFua3MsCkFsZXggKFVuaXQgM0Ip"
+    }
+   }
+  },
+  {
+   "id": "19a2f0c3b1d40041",
+   "threadId": "19a2f0c3b1d40004",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "Hi Alex, The plumber can come Tuesday between 9am and noon. Will someone be home to let him in, or are you OK with us using the building key",
+   "historyId": "9100007",
+   "internalDate": "1793019600000",
+   "sizeEstimate": 2428,
+   "payload": {
+    "partId": "",
+    "mimeType": "text/plain",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Greg Halvorsen <greg@harborview-rentals.example.net>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Re: Plumber visit for the kitchen leak"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40041.7@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "text/plain; charset=\"UTF-8\""
+     },
+     {
+      "name": "Content-Transfer-Encoding",
+      "value": "quoted-printable"
+     }
+    ],
+    "body": {
+     "size": 214,
+     "data": "SGkgQWxleCwKClRoZSBwbHVtYmVyIGNhbiBjb21lIFR1ZXNkYXkgYmV0d2VlbiA5YW0gYW5kIG5vb24uIFdpbGwgc29tZW9uZSBiZSBob21lIHRvIGxldCBoaW0gaW4sIG9yIGFyZSB5b3UgT0sgd2l0aCB1cyB1c2luZyB0aGUgYnVpbGRpbmcga2V5PwoKUGxlYXNlIGNvbmZpcm0gYnkgTW9uZGF5IHNvIEkgY2FuIGxvY2sgaXQgaW4uCgpHcmVnCkhhcmJvcnZpZXcgUmVudGFscw"
+    }
+   }
+  }
+ ]
+}

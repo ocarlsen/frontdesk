@@ -1,0 +1,78 @@
+{
+ "id": "t19-pr-review-before-release",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000013000000",
+  "historyId": "5200779",
+  "messages": [
+   {
+    "id": "1e7a000013000000",
+    "threadId": "1e7a000013000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hey Alex, Could you review the rate-limiter PR before we cut the release on Thursday? You wrote the original token bucket, so you're the",
+    "historyId": "5200780",
+    "internalDate": "1793192400000",
+    "sizeEstimate": 2248,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ken Matsuda <ken.matsuda@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Review on the rate-limiter PR before Thursday's cut?"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 13:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000013000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 201,
+      "data": "SGV5IEFsZXgsCgpDb3VsZCB5b3UgcmV2aWV3IHRoZSByYXRlLWxpbWl0ZXIgUFIgYmVmb3JlIHdlIGN1dCB0aGUgcmVsZWFzZSBvbiBUaHVyc2RheT8gWW91IHdyb3RlIHRoZSBvcmlnaW5hbCB0b2tlbiBidWNrZXQsIHNvIHlvdSdyZSB0aGUgYmVzdCByZXZpZXdlci4gSXQncyBhYm91dCAzMDAgbGluZXMsIG1vc3RseSB0ZXN0cy4KClRoYW5rcywKS2Vu"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "work",
+  "review_request"
+ ],
+ "note": "Ken personally asks Alex for a review before Thursday's release cut."
+}

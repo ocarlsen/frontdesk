@@ -1,0 +1,168 @@
+{
+ "id": "t50-multipart-done-deployed",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000032000000",
+  "historyId": "5202050",
+  "messages": [
+   {
+    "id": "1e7a000032000000",
+    "threadId": "1e7a000032000000",
+    "labelIds": [
+     "SENT"
+    ],
+    "snippet": "Sam, can you bump the worker pool to 32 on prod when you get a chance? Alex",
+    "historyId": "5202051",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2153,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Sam Okafor <sam.okafor@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Bump the worker pool to 32"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000032000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 76,
+      "data": "U2FtLCBjYW4geW91IGJ1bXAgdGhlIHdvcmtlciBwb29sIHRvIDMyIG9uIHByb2Qgd2hlbiB5b3UgZ2V0IGEgY2hhbmNlPwoKQWxleA"
+     }
+    }
+   },
+   {
+    "id": "1e7a000032000001",
+    "threadId": "1e7a000032000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Done, deployed at 14:10. Queue lag dropped from 90s to 4s. Sam On Tue, Oct 27, 2026 at 10:02 AM Alex Rivera <alex@example.com> wrote: >",
+    "historyId": "5202052",
+    "internalDate": "1793134800000",
+    "sizeEstimate": 2694,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/alternative",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Sam Okafor <sam.okafor@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Bump the worker pool to 32"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 21:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000032000001@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/alternative; boundary=\"000000000000e7a1b2\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 208,
+        "data": "RG9uZSwgZGVwbG95ZWQgYXQgMTQ6MTAuIFF1ZXVlIGxhZyBkcm9wcGVkIGZyb20gOTBzIHRvIDRzLgoKU2FtCgpPbiBUdWUsIE9jdCAyNywgMjAyNiBhdCAxMDowMiBBTSBBbGV4IFJpdmVyYSA8YWxleEBleGFtcGxlLmNvbT4gd3JvdGU6Cj4gU2FtLCBjYW4geW91IGJ1bXAgdGhlIHdvcmtlciBwb29sIHRvIDMyIG9uIHByb2Qgd2hlbiB5b3UgZ2V0IGEgY2hhbmNlPw"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "text/html",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/html; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 342,
+        "data": "PGRpdiBkaXI9Imx0ciI-RG9uZSwgZGVwbG95ZWQgYXQgMTQ6MTAuIFF1ZXVlIGxhZyBkcm9wcGVkIGZyb20gOTBzIHRvIDRzLjxicj48YnI-U2FtPC9kaXY-PGRpdiBjbGFzcz0iZ21haWxfcXVvdGUiPjxkaXYgY2xhc3M9ImdtYWlsX2F0dHIiPk9uIFR1ZSwgT2N0IDI3LCAyMDI2IGF0IDEwOjAyIEFNIEFsZXggUml2ZXJhICZsdDthbGV4QGV4YW1wbGUuY29tJmd0OyB3cm90ZTo8L2Rpdj48YmxvY2txdW90ZSBjbGFzcz0iZ21haWxfcXVvdGUiPlNhbSwgY2FuIHlvdSBidW1wIHRoZSB3b3JrZXIgcG9vbCB0byAzMiBvbiBwcm9kIHdoZW4geW91IGdldCBhIGNoYW5jZT88L2Jsb2NrcXVvdGU-PC9kaXY-"
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "multipart",
+  "quoted_history",
+  "status_update_requested"
+ ],
+ "note": "Sam reports Alex's request is done."
+}

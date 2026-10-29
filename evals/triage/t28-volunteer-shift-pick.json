@@ -1,0 +1,78 @@
+{
+ "id": "t28-volunteer-shift-pick",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00001c000000",
+  "historyId": "5201148",
+  "messages": [
+   {
+    "id": "1e7a00001c000000",
+    "threadId": "1e7a00001c000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, Thanks for signing up again! Which of these works for you in November? - Sat Nov 7, 9 to 12 - Sat Nov 14, 9 to 12 - Wed Nov 18, 5",
+    "historyId": "5201149",
+    "internalDate": "1793098800000",
+    "sizeEstimate": 2234,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Rosa Delgado <rosa@eastside-foodbank.example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Food bank shifts in November"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 11:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00001c000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 188,
+      "data": "SGkgQWxleCwKClRoYW5rcyBmb3Igc2lnbmluZyB1cCBhZ2FpbiEgV2hpY2ggb2YgdGhlc2Ugd29ya3MgZm9yIHlvdSBpbiBOb3ZlbWJlcj8KCi0gU2F0IE5vdiA3LCA5IHRvIDEyCi0gU2F0IE5vdiAxNCwgOSB0byAxMgotIFdlZCBOb3YgMTgsIDUgdG8gOAoKSSdtIGZpbmFsaXppbmcgdGhlIHNjaGVkdWxlIE1vbmRheS4KClJvc2E"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "none",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "scheduling"
+ ],
+ "note": "Volunteer coordinator asks Alex to pick a shift before Monday."
+}

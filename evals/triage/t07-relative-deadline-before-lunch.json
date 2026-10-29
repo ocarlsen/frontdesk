@@ -1,0 +1,77 @@
+{
+ "id": "t07-relative-deadline-before-lunch",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000007000000",
+  "historyId": "5200287",
+  "messages": [
+   {
+    "id": "1e7a000007000000",
+    "threadId": "1e7a000007000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Alex, can you send me the architecture slide before lunch today? I'm presenting to the steering group at 1. Thanks! Marcus",
+    "historyId": "5200288",
+    "internalDate": "1793204400000",
+    "sizeEstimate": 2181,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Marcus Bell <marcus.bell@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Need the slide by noon"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 16:20:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000007000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 123,
+      "data": "QWxleCwgY2FuIHlvdSBzZW5kIG1lIHRoZSBhcmNoaXRlY3R1cmUgc2xpZGUgYmVmb3JlIGx1bmNoIHRvZGF5PyBJJ20gcHJlc2VudGluZyB0byB0aGUgc3RlZXJpbmcgZ3JvdXAgYXQgMS4KClRoYW5rcyEKTWFyY3Vz"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "relative_deadline"
+ ],
+ "note": "Marcus needs a slide before noon today."
+}

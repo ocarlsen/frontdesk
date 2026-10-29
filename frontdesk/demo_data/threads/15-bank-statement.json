@@ -1,0 +1,92 @@
+{
+ "id": "19a2f0c3b1d4000f",
+ "historyId": "9100518",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d400f0",
+   "threadId": "19a2f0c3b1d4000f",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Your October statement for checking account ending 7781 is ready to view in online banking. For your security we never ask for your password",
+   "historyId": "9100019",
+   "internalDate": "1792952400000",
+   "sizeEstimate": 2995,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Granite Bay Credit Union <alerts@granitebay-cu.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Your October statement is ready"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d400f0.19@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 151,
+       "data": "WW91ciBPY3RvYmVyIHN0YXRlbWVudCBmb3IgY2hlY2tpbmcgYWNjb3VudCBlbmRpbmcgNzc4MSBpcyByZWFkeSB0byB2aWV3IGluIG9ubGluZSBiYW5raW5nLgoKRm9yIHlvdXIgc2VjdXJpdHkgd2UgbmV2ZXIgYXNrIGZvciB5b3VyIHBhc3N3b3JkIGJ5IGVtYWlsLg"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 576,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48ZGl2IHN0eWxlPSJiYWNrZ3JvdW5kOiMxMjNiNWQ7Y29sb3I6I2ZmZjtwYWRkaW5nOjE0cHggMThweDtib3JkZXItcmFkaXVzOjhweCA4cHggMCAwO2ZvbnQtd2VpZ2h0OmJvbGQiPkdyYW5pdGUgQmF5IENyZWRpdCBVbmlvbjwvZGl2PjxkaXYgc3R5bGU9ImJvcmRlcjoxcHggc29saWQgI2QwZDdkZTtib3JkZXItdG9wOjA7cGFkZGluZzoxNnB4IDE4cHg7Ym9yZGVyLXJhZGl1czowIDAgOHB4IDhweCI-PHA-WW91ciBPY3RvYmVyIHN0YXRlbWVudCBmb3IgY2hlY2tpbmcgYWNjb3VudCBlbmRpbmcgPGI-Nzc4MTwvYj4gaXMgcmVhZHkgdG8gdmlldyBpbiBvbmxpbmUgYmFua2luZy48L3A-PHAgc3R5bGU9ImZvbnQtc2l6ZToxMnB4O2NvbG9yOiM1NzYwNmEiPkZvciB5b3VyIHNlY3VyaXR5IHdlIG5ldmVyIGFzayBmb3IgeW91ciBwYXNzd29yZCBieSBlbWFpbC48L3A-PC9kaXY-PC9kaXY-"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

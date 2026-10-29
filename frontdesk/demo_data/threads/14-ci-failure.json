@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d4000e",
+ "historyId": "9100481",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d400e0",
+   "threadId": "19a2f0c3b1d4000e",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Run failed: tests on main Repository: alex/ledger-sync Commit: 3f9c2e1 \"Handle partial refunds in reconcile\" Failed job: pytest (3.12) FAILE",
+   "historyId": "9100018",
+   "internalDate": "1793027100000",
+   "sizeEstimate": 3191,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "CodeForge <notifications@codeforge.example.com>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "[alex/ledger-sync] Run failed: tests (main) - 3f9c2e1"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d400e0.18@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 308,
+       "data": "UnVuIGZhaWxlZDogdGVzdHMgb24gbWFpbgoKUmVwb3NpdG9yeTogYWxleC9sZWRnZXItc3luYwpDb21taXQ6IDNmOWMyZTEgIkhhbmRsZSBwYXJ0aWFsIHJlZnVuZHMgaW4gcmVjb25jaWxlIgpGYWlsZWQgam9iOiBweXRlc3QgKDMuMTIpCgpGQUlMRUQgdGVzdHMvdGVzdF9yZWNvbmNpbGUucHk6OnRlc3RfcGFydGlhbF9yZWZ1bmRfcm91bmRpbmcKQXNzZXJ0aW9uRXJyb3I6IGV4cGVjdGVkIDEyLjM0LCBnb3QgMTIuMzMKClZpZXcgcnVuOiBodHRwczovL2NvZGVmb3JnZS5leGFtcGxlLmNvbS9hbGV4L2xlZGdlci1zeW5jL3J1bnMvODg0MTI"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 706,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48cCBzdHlsZT0iZm9udC1zaXplOjE2cHgiPjxzcGFuIHN0eWxlPSJjb2xvcjojY2YyMjJlIj4mI3gyNzE2Ozwvc3Bhbj4gPGI-UnVuIGZhaWxlZDwvYj46IHRlc3RzIG9uIDxjb2RlPm1haW48L2NvZGU-PC9wPjxwIHN0eWxlPSJjb2xvcjojNTc2MDZhIj5hbGV4L2xlZGdlci1zeW5jICZtaWRkb3Q7IDNmOWMyZTEgJmxkcXVvO0hhbmRsZSBwYXJ0aWFsIHJlZnVuZHMgaW4gcmVjb25jaWxlJnJkcXVvOzwvcD48cHJlIHN0eWxlPSJiYWNrZ3JvdW5kOiNmNmY4ZmE7Ym9yZGVyOjFweCBzb2xpZCAjZDBkN2RlO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MTBweDtmb250LXNpemU6MTJweDt3aGl0ZS1zcGFjZTpwcmUtd3JhcCI-RkFJTEVEIHRlc3RzL3Rlc3RfcmVjb25jaWxlLnB5Ojp0ZXN0X3BhcnRpYWxfcmVmdW5kX3JvdW5kaW5nCkFzc2VydGlvbkVycm9yOiBleHBlY3RlZCAxMi4zNCwgZ290IDEyLjMzPC9wcmU-PHA-PGEgaHJlZj0iaHR0cHM6Ly9jb2RlZm9yZ2UuZXhhbXBsZS5jb20vYWxleC9sZWRnZXItc3luYy9ydW5zLzg4NDEyIiBzdHlsZT0iY29sb3I6IzA5NjlkYSI-VmlldyBydW48L2E-PC9wPjwvZGl2Pg"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

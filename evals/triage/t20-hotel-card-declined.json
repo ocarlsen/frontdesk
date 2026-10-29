@@ -1,0 +1,79 @@
+{
+ "id": "t20-hotel-card-declined",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000014000000",
+  "historyId": "5200820",
+  "messages": [
+   {
+    "id": "1e7a000014000000",
+    "threadId": "1e7a000014000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Payment declined Hi Alex, We were unable to charge the card ending 4417 for your reservation (Nov 13 to Nov 15, confirmation SM-88213).",
+    "historyId": "5200821",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2481,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/html",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Saltmarsh Inn Reservations <reservations@saltmarsh-inn.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Action required: payment declined for your reservation"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000014000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/html; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 528,
+      "data": "PGh0bWw-PGJvZHk-PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48aDIgc3R5bGU9Im1hcmdpbjowIDAgMTJweCI-UGF5bWVudCBkZWNsaW5lZDwvaDI-PHA-SGkgQWxleCw8L3A-PHA-V2Ugd2VyZSB1bmFibGUgdG8gY2hhcmdlIHRoZSBjYXJkIGVuZGluZyA0NDE3IGZvciB5b3VyIHJlc2VydmF0aW9uIChOb3YgMTMgdG8gTm92IDE1LCBjb25maXJtYXRpb24gU00tODgyMTMpLjwvcD48cD5QbGVhc2UgdXBkYXRlIHlvdXIgcGF5bWVudCBtZXRob2Qgd2l0aGluIDI0IGhvdXJzIG9yIHRoZSByZXNlcnZhdGlvbiB3aWxsIGJlIHJlbGVhc2VkLjwvcD48cD48YSBocmVmPSJodHRwczovL3NhbHRtYXJzaC1pbm4uZXhhbXBsZS5uZXQvcmVzZXJ2YXRpb25zL1NNLTg4MjEzIj5NYW5hZ2UgcmVzZXJ2YXRpb248L2E-PC9wPjwvZGl2PjwvYm9keT48L2h0bWw-"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "automated_needs_action",
+  "html_only"
+ ],
+ "note": "Automated, HTML-only, but Alex must update payment within 24 hours or lose the booking."
+}

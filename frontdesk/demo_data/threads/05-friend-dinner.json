@@ -1,0 +1,93 @@
+{
+ "id": "19a2f0c3b1d40005",
+ "historyId": "9100148",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40050",
+   "threadId": "19a2f0c3b1d40005",
+   "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "CATEGORY_PERSONAL"
+   ],
+   "snippet": "hey!! we're finally doing the housewarming dinner, saturday at 7 at our new place. small group, maybe 6 people. can you make it? and if you'",
+   "historyId": "9100008",
+   "internalDate": "1793005200000",
+   "sizeEstimate": 2768,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Nora Castellanos <nora.c@example.org>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "dinner saturday?"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40050.8@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 184,
+       "data": "aGV5ISEgd2UncmUgZmluYWxseSBkb2luZyB0aGUgaG91c2V3YXJtaW5nIGRpbm5lciwgc2F0dXJkYXkgYXQgNyBhdCBvdXIgbmV3IHBsYWNlLiBzbWFsbCBncm91cCwgbWF5YmUgNiBwZW9wbGUuIGNhbiB5b3UgbWFrZSBpdD8gYW5kIGlmIHlvdSdyZSB1cCBmb3IgaXQgYnJpbmcgYSBkZXNzZXJ0LCBubyBwcmVzc3VyZQoKbg"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 231,
+       "data": "PGRpdiBkaXI9Imx0ciI-aGV5ISEgd2UmIzM5O3JlIGZpbmFsbHkgZG9pbmcgdGhlIGhvdXNld2FybWluZyBkaW5uZXIsIDxiPnNhdHVyZGF5IGF0IDc8L2I-IGF0IG91ciBuZXcgcGxhY2UuIHNtYWxsIGdyb3VwLCBtYXliZSA2IHBlb3BsZS4gY2FuIHlvdSBtYWtlIGl0PyBhbmQgaWYgeW91JiMzOTtyZSB1cCBmb3IgaXQgYnJpbmcgYSBkZXNzZXJ0LCBubyBwcmVzc3VyZSDwn42wPGJyPjxicj5uPC9kaXY-"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

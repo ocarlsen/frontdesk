@@ -1,0 +1,79 @@
+{
+ "id": "t61-cold-recruiter-outreach",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00003d000000",
+  "historyId": "5202501",
+  "messages": [
+   {
+    "id": "1e7a00003d000000",
+    "threadId": "1e7a00003d000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, I lead recruiting at Halyard Robotics. We're hiring a Director of Platform Engineering and your background with data pipelines",
+    "historyId": "5202502",
+    "internalDate": "1793102400000",
+    "sizeEstimate": 2256,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Mira Solberg <mira.solberg@halyard-robotics.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Engineering leadership role at Halyard"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 12:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00003d000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 208,
+      "data": "SGkgQWxleCwKCkkgbGVhZCByZWNydWl0aW5nIGF0IEhhbHlhcmQgUm9ib3RpY3MuIFdlJ3JlIGhpcmluZyBhIERpcmVjdG9yIG9mIFBsYXRmb3JtIEVuZ2luZWVyaW5nIGFuZCB5b3VyIGJhY2tncm91bmQgd2l0aCBkYXRhIHBpcGVsaW5lcyBzdG9vZCBvdXQuIFdvdWxkIHlvdSBiZSBvcGVuIHRvIGEgMjAtbWludXRlIGNhbGwgbmV4dCB3ZWVrPwoKQmVzdCwKTWlyYQ"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": true
+ },
+ "tags": [
+  "ambiguous",
+  "recruiter",
+  "cold_outreach"
+ ],
+ "note": "Unsolicited but personal recruiter note: a person asks a question, yet nothing is owed. fyi/needs_you/ignore all defensible."
+}

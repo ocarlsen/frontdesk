@@ -1,0 +1,77 @@
+{
+ "id": "t44-subscription-confirmation",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00002c000000",
+  "historyId": "5201804",
+  "messages": [
+   {
+    "id": "1e7a00002c000000",
+    "threadId": "1e7a00002c000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Thanks for upgrading! Your Slatebox Pro plan is active. Plan: Pro, monthly Amount: $12.00/month Next billing date: Nov 28, 2026 Manage your",
+    "historyId": "5201805",
+    "internalDate": "1793098800000",
+    "sizeEstimate": 2212,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Slatebox <billing@slatebox.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Welcome to Slatebox Pro"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 11:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00002c000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 167,
+      "data": "VGhhbmtzIGZvciB1cGdyYWRpbmchIFlvdXIgU2xhdGVib3ggUHJvIHBsYW4gaXMgYWN0aXZlLgoKUGxhbjogUHJvLCBtb250aGx5CkFtb3VudDogJDEyLjAwL21vbnRoCk5leHQgYmlsbGluZyBkYXRlOiBOb3YgMjgsIDIwMjYKCk1hbmFnZSB5b3VyIHBsYW4gYW55dGltZSBpbiBzZXR0aW5ncy4"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "receipt",
+  "subscription"
+ ],
+ "note": "Confirmation of an upgrade Alex made."
+}

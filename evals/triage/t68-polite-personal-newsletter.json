@@ -1,0 +1,91 @@
+{
+ "id": "t68-polite-personal-newsletter",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000044000000",
+  "historyId": "5202788",
+  "messages": [
+   {
+    "id": "1e7a000044000000",
+    "threadId": "1e7a000044000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PROMOTIONS"
+    ],
+    "snippet": "Hi friend, Hope your fall is going well! This month I finished the redesign for a small bakery, gave a talk on accessible forms, and",
+    "historyId": "5202789",
+    "internalDate": "1793113200000",
+    "sizeEstimate": 2544,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Wren Abernathy <wren@wrenabernathy.example.net>"
+      },
+      {
+       "name": "To",
+       "value": "wren-notes@wrenabernathy.example.net"
+      },
+      {
+       "name": "Subject",
+       "value": "October notes from Wren"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000044000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@wrenabernathy.example.net>, <https://wrenabernathy.example.net/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 464,
+      "data": "SGkgZnJpZW5kLAoKSG9wZSB5b3VyIGZhbGwgaXMgZ29pbmcgd2VsbCEgVGhpcyBtb250aCBJIGZpbmlzaGVkIHRoZSByZWRlc2lnbiBmb3IgYSBzbWFsbCBiYWtlcnksIGdhdmUgYSB0YWxrIG9uIGFjY2Vzc2libGUgZm9ybXMsIGFuZCBmaW5hbGx5IHN0YXJ0ZWQgcG90dGVyeS4KCklmIHlvdSBrbm93IGFueW9uZSB3aG8gbmVlZHMgYSBmcmVlbGFuY2UgZGVzaWduZXIgaW4gUTEsIEknZCBiZSBncmF0ZWZ1bCBmb3IgYW4gaW50cm8uIEFuZCBJIGFsd2F5cyBsb3ZlIGhlYXJpbmcgd2hhdCB5b3UncmUgd29ya2luZyBvbiwgc28gaGl0IHJlcGx5IGFueXRpbWUuCgpXYXJtbHksCldyZW4KCllvdSdyZSBnZXR0aW5nIHRoaXMgYmVjYXVzZSB5b3Ugc2lnbmVkIHVwIGF0IHdyZW5hYmVybmF0aHkuZXhhbXBsZS5uZXQuIFVuc3Vic2NyaWJlOiBodHRwczovL3dyZW5hYmVybmF0aHkuZXhhbXBsZS5uZXQvdW5zdWJzY3JpYmU"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "newsletter",
+  "personal_tone"
+ ],
+ "note": "Warm first-person tone and 'hit reply anytime', but it's a bulk newsletter with an unsubscribe."
+}

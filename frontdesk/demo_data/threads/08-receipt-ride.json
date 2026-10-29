@@ -1,0 +1,92 @@
+{
+ "id": "19a2f0c3b1d40008",
+ "historyId": "9100259",
+ "messages": [
+  {
+   "id": "19a2f0c3b1d40080",
+   "threadId": "19a2f0c3b1d40008",
+   "labelIds": [
+    "INBOX",
+    "CATEGORY_UPDATES"
+   ],
+   "snippet": "Thanks for riding with Fernway. Trip: Market St to Elm Ave, 4.2 mi Fare: $14.20 Paid with card ending 4242. Rate your driver in the app.",
+   "historyId": "9100012",
+   "internalDate": "1792916400000",
+   "sizeEstimate": 2841,
+   "payload": {
+    "mimeType": "multipart/alternative",
+    "filename": "",
+    "headers": [
+     {
+      "name": "From",
+      "value": "Fernway Rides <receipts@fernway.example.net>"
+     },
+     {
+      "name": "To",
+      "value": "Alex Rivera <alex@example.com>"
+     },
+     {
+      "name": "Subject",
+      "value": "Your Tuesday evening trip with Fernway"
+     },
+     {
+      "name": "Message-ID",
+      "value": "<19a2f0c3b1d40080.12@mail.example.com>"
+     },
+     {
+      "name": "MIME-Version",
+      "value": "1.0"
+     },
+     {
+      "name": "Content-Type",
+      "value": "multipart/alternative; boundary=\"000000000000a1b2c3\""
+     }
+    ],
+    "body": {
+     "size": 0
+    },
+    "parts": [
+     {
+      "partId": "0",
+      "mimeType": "text/plain",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/plain; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 138,
+       "data": "VGhhbmtzIGZvciByaWRpbmcgd2l0aCBGZXJud2F5LgoKVHJpcDogTWFya2V0IFN0IHRvIEVsbSBBdmUsIDQuMiBtaQpGYXJlOiAkMTQuMjAKUGFpZCB3aXRoIGNhcmQgZW5kaW5nIDQyNDIuCgpSYXRlIHlvdXIgZHJpdmVyIGluIHRoZSBhcHAu"
+      }
+     },
+     {
+      "partId": "1",
+      "mimeType": "text/html",
+      "filename": "",
+      "headers": [
+       {
+        "name": "Content-Type",
+        "value": "text/html; charset=\"UTF-8\""
+       },
+       {
+        "name": "Content-Transfer-Encoding",
+        "value": "quoted-printable"
+       }
+      ],
+      "body": {
+       "size": 365,
+       "data": "PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48aDIgc3R5bGU9ImZvbnQtc2l6ZToxOHB4Ij5UaGFua3MgZm9yIHJpZGluZyB3aXRoIEZlcm53YXk8L2gyPjxwPk1hcmtldCBTdCAmcmFycjsgRWxtIEF2ZSAmbWlkZG90OyA0LjIgbWk8L3A-PHAgc3R5bGU9ImZvbnQtc2l6ZToyNHB4O2ZvbnQtd2VpZ2h0OmJvbGQ7bWFyZ2luOjhweCAwIj4kMTQuMjA8L3A-PHAgc3R5bGU9ImNvbG9yOiM1NzYwNmEiPlBhaWQgd2l0aCBjYXJkIGVuZGluZyA0MjQyLjwvcD48L2Rpdj4"
+      }
+     }
+    ],
+    "partId": ""
+   }
+  }
+ ]
+}

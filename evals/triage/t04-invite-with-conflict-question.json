@@ -1,0 +1,79 @@
+{
+ "id": "t04-invite-with-conflict-question",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000004000000",
+  "historyId": "5200164",
+  "messages": [
+   {
+    "id": "1e7a000004000000",
+    "threadId": "1e7a000004000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "IMPORTANT",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi Alex, The Larchmont team can demo their scheduling tool Thursday at 3pm. I know that overlaps with your design review. Do you want me to",
+    "historyId": "5200165",
+    "internalDate": "1793199600000",
+    "sizeEstimate": 2267,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Ruth Coleman <ruth.coleman@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Vendor demo Thursday 3pm?"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000004000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 248,
+      "data": "SGkgQWxleCwKClRoZSBMYXJjaG1vbnQgdGVhbSBjYW4gZGVtbyB0aGVpciBzY2hlZHVsaW5nIHRvb2wgVGh1cnNkYXkgYXQgM3BtLiBJIGtub3cgdGhhdCBvdmVybGFwcyB3aXRoIHlvdXIgZGVzaWduIHJldmlldy4gRG8geW91IHdhbnQgbWUgdG8gbW92ZSB0aGUgZGVtbyB0byBGcmlkYXksIG9yIHdpbGwgeW91IHNraXAgdGhlIHJldmlldyBmb3IgdGhpcyBvbmU_IEkgbmVlZCB0byBjb25maXJtIHdpdGggdGhlbSB0b2RheS4KClJ1dGg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "today",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "hard",
+  "meeting_conflict"
+ ],
+ "note": "Ruth needs Alex to choose between two overlapping meetings and must confirm with the vendor today."
+}

@@ -1,0 +1,78 @@
+{
+ "id": "t25-benefits-enrollment-closes",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000019000000",
+  "historyId": "5201025",
+  "messages": [
+   {
+    "id": "1e7a000019000000",
+    "threadId": "1e7a000019000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Hi Alex, Our records show you haven't completed open enrollment for 2027. If you take no action by Friday, Oct 30, you'll be enrolled in",
+    "historyId": "5201026",
+    "internalDate": "1793120400000",
+    "sizeEstimate": 2270,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "People Team <people@example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Open enrollment closes Friday"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000019000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 254,
+      "data": "SGkgQWxleCwKCk91ciByZWNvcmRzIHNob3cgeW91IGhhdmVuJ3QgY29tcGxldGVkIG9wZW4gZW5yb2xsbWVudCBmb3IgMjAyNy4gSWYgeW91IHRha2Ugbm8gYWN0aW9uIGJ5IEZyaWRheSwgT2N0IDMwLCB5b3UnbGwgYmUgZW5yb2xsZWQgaW4gdGhlIGRlZmF1bHQgbWVkaWNhbCBwbGFuIGFuZCB5b3VyIEZTQSBlbGVjdGlvbiB3aWxsIGJlICQwLgoKQ29tcGxldGUgZW5yb2xsbWVudCBpbiB0aGUgYmVuZWZpdHMgcG9ydGFsLgoKUGVvcGxlIFRlYW0"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "automated_needs_action",
+  "deadline"
+ ],
+ "note": "Enrollment closes Friday with a costly default; Alex must act in the portal."
+}

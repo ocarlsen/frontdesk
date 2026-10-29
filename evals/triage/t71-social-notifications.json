@@ -1,0 +1,89 @@
+{
+ "id": "t71-social-notifications",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000047000000",
+  "historyId": "5202911",
+  "messages": [
+   {
+    "id": "1e7a000047000000",
+    "threadId": "1e7a000047000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_SOCIAL"
+    ],
+    "snippet": "Hi Alex, you have 5 new notifications, including 2 people who viewed your profile. See what you missed:",
+    "historyId": "5202912",
+    "internalDate": "1793196000000",
+    "sizeEstimate": 2320,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Circlet <notify@circlet.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "You have 5 new notifications"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 14:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000047000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "List-Unsubscribe",
+       "value": "<mailto:unsubscribe@circlet.example.com>, <https://circlet.example.com/unsubscribe>"
+      },
+      {
+       "name": "List-Unsubscribe-Post",
+       "value": "List-Unsubscribe=One-Click"
+      },
+      {
+       "name": "Precedence",
+       "value": "bulk"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 146,
+      "data": "SGkgQWxleCwgeW91IGhhdmUgNSBuZXcgbm90aWZpY2F0aW9ucywgaW5jbHVkaW5nIDIgcGVvcGxlIHdobyB2aWV3ZWQgeW91ciBwcm9maWxlLgoKU2VlIHdoYXQgeW91IG1pc3NlZDogaHR0cHM6Ly9jaXJjbGV0LmV4YW1wbGUuY29tL25vdGlmaWNhdGlvbnM"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "ignore",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "social"
+ ],
+ "note": "Engagement-bait notification digest."
+}

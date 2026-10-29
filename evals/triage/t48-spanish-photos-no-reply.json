@@ -1,0 +1,77 @@
+{
+ "id": "t48-spanish-photos-no-reply",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000030000000",
+  "historyId": "5201968",
+  "messages": [
+   {
+    "id": "1e7a000030000000",
+    "threadId": "1e7a000030000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "¡Hola a todos! Ya están las fotos de la boda en el álbum compartido. Gracias por venir, fue un día precioso. No hace falta responder, ¡solo",
+    "historyId": "5201969",
+    "internalDate": "1793034000000",
+    "sizeEstimate": 2214,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Marisol Vega <marisol.vega@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "familia-vega@example.org"
+      },
+      {
+       "name": "Subject",
+       "value": "Fotos de la boda"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 26 Oct 2026 17:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000030000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 179,
+      "data": "wqFIb2xhIGEgdG9kb3MhCgpZYSBlc3TDoW4gbGFzIGZvdG9zIGRlIGxhIGJvZGEgZW4gZWwgw6FsYnVtIGNvbXBhcnRpZG8uIEdyYWNpYXMgcG9yIHZlbmlyLCBmdWUgdW4gZMOtYSBwcmVjaW9zby4gTm8gaGFjZSBmYWx0YSByZXNwb25kZXIsIMKhc29sbyBkaXNmcnV0YWRsYXMhCgpVbiBhYnJhem8sCk1hcmlzb2w"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "non_english",
+  "spanish"
+ ],
+ "note": "Spanish: photos shared, explicitly no reply needed."
+}

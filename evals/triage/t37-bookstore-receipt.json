@@ -1,0 +1,111 @@
+{
+ "id": "t37-bookstore-receipt",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a000025000000",
+  "historyId": "5201517",
+  "messages": [
+   {
+    "id": "1e7a000025000000",
+    "threadId": "1e7a000025000000",
+    "labelIds": [
+     "INBOX",
+     "CATEGORY_UPDATES"
+    ],
+    "snippet": "Thanks for shopping with us Designing Data Pipelines (paperback) $38.00 Tax $3.33 Total $41.33 Visa ending 4417. Returns accepted within 30",
+    "historyId": "5201518",
+    "internalDate": "1793113200000",
+    "sizeEstimate": 2815,
+    "payload": {
+     "partId": "",
+     "mimeType": "multipart/alternative",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Tidewater Books <receipts@tidewaterbooks.example.com>"
+      },
+      {
+       "name": "To",
+       "value": "Alex Rivera <alex@example.com>"
+      },
+      {
+       "name": "Subject",
+       "value": "Your receipt from Tidewater Books"
+      },
+      {
+       "name": "Date",
+       "value": "Tue, 27 Oct 2026 15:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a000025000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "multipart/alternative; boundary=\"000000000000e7a1b2\""
+      }
+     ],
+     "body": {
+      "size": 0
+     },
+     "parts": [
+      {
+       "partId": "0",
+       "mimeType": "text/plain",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/plain; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 147,
+        "data": "VGhhbmtzIGZvciBzaG9wcGluZyB3aXRoIHVzCgpEZXNpZ25pbmcgRGF0YSBQaXBlbGluZXMgKHBhcGVyYmFjaykgJDM4LjAwClRheCAkMy4zMwpUb3RhbCAkNDEuMzMKClZpc2EgZW5kaW5nIDQ0MTcuIFJldHVybnMgYWNjZXB0ZWQgd2l0aGluIDMwIGRheXMu"
+       }
+      },
+      {
+       "partId": "1",
+       "mimeType": "text/html",
+       "filename": "",
+       "headers": [
+        {
+         "name": "Content-Type",
+         "value": "text/html; charset=\"UTF-8\""
+        },
+        {
+         "name": "Content-Transfer-Encoding",
+         "value": "quoted-printable"
+        }
+       ],
+       "body": {
+        "size": 570,
+        "data": "PGh0bWw-PGJvZHk-PGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7bWF4LXdpZHRoOjU2MHB4O21hcmdpbjowIGF1dG87Y29sb3I6IzFmMjMyODtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1Ij48aDIgc3R5bGU9Im1hcmdpbjowIj5UaGFua3MgZm9yIHNob3BwaW5nIHdpdGggdXM8L2gyPjx0YWJsZSBzdHlsZT0id2lkdGg6MTAwJTttYXJnaW4tdG9wOjEycHgiPjx0cj48dGQ-RGVzaWduaW5nIERhdGEgUGlwZWxpbmVzIChwYXBlcmJhY2spPC90ZD48dGQgc3R5bGU9InRleHQtYWxpZ246cmlnaHQiPiQzOC4wMDwvdGQ-PC90cj48dHI-PHRkPlRheDwvdGQ-PHRkIHN0eWxlPSJ0ZXh0LWFsaWduOnJpZ2h0Ij4kMy4zMzwvdGQ-PC90cj48dHI-PHRkPjxiPlRvdGFsPC9iPjwvdGQ-PHRkIHN0eWxlPSJ0ZXh0LWFsaWduOnJpZ2h0Ij48Yj4kNDEuMzM8L2I-PC90ZD48L3RyPjwvdGFibGU-PHAgc3R5bGU9ImNvbG9yOiM2NjYiPlZpc2EgZW5kaW5nIDQ0MTcuIFJldHVybnMgYWNjZXB0ZWQgd2l0aGluIDMwIGRheXMuPC9wPjwvZGl2PjwvYm9keT48L2h0bWw-"
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "fyi",
+  "urgency_band": "none",
+  "reply_expected": false,
+  "ambiguous": false
+ },
+ "tags": [
+  "receipt"
+ ],
+ "note": "Purchase receipt; nothing to do."
+}

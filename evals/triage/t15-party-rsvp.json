@@ -1,0 +1,78 @@
+{
+ "id": "t15-party-rsvp",
+ "account": "alex@example.com",
+ "today": "2026-10-28",
+ "thread": {
+  "id": "1e7a00000f000000",
+  "historyId": "5200615",
+  "messages": [
+   {
+    "id": "1e7a00000f000000",
+    "threadId": "1e7a00000f000000",
+    "labelIds": [
+     "INBOX",
+     "UNREAD",
+     "CATEGORY_PERSONAL"
+    ],
+    "snippet": "Hi friends! We finally unpacked. Come by Saturday from 6pm, food and drinks on us. Can you let me know by Thursday if you're coming and",
+    "historyId": "5200616",
+    "internalDate": "1793170800000",
+    "sizeEstimate": 2245,
+    "payload": {
+     "partId": "",
+     "mimeType": "text/plain",
+     "filename": "",
+     "headers": [
+      {
+       "name": "From",
+       "value": "Noor Haddad <noor.haddad@example.org>"
+      },
+      {
+       "name": "To",
+       "value": "Noor's friends <friends-of-noor@example.org>"
+      },
+      {
+       "name": "Subject",
+       "value": "Housewarming Saturday!"
+      },
+      {
+       "name": "Date",
+       "value": "Wed, 28 Oct 2026 07:00:00 +0000"
+      },
+      {
+       "name": "Message-ID",
+       "value": "<1e7a00000f000000@mail.example.com>"
+      },
+      {
+       "name": "MIME-Version",
+       "value": "1.0"
+      },
+      {
+       "name": "Content-Type",
+       "value": "text/plain; charset=\"UTF-8\""
+      },
+      {
+       "name": "Content-Transfer-Encoding",
+       "value": "quoted-printable"
+      }
+     ],
+     "body": {
+      "size": 208,
+      "data": "SGkgZnJpZW5kcyEKCldlIGZpbmFsbHkgdW5wYWNrZWQuIENvbWUgYnkgU2F0dXJkYXkgZnJvbSA2cG0sIGZvb2QgYW5kIGRyaW5rcyBvbiB1cy4gQ2FuIHlvdSBsZXQgbWUga25vdyBieSBUaHVyc2RheSBpZiB5b3UncmUgY29taW5nIGFuZCB3aGV0aGVyIHlvdSdyZSBicmluZ2luZyBhbnlvbmU_IE5lZWQgYSBoZWFkY291bnQgZm9yIHRoZSBjYXRlcmVyLgoKTm9vcg"
+     }
+    }
+   }
+  ]
+ },
+ "gold": {
+  "bucket": "needs_you",
+  "urgency_band": "week",
+  "reply_expected": true,
+  "ambiguous": false
+ },
+ "tags": [
+  "personal",
+  "rsvp"
+ ],
+ "note": "Friend asks for an RSVP and plus-one count by Thursday."
+}
