@@ -59,9 +59,10 @@ LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 TEXT = "text/plain; charset=utf-8"
 
 
-def ranked_payload(store: Store) -> list[dict]:
+def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     """HTML bodies stay out of the list payload (fetched per message from /msg); each
-    message carries has_html instead."""
+    message carries has_html instead. A proposed email reply gets the owner's sign-off."""
+    from ..assist import with_signoff
     with_html = store.html_indexes()
     out = []
     for item, tri in store.ranked():
@@ -69,8 +70,22 @@ def ranked_payload(store: Store) -> list[dict]:
         for i, m in enumerate(d["messages"]):
             m.pop("html", None)
             m["has_html"] = i in with_html.get(item.id, set())
-        out.append({"item": d, "triage": asdict(tri) if tri else None})
+        t = asdict(tri) if tri else None
+        if t and item.source == "gmail":
+            t["proposed_reply"] = with_signoff(t["proposed_reply"], signoff)
+        out.append({"item": d, "triage": t})
     return out
+
+
+def signed_history(history: list[dict], source: str) -> list[dict]:
+    """Ask drafts saved before the sign-off existed (or before it changed) get the current one,
+    so "Use as reply" always carries it. Email only."""
+    from ..assist import with_signoff
+    if source != "gmail":
+        return history
+    sign = config.settings()["reply_signoff"]
+    return [{**h, "draft_reply": with_signoff(h["draft_reply"], sign)} if h.get("draft_reply")
+            else h for h in history]
 
 
 def message_html(store: Store, item_id: str, index: int) -> str | None:
@@ -146,6 +161,39 @@ def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
     return t
 
 
+# Owner-side memory writes (notes, "What's going on"): local only, each names its author.
+MEMORY_KINDS = ("note", "note_confirm", "situation_add", "situation_update", "situation_confirm",
+                "situation_delete")
+
+
+def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int, dict]:
+    from .. import actions
+    if settings.get("demo"):   # like the profile: the demo's memory is empty and read-only
+        what = "notes need" if kind.startswith("note") else "What's going on needs"
+        return HTTPStatus.CONFLICT, {"error": f"Demo mode: {what} your own copy."}
+    store = Store(db_path)
+    try:
+        a = req.get("author")
+        if kind == "note":
+            out = actions.save_note(store, req.get("who"), req.get("text"), a,
+                                    bool(req.get("append")))
+        elif kind == "note_confirm":
+            out = actions.confirm_note(store, req.get("who"), a)
+        elif kind == "situation_add":
+            out = actions.situation_add(store, req.get("text"), a)
+        elif kind == "situation_update":
+            out = actions.situation_update(store, req.get("id"), req.get("text"), a)
+        elif kind == "situation_confirm":
+            out = actions.situation_confirm(store, req.get("id"), a)
+        else:
+            out = actions.situation_delete(store, req.get("id"), a)
+        return HTTPStatus.OK, out
+    except actions.ActionError as e:
+        return HTTPStatus.BAD_REQUEST, {"error": str(e)}
+    finally:
+        store.db.close()
+
+
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
@@ -164,10 +212,10 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             return HTTPStatus.CONFLICT, {"error": str(e)}
         finally:
             store.db.close()
+    if kind in MEMORY_KINDS:
+        return run_memory(db_path, settings, kind, req)
     if kind == "profile":
         item_id = key = ""
-    elif kind == "note":
-        key = item_id = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
                       "undone", "read", "ask") \
             or not isinstance(item_id, str) or not isinstance(key, str):
@@ -179,34 +227,51 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         if not isinstance(text, str) or len(text) > config.PROFILE_MAX:
             return HTTPStatus.BAD_REQUEST, {"error": f"profile must be text, at most "
                                                      f"{config.PROFILE_MAX} characters"}
+        sign = req.get("signoff")
+        if sign is not None and (not isinstance(sign, str) or len(sign) > config.SIGNOFF_MAX):
+            return HTTPStatus.BAD_REQUEST, {"error": f"sign-off must be text, at most "
+                                                     f"{config.SIGNOFF_MAX} characters"}
         config.save_setting("owner_profile", text.strip())
+        if sign is not None:
+            config.save_setting("reply_signoff", sign.strip())
         return HTTPStatus.OK, {"status": "done", "kind": "profile"}
-    if kind in ("ask", "note"):
+    if kind == "ask":
         if settings.get("demo"):
             return HTTPStatus.CONFLICT, {"error": "Demo mode: Ask needs a live model."}
         from .. import assist
         from ..providers import ProviderError, get_provider
+        from ..store import InvalidMemory, check_author
+        try:
+            author = check_author(req.get("author"))
+        except InvalidMemory as e:
+            return HTTPStatus.BAD_REQUEST, {"error": str(e)}
         store = Store(db_path)
         try:
-            if kind == "note":
-                who, text = req.get("who"), req.get("text")
-                if not isinstance(who, str) or not who.strip() or not isinstance(text, str) \
-                        or len(text) > 2000:
-                    return HTTPStatus.BAD_REQUEST, {"error": "expected {who, text<=2000}"}
-                if req.get("append"):   # a suggestion adds to the note, never replaces it
-                    old = store.notes_for([who]).get(who.strip().lower(), "")
-                    text = (old + "\n" + text.strip()).strip() if old else text
-                store.save_note(who, text)
-                return HTTPStatus.OK, {"status": "done"}
             q, mode, draft = req.get("question", ""), req.get("mode", "ask"), req.get("draft", "")
             if mode not in ("ask", "second", "polish") or not isinstance(q, str) \
                     or not isinstance(draft, str) or len(q) > 4000 or len(draft) > 8000:
                 return HTTPStatus.BAD_REQUEST, {"error": "expected question/draft text and a mode"}
             s = config.settings()
+            choice = req.get("model")
             if mode != "ask":            # the reviewer is a different, stronger model
-                s = {**s, "model": s["review_model"]}
+                s = {**s, "provider": "anthropic", "model": s["review_model"]}
+                return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
+                                                 s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"], mode=mode,
+                                                 draft=draft)
+            available = available_models(s)
+            if choice == "all":
+                return HTTPStatus.OK, ask_all(db_path, s, available, str(item_id), q, author)
+            if isinstance(choice, int) and 0 <= choice < len(available):
+                m = available[choice]
+                s = {**s, "provider": m["provider"], "model": m["model"]}
+                return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
+                                                 s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"],
+                                                 label=m["label"])
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
-                                             s["owner_profile"], mode=mode, draft=draft)
+                                             s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"])
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:
@@ -272,6 +337,51 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         return HTTPStatus.CONFLICT, {"error": str(e)}
     finally:
         store.db.close()
+
+
+def available_models(settings: dict) -> list[dict]:
+    """The Ask model list, minus vendors with no key configured."""
+    from ..providers import has_key
+    have: dict[str, bool] = {}
+    out = []
+    for m in settings["ask_models"]:
+        if m["provider"] not in have:
+            have[m["provider"]] = has_key(settings, m["provider"])
+        if have[m["provider"]]:
+            out.append(m)
+    return out
+
+
+def ask_all(db_path: Path, settings: dict, models: list[dict], item_id: str,
+            question: str, author: str) -> dict:
+    """The same question to every available model in parallel, each answer saved under its
+    model's label. A model that fails is reported, not fatal. The question is recorded once,
+    with its author."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from .. import assist
+    from ..providers import ProviderError, get_provider
+    q = (question or "").strip() or assist.ADVISE
+    store = Store(db_path)
+    try:
+        store.add_ask(item_id, "owner", q + "  [asked: all models]", author)
+    finally:
+        store.db.close()
+
+    def one(m: dict) -> dict:
+        st = Store(db_path)      # one connection per thread (sqlite)
+        try:
+            s = {**settings, "provider": m["provider"], "model": m["model"]}
+            return assist.ask(st, get_provider(s), item_id, q, settings["owner_profile"],
+                              author=author, record_question=False,
+                              signoff=settings.get("reply_signoff", ""), label=m["label"])
+        except ProviderError as e:
+            return {"model": m["label"], "error": str(e)}
+        finally:
+            st.db.close()
+    with ThreadPoolExecutor(max_workers=max(1, len(models))) as pool:
+        answers = list(pool.map(one, models))
+    return {"answers": answers}
 
 
 def host_allowed(host_header: str, extra_names: set[str]) -> bool:
@@ -361,20 +471,30 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 name, ctype = STATIC[path]
                 self._send(HTTPStatus.OK, (STATIC_DIR / name).read_bytes(), ctype)
             elif path == "/api/profile":
+                # The profile plus "What's going on". The demo shows both empty and read-only.
                 demo = bool((settings or {}).get("demo"))
-                prof = "" if demo else config.settings()["owner_profile"]
-                self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo}).encode(),
+                cfg = {} if demo else config.settings()
+                prof, sign = cfg.get("owner_profile", ""), cfg.get("reply_signoff", "")
+                situation: list[dict] = []
+                if not demo:
+                    store = Store(db_path)
+                    try:
+                        situation = store.situation()
+                    finally:
+                        store.db.close()
+                body = {"profile": prof, "signoff": sign, "demo": demo, "situation": situation}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/ask":
+                from .. import assist
                 item_id = parse_qs(query).get("item", [""])[0]
                 store = Store(db_path)
                 try:
                     item = store.get_item(item_id)
                     out = None if item is None else {
-                        "history": store.ask_history(item_id),
-                        "notes": store.notes_for(item.participants),
-                        "people": [p for p in item.participants
-                                   if p.lower() != item.account.lower()]}
+                        "history": signed_history(store.ask_history(item_id), item.source),
+                        "notes": store.notes_for(assist.others(item)),
+                        "people": assist.others(item)}
                 finally:
                     store.db.close()
                 if out is None:
@@ -382,6 +502,11 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 else:
                     self._send(HTTPStatus.OK, json.dumps(out).encode(),
                                "application/json; charset=utf-8")
+            elif path == "/api/models":
+                body = [{"index": i, "label": m["label"], "provider": m["provider"]}
+                        for i, m in enumerate(available_models(config.settings()))]
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/status":
                 self._send(HTTPStatus.OK, json.dumps(_last_sync).encode(),
                            "application/json; charset=utf-8")
@@ -406,7 +531,10 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 # default and ThreadingHTTPServer runs each request on its own thread.
                 store = Store(db_path)
                 try:
-                    body = json.dumps(ranked_payload(store)).encode()
+                    # Read per request so a sign-off edited in the profile applies at once.
+                    sign = "" if (settings or {}).get("demo") else \
+                        config.settings()["reply_signoff"]
+                    body = json.dumps(ranked_payload(store, sign)).encode()
                 finally:
                     store.db.close()
                 self._send(HTTPStatus.OK, body, "application/json; charset=utf-8")

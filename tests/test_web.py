@@ -286,7 +286,7 @@ def test_profile_read_and_save(tmp_path):
     try:
         assert post({"kind": "profile", "text": "I am job hunting."}) == 200
         got = _json.loads(urllib.request.urlopen(base + "/api/profile").read())
-        assert got == {"profile": "I am job hunting.", "demo": False}
+        assert got == {"profile": "I am job hunting.", "signoff": "", "demo": False, "situation": []}
         assert config.settings()["serve_port"] == 9999
         assert post({"kind": "profile", "text": "x" * 2001}) == 400
         assert oct(config.SETTINGS_PATH.stat().st_mode & 0o777) == "0o600"

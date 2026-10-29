@@ -48,4 +48,47 @@ vm.runInContext("buildCard", ctx)(item, triage);
 vm.runInContext("buildDetail", ctx)(item, triage);
 vm.runInContext("buildDetail", ctx)(item, { ...triage, summary: "", proposed_reply: "" });
 vm.runInContext("buildDetail", ctx)(item, null);
+// Memory: author labels, the notes editor with Confirm, situation suggestions, What's going on.
+const fn = name => vm.runInContext(name, ctx);
+const texts = n => [n.textContent, ...n.children.flatMap(texts)];
+const box = new Node("div");
+fn("renderAnswer")(box, { answer: "Hold off.", draft_reply: "", note_suggestions: [],
+  situation_suggestions: ["Decided to wait."] }, new Node("textarea"), () => {});
+if (!texts(box).includes("Add to What's going on: Decided to wait.")) throw new Error("no situation button");
+const notes = new Node("div");
+fn("renderNotes")(notes, ["fab@example.com", "bo@example.com", "cy@example.com"], {
+  "fab@example.com": { text: "a", author: "owner", updated_at: "2026-10-28T16:00:00Z" },
+  "bo@example.com": { text: "b", author: "session:frontdesk", updated_at: "2026-10-28T16:00:00Z" },
+}, () => {});
+const nt = texts(notes);
+if (!nt.some(t => t.startsWith("Written by you on "))) throw new Error("no owner label");
+if (!nt.some(t => t.startsWith("Written by session frontdesk on ") && t.endsWith(", not confirmed")))
+  throw new Error("no session label");
+if (nt.filter(t => t === "Confirm").length !== 1) throw new Error("Confirm only on the session note");
+const sit = new Node("div");
+const items = [{ id: 1, text: "Mine", author: "owner", created_at: "x", updated_at: "2026-10-28T16:00:00Z" },
+               { id: 2, text: "Theirs", author: "unrecorded", created_at: "x", updated_at: "" }];
+fn("renderSituation")(sit, items, false, () => {});
+const st = texts(sit);
+if (st.filter(t => t === "Confirm").length !== 1 || !st.includes("Add")) throw new Error("situation controls");
+if (!st.includes("Author not recorded, an unknown date, not confirmed")) throw new Error("unrecorded label");
+const demo = new Node("div");
+fn("renderSituation")(demo, items, true, () => {});
+if (texts(demo).includes("Add") || texts(demo).includes("Delete")) throw new Error("demo must be read-only");
+if (fn("askerLabel")("session:helper") !== "Asked by session helper on your behalf, not typed by you")
+  throw new Error("asker label");
+// Old-shape notes (a page and server out of step) get no editor, so no Save can overwrite them.
+const stale = new Node("div");
+fn("renderNotes")(stale, ["fab@example.com"], { "fab@example.com": "plain string" }, () => {});
+const all = n => [n, ...n.children.flatMap(all)];
+if (all(stale).some(n => n.tagName === "TEXTAREA") || !texts(stale).some(t => t.startsWith("This page is out of date")))
+  throw new Error("stale notes must not be editable");
 console.log("js smoke ok");
+// History folds into turns: a second opinion joins the turn it reviews.
+const turns = vm.runInContext("groupTurns", ctx)([
+  { role: "owner", text: "First?", author: "owner" }, { role: "assistant", text: "A1" },
+  { role: "owner", text: "Give me a second opinion on your colleague's last answer above", author: "owner" },
+  { role: "assistant", text: "A2" },
+  { role: "owner", text: "Next?", author: "owner" }, { role: "assistant", text: "A3" }]);
+if (turns.length !== 2 || turns[0].entries.length !== 4) throw new Error("turn grouping");
+console.log("turns ok");

@@ -218,3 +218,21 @@ def test_cid_image_becomes_data_uri():
          "headers": [{"name": "Content-ID", "value": "<logo123@x>"}], "body": {"data": img}}]}
     out = clean_html(payload)
     assert 'src="data:image/png;base64,' in out and "cid:" not in out
+
+
+def test_stub_plain_part_falls_back_to_the_html():
+    html = ("<html><body><h1>Personal brief</h1><p>Today: call with Gee at 9am. Invoice from "
+            "the landlord is due Friday. Two recruiter replies are waiting.</p>"
+            + "<ul>" + "".join(f"<li>Item {i}: follow up on the open thread.</li>" for i in range(8))
+            + "</ul></body></html>")
+    t = thread(msg("m1", 1000, "Me <owner@example.com>",
+                   alternative("This message is HTML; open it in a mail client that renders HTML.",
+                               html)))
+    body = thread_to_item(t, ME).messages[0].body
+    assert "call with Gee at 9am" in body and "This message is HTML" not in body
+
+
+def test_a_real_plain_part_still_wins_over_similar_html():
+    t = thread(msg("m1", 1000, "Ann <ann@example.com>",
+                   alternative("Lunch at noon? Plain version.", "<p>Lunch at noon? <b>HTML</b> version.</p>")))
+    assert thread_to_item(t, ME).messages[0].body == "Lunch at noon? Plain version."

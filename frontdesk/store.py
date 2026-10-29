@@ -5,6 +5,7 @@ every side effect."""
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import replace
@@ -65,11 +66,12 @@ CREATE TABLE IF NOT EXISTS hidden (
     item_updated_at TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS notes (
-    -- The owner's own notes about a person (keyed by their address or Slack name, lowercase).
-    -- Trusted context for Ask; written only by the owner (a model may only suggest).
+    -- Owner-side notes about a person (keyed by their address or Slack name, lowercase). Context
+    -- for Ask; `author` says who wrote it (see AUTHORS below). A model may only suggest.
     who TEXT PRIMARY KEY,
     text TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    author TEXT NOT NULL DEFAULT 'unrecorded'
 );
 CREATE TABLE IF NOT EXISTS asks (
     -- One Ask conversation per thread: the owner's questions and the model's answers.
@@ -78,7 +80,17 @@ CREATE TABLE IF NOT EXISTS asks (
     role TEXT NOT NULL,              -- 'owner' | 'assistant'
     text TEXT NOT NULL,
     extra TEXT NOT NULL DEFAULT '{}', -- assistant: {draft_reply, note_suggestions, model, cost}
-    at TEXT NOT NULL
+    at TEXT NOT NULL,
+    -- owner rows: who wrote the question; assistant rows: who asked for the answer
+    author TEXT NOT NULL DEFAULT 'unrecorded'
+);
+CREATE TABLE IF NOT EXISTS situation (
+    -- "What's going on": what is live for the owner right now, for Ask. Same authorship rule.
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    author TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS labels (
     -- The owner's correction of a ranking: private ground truth for `frontdesk eval --mine`.
@@ -115,9 +127,40 @@ TRIAGE_ADDED_COLUMNS = [
     ("cost_usd", "REAL"),
     ("summary", "TEXT NOT NULL DEFAULT ''"),
 ]
+# Columns added to owner-side memory tables, applied to older databases on open.
+MEMORY_ADDED_COLUMNS = [("notes", "author", "TEXT NOT NULL DEFAULT 'unrecorded'"),
+                        ("asks", "author", "TEXT NOT NULL DEFAULT 'unrecorded'")]
 TRIAGE_FIELDS = ("item_id", "bucket", "urgency", "reason", "proposed_reply", "model",
                  "triaged_at", "item_updated_at", "prompt_version", "model_served", "tokens_in",
                  "tokens_out", "cache_read", "cache_write", "latency_ms", "cost_usd", "summary")
+
+
+# Authorship of owner-side memory (notes, Ask questions, situation items):
+#   'owner'          typed or clicked by the owner in the FrontDesk UI (a model suggestion the
+#                    owner saved with a click counts as the owner's);
+#   'session:<name>' a tool or agent session writing on the owner's behalf (the CLI);
+#   'unrecorded'     rows from before authorship was recorded.
+# Confirmed means author == 'owner'. This is a record for honest writers, NOT a security
+# boundary: any local process can open this database, or call the local API, and claim any author.
+OWNER = "owner"
+UNRECORDED = "unrecorded"
+_SESSION = re.compile(r"session:[a-z0-9._-]{1,40}")
+SITUATION_MAX_ITEMS = 50
+SITUATION_MAX_CHARS = 500
+NOTE_MAX_CHARS = 2000
+
+
+class InvalidMemory(ValueError):
+    """A memory write with a bad author, text or id. The message is safe to show the owner."""
+
+
+def check_author(author) -> str:
+    """The author a writer may claim: 'owner' or 'session:<name>'. Never 'unrecorded', which
+    only marks old rows, and never a default: a missing author is an error."""
+    if author == OWNER or (isinstance(author, str) and _SESSION.fullmatch(author)):
+        return author
+    raise InvalidMemory("author must be 'owner' or 'session:<name>' "
+                        "(name: a-z, 0-9, '.', '_', '-'; at most 40)")
 
 
 def now() -> str:
@@ -144,13 +187,14 @@ class Store:
             except sqlite3.OperationalError as e:
                 if "duplicate column" not in str(e):
                     raise
-        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(triage)")}
-        for name, decl in TRIAGE_ADDED_COLUMNS:
+        added = [("triage", n, d) for n, d in TRIAGE_ADDED_COLUMNS] + MEMORY_ADDED_COLUMNS
+        for table, name, decl in added:
+            cols = {r["name"] for r in self.db.execute(f"PRAGMA table_info({table})")}
             if name in cols:
                 continue
             try:
                 with self.db:
-                    self.db.execute(f"ALTER TABLE triage ADD COLUMN {name} {decl}")
+                    self.db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
             except sqlite3.OperationalError as e:
                 # Another process (the server, a CLI run) added it between our read and write.
                 if "duplicate column" not in str(e):
@@ -198,33 +242,101 @@ class Store:
         with self.tx() as db:
             db.execute("UPDATE items SET data=? WHERE id=?", (json.dumps(d), item_id))
 
-    # ---- notes and Ask history
-    def notes_for(self, people: list[str]) -> dict[str, str]:
+    # ---- notes, Ask history and situation: owner-side memory, each row with its author
+    def notes_for(self, people: list[str]) -> dict[str, dict]:
+        """{who: {"text", "author", "updated_at"}} for the people that have a note."""
         keys = [p.lower() for p in people if p]
         if not keys:
             return {}
-        rows = self.db.execute(f"SELECT who, text FROM notes WHERE who IN "
+        rows = self.db.execute(f"SELECT who, text, author, updated_at FROM notes WHERE who IN "
                                f"({','.join('?' * len(keys))})", keys).fetchall()
-        return {r["who"]: r["text"] for r in rows}
+        return {r["who"]: {"text": r["text"], "author": r["author"],
+                           "updated_at": r["updated_at"]} for r in rows}
 
-    def save_note(self, who: str, text: str) -> None:
+    def save_note(self, who: str, text: str, author: str, append: bool = False) -> None:
+        """Set (or, with empty text, delete) the note on `who`. With `append`, add `text` to the
+        existing note; the combined note counts as the owner's only if both parts are."""
+        author = check_author(author)
         who = who.strip().lower()
+        if not who:
+            raise InvalidMemory("a note needs a person")
+        if not isinstance(text, str) or len(text) > NOTE_MAX_CHARS:
+            raise InvalidMemory(f"a note is text of at most {NOTE_MAX_CHARS} characters")
+        text = text.strip()
+        if append and text:
+            old = self.notes_for([who]).get(who)
+            if old:
+                text = (old["text"] + "\n" + text)[:NOTE_MAX_CHARS]
+                if old["author"] != OWNER:
+                    author = old["author"]
         with self.tx() as db:
-            if text.strip():
-                db.execute("INSERT OR REPLACE INTO notes VALUES (?,?,?)",
-                           (who, text.strip(), now()))
+            if text:
+                db.execute("INSERT OR REPLACE INTO notes (who, text, updated_at, author) "
+                           "VALUES (?,?,?,?)", (who, text, now(), author))
             else:
                 db.execute("DELETE FROM notes WHERE who=?", (who,))
 
+    def confirm_note(self, who: str) -> None:
+        """The owner vouches for a note as written: author becomes 'owner'; text and date stay."""
+        with self.tx() as db:
+            if db.execute("UPDATE notes SET author=? WHERE who=?",
+                          (OWNER, who.strip().lower())).rowcount == 0:
+                raise InvalidMemory("no note for that person")
+
     def ask_history(self, item_id: str) -> list[dict]:
-        return [{"role": r["role"], "text": r["text"], **json.loads(r["extra"])}
+        return [{"role": r["role"], "text": r["text"], "author": r["author"], "at": r["at"],
+                 **json.loads(r["extra"])}
                 for r in self.db.execute("SELECT * FROM asks WHERE item_id=? ORDER BY id",
                                          (item_id,))]
 
-    def add_ask(self, item_id: str, role: str, text: str, extra: dict | None = None) -> None:
+    def add_ask(self, item_id: str, role: str, text: str, author: str,
+                extra: dict | None = None) -> None:
+        author = check_author(author)
         with self.tx() as db:
-            db.execute("INSERT INTO asks (item_id, role, text, extra, at) VALUES (?,?,?,?,?)",
-                       (item_id, role, text, json.dumps(extra or {}), now()))
+            db.execute("INSERT INTO asks (item_id, role, text, extra, at, author) "
+                       "VALUES (?,?,?,?,?,?)",
+                       (item_id, role, text, json.dumps(extra or {}), now(), author))
+
+    def situation(self) -> list[dict]:
+        """Oldest first: {"id", "text", "author", "created_at", "updated_at"}."""
+        return [dict(r) for r in self.db.execute(
+            "SELECT id, text, author, created_at, updated_at FROM situation ORDER BY id")]
+
+    @staticmethod
+    def _situation_text(text) -> str:
+        if not isinstance(text, str) or not text.strip():
+            raise InvalidMemory("a situation item needs text")
+        if len(text.strip()) > SITUATION_MAX_CHARS:
+            raise InvalidMemory(f"a situation item is at most {SITUATION_MAX_CHARS} characters")
+        return text.strip()
+
+    def add_situation(self, text: str, author: str) -> int:
+        author, text = check_author(author), self._situation_text(text)
+        with self.tx() as db:
+            n = db.execute("SELECT COUNT(*) FROM situation").fetchone()[0]
+            if n >= SITUATION_MAX_ITEMS:
+                raise InvalidMemory(f"What's going on holds at most {SITUATION_MAX_ITEMS} items; "
+                                    "delete one first")
+            t = now()
+            return db.execute("INSERT INTO situation (text, author, created_at, updated_at) "
+                              "VALUES (?,?,?,?)", (text, author, t, t)).lastrowid
+
+    def _situation_write(self, sql: str, args: tuple) -> None:
+        with self.tx() as db:
+            if db.execute(sql, args).rowcount == 0:
+                raise InvalidMemory("no such situation item")
+
+    def update_situation(self, item_id: int, text: str, author: str) -> None:
+        author, text = check_author(author), self._situation_text(text)
+        self._situation_write("UPDATE situation SET text=?, author=?, updated_at=? WHERE id=?",
+                              (text, author, now(), item_id))
+
+    def confirm_situation(self, item_id: int) -> None:
+        """Author becomes 'owner'; text and dates stay."""
+        self._situation_write("UPDATE situation SET author=? WHERE id=?", (OWNER, item_id))
+
+    def delete_situation(self, item_id: int) -> None:
+        self._situation_write("DELETE FROM situation WHERE id=?", (item_id,))
 
     def related(self, item: Item, limit: int = 5) -> list[tuple[Item, str]]:
         """Other stored threads (including archived or done ones) that share a participant with

@@ -34,6 +34,19 @@ function el(tag, cls, text) {
   return n;
 }
 
+// Text boxes grow to fit their content: CSS field-sizing where the browser has it, else this.
+const NATIVE_FIT = typeof CSS !== "undefined" && CSS.supports && CSS.supports("field-sizing", "content");
+function fitText(t) {
+  if (NATIVE_FIT || !t || t.tagName !== "TEXTAREA") return;
+  t.style.height = "auto";
+  t.style.height = (t.scrollHeight + 2) + "px";
+}
+document.addEventListener("input", e => fitText(e.target));
+document.addEventListener("focusin", e => fitText(e.target));
+document.addEventListener("toggle", e => {
+  if (e.target && e.target.querySelectorAll) e.target.querySelectorAll("textarea").forEach(fitText);
+}, true);
+
 function parseSender(s) {
   // "Jane Doe <jane@example.com>" -> {name, addr}; "<a@b>" or "a@b" -> name falls back to addr.
   const m = /^\s*"?([^"<]*?)"?\s*<([^>]*)>\s*$/.exec(s || "");
@@ -144,7 +157,9 @@ function buildDetail(item, triage) {
   const actions = el("div", "actions");
   const proposed = triage && triage.proposed_reply ? triage.proposed_reply : "";
   const id = "reply-" + Math.random().toString(36).slice(2);
-  const label = el("label", null, proposed ? "Proposed reply (edit it, then save)" : "Reply");
+  const head = el("h3", "panelhead", "Reply");
+  const label = el("label", null, proposed ? "Proposed by FrontDesk: edit it, then save or send" :
+    "Write your reply");
   label.htmlFor = id;
   const ta = el("textarea");
   ta.id = id;
@@ -183,7 +198,7 @@ function buildDetail(item, triage) {
     }
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
-  reply.append(label, ta, hint);
+  reply.append(head, label, ta, hint);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
   if (isGmail) actions.append(save);
@@ -296,7 +311,8 @@ async function postAction(kind, itemId, extra) {
     if (kind === "done") staticHidden.add(itemId);
     if (kind === "read") return { status: "done" };
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
-    if (kind === "profile") throw new Error("demo mode");
+    if (kind === "profile" || kind === "note" || kind.startsWith("note_") ||
+        kind.startsWith("situation_")) throw new Error("demo mode");
     if (kind === "send_prepare") {
       const it = (window.__items || []).find(r => r.item.id === itemId);
       const inbound = it ? it.item.messages.filter(m => !m.is_mine) : [];
@@ -514,16 +530,88 @@ async function archive(item, btn) {
   }
 }
 
+// ---- Memory authorship. "owner": typed or clicked by you here. "session:<name>": a tool or
+// agent session wrote it on your behalf (frontdesk note / situation add). "unrecorded": written
+// before FrontDesk recorded authors. Only "owner" counts as confirmed; Confirm or Save makes it so.
+function fmtDate(iso) {
+  const t = Date.parse(iso || "");
+  return Number.isNaN(t) ? "an unknown date"
+    : new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function authorLabel(author, iso) {
+  const d = fmtDate(iso);
+  if (author === "owner") return "Written by you on " + d;
+  if ((author || "").startsWith("session:")) {
+    return "Written by session " + author.slice(8) + " on " + d + ", not confirmed";
+  }
+  return "Author not recorded, " + d + ", not confirmed";
+}
+
+function askerLabel(author) {
+  if ((author || "").startsWith("session:")) {
+    return "Asked by session " + author.slice(8) + " on your behalf, not typed by you";
+  }
+  return "Author not recorded";
+}
+
+function renderNotes(notesBox, people, notes, refresh) {
+  // notes: {who: {text, author, updated_at}}. Saving from here records you as the author.
+  notesBox.replaceChildren();
+  const nd = el("details", "notes");
+  nd.append(el("summary", null, "Your notes on these people (" + Object.keys(notes).length + ")"));
+  const ok = Object.values(notes).every(n => n && typeof n === "object" && typeof n.text === "string");
+  if (!ok) {   // never offer a Save that could write a placeholder over a real note
+    nd.append(el("p", "hint", "This page is out of date with the server. Reload FrontDesk to see " +
+      "and edit your notes."));
+    notesBox.append(nd);
+    return;
+  }
+  for (const p of people) {
+    const n = notes[p.toLowerCase()];
+    const t = el("textarea");
+    t.rows = 2;
+    t.value = n ? n.text : "";
+    t.placeholder = "What should FrontDesk remember about " + p + "?";
+    const sv = el("button", "btn small", "Save");
+    sv.type = "button";
+    sv.addEventListener("click", async () => {
+      try {
+        await postAction("note", "", { who: p, text: t.value, author: "owner" });
+        toast("Note saved.");
+        refresh();
+      } catch (e) { toast("Save failed: " + e.message); }
+    });
+    nd.append(el("p", "notewho", p), t);
+    if (n) nd.append(el("p", "kbdhint authorlabel", authorLabel(n.author, n.updated_at)));
+    const row = el("div", "actions");
+    row.append(sv);
+    if (n && n.author !== "owner") {
+      const ok = el("button", "btn small", "Confirm");
+      ok.type = "button";
+      ok.title = "Mark this note as yours, as written";
+      ok.addEventListener("click", async () => {
+        try { await postAction("note_confirm", "", { who: p, author: "owner" }); refresh(); }
+        catch (e) { toast("Confirm failed: " + e.message); }
+      });
+      row.append(ok);
+    }
+    nd.append(row);
+  }
+  notesBox.append(nd);
+}
+
 // ---- Ask: reason about this thread with the context (history with these people, your notes).
 // Answers are model text from untrusted mail: shown as plain text; a draft only fills the box.
 function askPanel(item, replyBox) {
   const det = el("details", "ask");
-  det.append(el("summary", null, "Ask FrontDesk about this thread"));
+  const sum = el("summary", null, "Ask FrontDesk about this thread");
+  det.append(sum);
   const body = el("div", "askbody");
   det.append(body);
   let loaded = false;
   det.addEventListener("toggle", () => {
-    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body); }
+    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body, sum); }
   });
   return det;
 }
@@ -551,9 +639,21 @@ function renderAnswer(box, a, replyBox, refreshNotes) {
     b.addEventListener("click", async () => {
       b.disabled = true;
       try {
-        await postAction("note", "", { who: n.who, text: n.text, append: true });
+        await postAction("note", "", { who: n.who, text: n.text, append: true, author: "owner" });
         b.textContent = "Saved note for " + n.who;
         refreshNotes();
+      } catch (e) { b.disabled = false; toast("Save failed: " + e.message); }
+    });
+    row.append(b);
+  }
+  for (const t of a.situation_suggestions || []) {
+    const b = el("button", "btn small", "Add to What's going on: " + t);
+    b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        await postAction("situation_add", "", { text: t, author: "owner" });
+        b.textContent = "Added to What's going on";
       } catch (e) { b.disabled = false; toast("Save failed: " + e.message); }
     });
     row.append(b);
@@ -565,13 +665,58 @@ function renderAnswer(box, a, replyBox, refreshNotes) {
   box.append(ans);
 }
 
-async function buildAsk(item, replyBox, body) {
+// Stored owner questions for the two built-in modes start with these words (assist.py).
+const SECOND_PREFIX = "Give me a second opinion on your colleague's last answer";
+const POLISH_PREFIX = "Review this draft reply against my goals";
+
+function groupTurns(history) {
+  // One turn = an owner question and the answers to it (Ask all gives several). A second opinion
+  // joins the turn whose answer it reviews, so the two fold and show together.
+  const turns = [];
+  for (const h of history) {
+    if (h.role === "owner") {
+      if ((h.text || "").startsWith(SECOND_PREFIX) && turns.length) {
+        turns[turns.length - 1].entries.push({ kind: "second", h });
+      } else {
+        turns.push({ entries: [{ kind: "q", h }] });
+      }
+    } else {
+      if (!turns.length) turns.push({ entries: [] });
+      turns[turns.length - 1].entries.push({ kind: "a", h });
+    }
+  }
+  return turns;
+}
+
+function questionText(h) {
+  const t = h.text || "";
+  if (t.startsWith(POLISH_PREFIX)) return "Polish draft";
+  return t;
+}
+
+async function buildAsk(item, replyBox, body, summaryEl) {
   if (STATIC) {
     body.append(el("p", "kbdhint", "Demo: Ask needs a live model. In your own copy it reads this " +
       "thread, your other threads with the same people and your notes, then advises."));
     return;
   }
   const history = el("div", "askhistory");
+  const prev = el("details", "askprev");
+  const prevSum = el("summary");
+  prev.append(prevSum);
+  const latest = el("div", "asklatest");
+  history.append(prev, latest);
+  const turnEls = [];
+  const layout = () => {
+    // Every turn but the last folds into "Earlier"; the latest stays open with its draft.
+    turnEls.forEach((t, i) => (i < turnEls.length - 1 ? prev : latest).append(t));
+    const n = turnEls.length - 1;
+    prev.hidden = n < 1;
+    prevSum.textContent = "Earlier: " + n + (n === 1 ? " question" : " questions");
+    if (summaryEl) summaryEl.textContent = "Ask FrontDesk" + (turnEls.length ?
+      " (" + turnEls.length + (turnEls.length === 1 ? " exchange)" : " exchanges)") : "");
+  };
+  const newTurn = () => { const t = el("div", "askturn"); turnEls.push(t); return t; };
   const notesBox = el("div", "asknotes");
   const q = el("textarea");
   q.rows = 2;
@@ -588,8 +733,18 @@ async function buildAsk(item, replyBox, body) {
   polish.title = "Review and tighten the draft in the reply box (or the last suggested draft)";
   const status = el("p", "kbdhint");
   const row = el("div", "actions");
-  row.append(advise, askBtn, second, polish);
-  body.append(notesBox, history, q, row, status);
+  const pick = el("select", "modelpick");
+  pick.title = "Model for Advise and Ask";
+  pick.append(Object.assign(el("option", null, "Default model"), { value: "" }));
+  const all = el("button", "btn", "Ask all");
+  all.type = "button";
+  all.title = "Same question to every model you have a key for, answers side by side";
+  fetch("/api/models", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(ms => {
+    for (const m of ms) pick.append(Object.assign(el("option", null, m.label), { value: String(m.index) }));
+    if (ms.length < 2) all.hidden = true;
+  }).catch(() => { all.hidden = true; });
+  row.append(pick, advise, askBtn, all, second, polish);
+  body.append(history, q, row, status, notesBox);
 
   let people = [];
   const refreshNotes = async () => {
@@ -597,43 +752,49 @@ async function buildAsk(item, replyBox, body) {
     if (!res.ok) return null;
     const data = await res.json();
     people = data.people || [];
-    notesBox.replaceChildren();
-    const nd = el("details", "notes");
-    nd.append(el("summary", null, "Your notes on these people (" +
-      Object.keys(data.notes || {}).length + ")"));
-    for (const p of people) {
-      const t = el("textarea");
-      t.rows = 2;
-      t.value = (data.notes || {})[p.toLowerCase()] || "";
-      t.placeholder = "What should FrontDesk remember about " + p + "?";
-      const sv = el("button", "btn small", "Save");
-      sv.type = "button";
-      sv.addEventListener("click", async () => {
-        try { await postAction("note", "", { who: p, text: t.value }); toast("Note saved."); }
-        catch (e) { toast("Save failed: " + e.message); }
-      });
-      nd.append(el("p", "notewho", p), t, sv);
-    }
-    notesBox.append(nd);
+    renderNotes(notesBox, people, data.notes || {}, refreshNotes);
     return data;
   };
   const data = await refreshNotes();
-  for (const h of (data && data.history) || []) {
-    if (h.role === "owner") history.append(el("p", "askq", h.text));
-    else renderAnswer(history, h, replyBox, refreshNotes);
+  const askedBy = (box, h) => {
+    if (h.author && h.author !== "owner") box.append(el("p", "kbdhint authorlabel", askerLabel(h.author)));
+  };
+  for (const turn of groupTurns((data && data.history) || [])) {
+    const t = newTurn();
+    for (const e of turn.entries) {
+      if (e.kind === "q") { t.append(el("p", "askq", questionText(e.h))); askedBy(t, e.h); }
+      else if (e.kind === "second") { t.append(el("p", "askq", "Second opinion on the answer above")); askedBy(t, e.h); }
+      else renderAnswer(t, e.h, replyBox, refreshNotes);
+    }
   }
+  layout();
   let lastDraft = "";
   for (const h of (data && data.history) || []) if (h.draft_reply) lastDraft = h.draft_reply;
-  const buttons = [advise, askBtn, second, polish];
-  const go = async (question, mode, draft) => {
+  const buttons = [advise, askBtn, all, second, polish];
+  const go = async (question, mode, draft, model) => {
     buttons.forEach(b => { b.disabled = true; });
     status.textContent = mode === "ask" ? "Thinking..." : "Asking the review model (slower)...";
     try {
-      const out = await postAction("ask", item.id, { question, mode: mode || "ask", draft: draft || "" });
-      if (out.draft_reply) lastDraft = out.draft_reply;
-      history.append(el("p", "askq", mode === "second" ? "Second opinion" :
-        mode === "polish" ? "Polish draft" : (question || "Advise me")));
-      renderAnswer(history, out, replyBox, refreshNotes);
+      const chosen = model !== undefined ? model : (pick.value === "" ? undefined : Number(pick.value));
+      const out = await postAction("ask", item.id, { question, mode: mode || "ask",
+                                                     draft: draft || "", model: chosen,
+                                                     author: "owner" });
+      // A second opinion joins the turn it reviews; anything else starts a new turn.
+      const t = mode === "second" && turnEls.length ? turnEls[turnEls.length - 1] : newTurn();
+      t.append(el("p", "askq", mode === "second" ? "Second opinion on the answer above" :
+        mode === "polish" ? "Polish draft" : (question || "Advise me") +
+        (chosen === "all" ? "  [all models]" : "")));
+      if (out.answers) {                       // Ask all: one answer per model
+        for (const a of out.answers) {
+          if (a.error) { t.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
+          if (a.draft_reply) lastDraft = a.draft_reply;
+          renderAnswer(t, a, replyBox, refreshNotes);
+        }
+      } else {
+        if (out.draft_reply) lastDraft = out.draft_reply;
+        renderAnswer(t, out, replyBox, refreshNotes);
+      }
+      layout();
       q.value = "";
       status.textContent = "";
     } catch (e) {
@@ -644,6 +805,7 @@ async function buildAsk(item, replyBox, body) {
   };
   advise.addEventListener("click", () => go("", "ask"));
   askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value, "ask"); });
+  all.addEventListener("click", () => go(q.value, "ask", "", "all"));
   second.addEventListener("click", () => go("", "second"));
   polish.addEventListener("click", () => {
     const d = replyBox.value.trim() || lastDraft;
@@ -812,6 +974,12 @@ async function openProfile() {
   ta.maxLength = 2000;
   ta.placeholder = "For example: I'm job hunting, so recruiter mail is at least FYI. " +
     "Invoices from my landlord are always needs you.";
+  const signLabel = el("label", "kbdhint", "Sign-off for email replies (added to every " +
+    "suggested email reply, not Slack)");
+  const sign = el("textarea");
+  sign.maxLength = 200;
+  sign.placeholder = "For example: Best,\nAlex";
+  signLabel.htmlFor = sign.id = "signoff-box";
   const status = el("p", "kbdhint");
   const save = el("button", "btn primary", "Save");
   save.type = "button";
@@ -820,25 +988,38 @@ async function openProfile() {
   cancel.addEventListener("click", () => { panel.hidden = true; });
   const row = el("div", "actions");
   row.append(save, cancel);
-  box.append(ta, status, row);
+  const sitBox = el("div", "situation");
+  box.append(ta, signLabel, sign, status, row, sitBox);
   panel.replaceChildren(box);
   panel.hidden = false;
-  try {
+  const load = async () => {
     const res = await fetch(STATIC ? "api/profile.json" : "/api/profile", { cache: "no-store" });
-    const out = await res.json();
+    return res.json();
+  };
+  const reloadSituation = async () => {
+    try {
+      const out = await load();
+      renderSituation(sitBox, out.situation || [], out.demo, reloadSituation);
+    } catch (e) { toast("Could not load What's going on: " + e.message); }
+  };
+  try {
+    const out = await load();
     ta.value = out.profile || "";
+    sign.value = out.signoff || "";
     if (out.demo) {
       save.disabled = true;
       ta.readOnly = true;
+      sign.readOnly = true;
       status.textContent = "Demo: the profile is off here. In your own copy, edit it above.";
     }
+    renderSituation(sitBox, out.situation || [], out.demo, reloadSituation);
   } catch (e) {
     status.textContent = "Could not load the profile: " + e.message;
   }
   save.addEventListener("click", async () => {
     save.disabled = true;
     try {
-      await postAction("profile", "", { text: ta.value });
+      await postAction("profile", "", { text: ta.value, signoff: sign.value });
       status.textContent = "Saved. Click Sync to re-rank with it.";
     } catch (e) {
       status.textContent = "Save failed: " + e.message;
@@ -847,6 +1028,77 @@ async function openProfile() {
     }
   });
   ta.focus();
+}
+
+// ---- What's going on: what is live for you right now, sent to Ask with each question.
+// items: [{id, text, author, created_at, updated_at}]. Anything you add, edit or confirm here
+// is recorded as written by you.
+function renderSituation(box, items, demo, reload) {
+  box.replaceChildren(el("h3", null, "What's going on"));
+  box.append(el("p", "kbdhint", "Decisions, open matters and anything else live for you now. " +
+    "Ask reads these with every question; lines you did not write are marked unconfirmed."));
+  const act = async (kind, extra, failMsg) => {
+    try { await postAction(kind, "", Object.assign({ author: "owner" }, extra)); reload(); }
+    catch (e) { toast(failMsg + ": " + e.message); }
+  };
+  if (!items.length) box.append(el("p", "kbdhint", "Nothing yet."));
+  for (const it of items) {
+    const li = el("div", "situationitem");
+    const text = el("p", "situationtext", it.text);
+    const label = el("p", "kbdhint authorlabel", authorLabel(it.author, it.updated_at));
+    const row = el("div", "actions");
+    if (!demo) {
+      const edit = el("button", "btn small", "Edit");
+      edit.type = "button";
+      edit.addEventListener("click", () => {
+        const ta = el("textarea");
+        ta.rows = 2;
+        ta.maxLength = 500;
+        ta.value = it.text;
+        const sv = el("button", "btn small primary", "Save");
+        sv.type = "button";
+        sv.addEventListener("click", () =>
+          act("situation_update", { id: it.id, text: ta.value }, "Save failed"));
+        const cancel = el("button", "btn small", "Cancel");
+        cancel.type = "button";
+        cancel.addEventListener("click", reload);
+        const r2 = el("div", "actions");
+        r2.append(sv, cancel);
+        li.replaceChildren(ta, r2);
+        ta.focus();
+      });
+      row.append(edit);
+      if (it.author !== "owner") {
+        const ok = el("button", "btn small", "Confirm");
+        ok.type = "button";
+        ok.title = "Mark this as yours, as written";
+        ok.addEventListener("click", () => act("situation_confirm", { id: it.id }, "Confirm failed"));
+        row.append(ok);
+      }
+      const del = el("button", "btn small", "Delete");
+      del.type = "button";
+      del.addEventListener("click", () => act("situation_delete", { id: it.id }, "Delete failed"));
+      row.append(del);
+    }
+    li.append(text, label, row);
+    box.append(li);
+  }
+  if (demo) {
+    box.append(el("p", "kbdhint", "Demo: this is off here. In your own copy, add items above."));
+    return;
+  }
+  const add = el("textarea");
+  add.rows = 2;
+  add.maxLength = 500;
+  add.placeholder = "For example: Decided to turn down the Acme offer; waiting on Bo's contract.";
+  const addBtn = el("button", "btn small", "Add");
+  addBtn.type = "button";
+  addBtn.addEventListener("click", () => {
+    if (add.value.trim()) act("situation_add", { text: add.value }, "Add failed");
+  });
+  const r3 = el("div", "actions");
+  r3.append(addBtn);
+  box.append(add, r3);
 }
 
 // ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open, u close, e archive,
