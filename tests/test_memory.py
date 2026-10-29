@@ -391,7 +391,7 @@ def test_demo_mode_shows_an_empty_read_only_situation(tmp_path):
     try:
         base = f"http://127.0.0.1:{httpd.server_address[1]}"
         got = json.loads(urllib.request.urlopen(base + "/api/profile").read())
-        assert got == {"profile": "", "demo": True, "situation": []}
+        assert got == {"profile": "", "signoff": "", "demo": True, "situation": []}
     finally:
         httpd.shutdown()
     for kind in ("situation_add", "note", "note_confirm"):
@@ -404,7 +404,7 @@ def test_static_export_profile_has_the_same_shape(tmp_path):
     from frontdesk.export import export_demo
     export_demo(tmp_path / "site")
     got = json.loads((tmp_path / "site" / "api" / "profile.json").read_text())
-    assert got == {"profile": "", "demo": True, "situation": []}
+    assert got == {"profile": "", "signoff": "", "demo": True, "situation": []}
 
 
 def test_a_note_on_the_owners_own_address_never_reaches_the_prompt(tmp_path):
@@ -421,3 +421,62 @@ def test_api_does_not_return_a_note_on_the_owners_own_address(api):
     Store(db).save_note(ME, "SELF NOTE", "session:x")
     data = get("/api/ask?item=gmail:t1")
     assert ME not in data["notes"] and ME not in data["people"]
+
+
+# ---------- sign-off ----------
+
+def test_with_signoff_appends_once():
+    assert assist.with_signoff("Hi Fab,\n\nThanks.", "Best,\nOwen") == "Hi Fab,\n\nThanks.\n\nBest,\nOwen"
+    assert assist.with_signoff("Thanks.\n\nBest,\nOwen\n", "Best,\nOwen") == "Thanks.\n\nBest,\nOwen\n"
+    assert assist.with_signoff("", "Best,\nOwen") == ""             # no draft, no sign-off
+    assert assist.with_signoff("Thanks.", "  ") == "Thanks."
+    # A model that signed anyway: its name line (and closing) is replaced, not doubled.
+    assert assist.with_signoff("Thanks.\n\nOwen", "Best,\nOwen") == "Thanks.\n\nBest,\nOwen"
+    assert assist.with_signoff("Thanks.\n\nCheers,\nOwen", "Best,\nOwen") == "Thanks.\n\nBest,\nOwen"
+    assert assist.with_signoff("Owen, thanks.", "Best,\nOwen") == "Owen, thanks.\n\nBest,\nOwen"
+
+
+def test_ask_draft_gets_the_signoff_on_email_not_slack(tmp_path):
+    s = Store(tmp_path / "sg.db")
+    mk(s)
+
+    class Drafts(Fake):
+        def complete_json(self, system, user, schema, max_tokens=2048):
+            return Completion({"answer": "Reply.", "draft_reply": "Hi Fab,\n\nYes.",
+                               "note_suggestions": [], "situation_suggestions": []})
+    out = assist.ask(s, Drafts(), "gmail:t1", "Draft it", author="owner", signoff="Best,\nOwen")
+    assert out["draft_reply"].endswith("Yes.\n\nBest,\nOwen")
+    s.upsert_item(Item(id="slack:C1:1.0", source="slack", account="ws.slack.com", subject="#x",
+                       participants=["fab"], updated_at="2026-10-28T16:00:00Z",
+                       messages=[Message("fab", "2026-10-28T16:00:00Z", "?")]))
+    out = assist.ask(s, Drafts(), "slack:C1:1.0", "Draft it", author="owner", signoff="Best,\nOwen")
+    assert out["draft_reply"] == "Hi Fab,\n\nYes."
+
+
+def test_profile_saves_signoff_and_items_carry_it(api):
+    post, get, db, base = api
+    assert post({"kind": "profile", "text": "x", "signoff": "Best,\nOwen"})[0] == 200
+    assert get("/api/profile")["signoff"] == "Best,\nOwen"
+    assert post({"kind": "profile", "text": "x", "signoff": "y" * 201})[0] == 400
+
+
+def test_ranked_payload_signs_proposed_email_replies(tmp_path):
+    from frontdesk.items import Triage
+    from frontdesk.web.server import ranked_payload
+    s = Store(tmp_path / "rp.db")
+    mk(s)
+    s.save_triage(Triage(item_id="gmail:t1", bucket="needs_you", urgency=4, reason="r",
+                         proposed_reply="Hi Fab,\n\nYes.", model="m",
+                         triaged_at="2026-10-28T16:00:00Z", item_updated_at="2026-10-28T16:00:00Z"))
+    row = ranked_payload(s, "Best,\nOwen")[0]
+    assert row["triage"]["proposed_reply"].endswith("Yes.\n\nBest,\nOwen")
+    assert ranked_payload(s)[0]["triage"]["proposed_reply"] == "Hi Fab,\n\nYes."
+
+
+def test_ask_history_drafts_carry_the_current_signoff(api):
+    post, get, db, base = api
+    from frontdesk import config
+    config.save_setting("reply_signoff", "Best,\nOwen")
+    Store(db).add_ask("gmail:t1", "assistant", "Answer.", "owner", {"draft_reply": "Hi.\n\nOwen"})
+    h = get("/api/ask?item=gmail:t1")["history"][-1]
+    assert h["draft_reply"] == "Hi.\n\nBest,\nOwen"

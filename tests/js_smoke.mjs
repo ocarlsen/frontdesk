@@ -84,3 +84,11 @@ const all = n => [n, ...n.children.flatMap(all)];
 if (all(stale).some(n => n.tagName === "TEXTAREA") || !texts(stale).some(t => t.startsWith("This page is out of date")))
   throw new Error("stale notes must not be editable");
 console.log("js smoke ok");
+// History folds into turns: a second opinion joins the turn it reviews.
+const turns = vm.runInContext("groupTurns", ctx)([
+  { role: "owner", text: "First?", author: "owner" }, { role: "assistant", text: "A1" },
+  { role: "owner", text: "Give me a second opinion on your colleague's last answer above", author: "owner" },
+  { role: "assistant", text: "A2" },
+  { role: "owner", text: "Next?", author: "owner" }, { role: "assistant", text: "A3" }]);
+if (turns.length !== 2 || turns[0].entries.length !== 4) throw new Error("turn grouping");
+console.log("turns ok");

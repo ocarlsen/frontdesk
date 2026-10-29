@@ -65,7 +65,8 @@ How to answer:
 
 draft_reply: only when a reply is warranted or the owner asked for one; otherwise "". Write it as
 the owner, first person, short, matching the thread's tone. Use [bracketed placeholders] for
-anything only the owner can supply. No signature line.
+anything only the owner can supply. No sign-off or signature line: FrontDesk adds the owner's
+own sign-off.
 
 note_suggestions: facts worth remembering about a person in this thread that are not already in
 <owner_notes> (a commitment, a pending item, a preference, a status). At most 3, each one short
@@ -122,6 +123,26 @@ def speaker(author: str) -> str:
 def _owner_text(text: str) -> str:
     # Owner-side text may now come from a session, so it cannot close or open a tag either.
     return text.replace("<", "\\u003c")
+
+
+def with_signoff(text: str, signoff: str) -> str:
+    """The owner's sign-off appended to a suggested email reply, once. Done in code, not asked of
+    the model, so it is the owner's exact words every time."""
+    sign = (signoff or "").strip()
+    body = (text or "").rstrip()
+    if not body or not sign or body.endswith(sign):
+        return text
+    # Models sometimes sign anyway despite the prompt. Drop a trailing line that is just the
+    # owner's name (the sign-off's last line), and a short closing line before it, so the reply
+    # never ends "Owen / Best, Owen".
+    lines = body.split("\n")
+    name = sign.split("\n")[-1].strip().strip(".,!").lower()
+    if lines and lines[-1].strip().strip(".,!").lower() == name:
+        lines.pop()
+        if lines and lines[-1].strip().endswith(",") and len(lines[-1].split()) <= 4:
+            lines.pop()
+    body = "\n".join(lines).rstrip()
+    return body + "\n\n" + sign if body else text
 
 
 def others(item: Item) -> list[str]:
@@ -187,7 +208,7 @@ def validate(raw: dict) -> dict:
 
 def ask(store: Store, provider: Provider, item_id: str, question: str, profile: str = "", *,
         author: str, mode: str = "ask", draft: str = "", record_question: bool = True,
-        label: str = "") -> dict:
+        label: str = "", signoff: str = "") -> dict:
     """mode 'ask' answers `question` (Advise when empty); 'second' asks the provider (normally the
     stronger review model) to check the previous answer; 'polish' reviews and rewrites `draft`.
     `author` ('owner' or 'session:<name>') is recorded with the question; it has no default."""
@@ -208,6 +229,8 @@ def ask(store: Store, provider: Provider, item_id: str, question: str, profile: 
     prompt = build_prompt(store, item, question, profile, author=author)
     res = provider.complete_json(SYSTEM, prompt, SCHEMA, max_tokens=8000)
     out = validate(res.data)
+    if item.source == "gmail":   # a Slack reply carries no sign-off
+        out["draft_reply"] = with_signoff(out["draft_reply"], signoff)
     u = res.usage
     served = u.model_served or provider.model
     out["model"] = served

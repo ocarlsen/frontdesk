@@ -48,7 +48,7 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
         (out / "api" / "items.json").write_text(json.dumps(rows))
         # Same shape as GET /api/profile in demo mode: empty and read-only.
         (out / "api" / "profile.json").write_text(
-            json.dumps({"profile": "", "demo": True, "situation": []}))
+            json.dumps({"profile": "", "signoff": "", "demo": True, "situation": []}))
         meta = _meta_csp(server.MSG_CSP)
         for r in rows:
             for i, m in enumerate(r["item"]["messages"]):

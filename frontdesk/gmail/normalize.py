@@ -171,13 +171,19 @@ def clean_html(payload: dict) -> str:
     return _CID.sub(lambda m: images.get(m.group(1), m.group(0)), html) if images else html
 
 
+# A text/plain part this much shorter than the HTML's own text is a stub ("This message is
+# HTML; open it in a client that renders HTML"), so the HTML is the real content.
+STUB_RATIO = 0.3
+
+
 def clean_body(payload: dict) -> str:
-    part = _find_part(payload, "text/plain")
-    if part:
-        text = _decode(part)
-    else:
-        part = _find_part(payload, "text/html")
-        text = html_to_text(_decode(part)) if part else ""
+    plain = _find_part(payload, "text/plain")
+    html = _find_part(payload, "text/html")
+    text = _decode(plain) if plain else ""
+    if html:
+        from_html = html_to_text(_decode(html))
+        if len(text.strip()) < STUB_RATIO * len(from_html.strip()):
+            text = from_html
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = strip_quoted(text)
     text = "\n".join(ln.rstrip() for ln in text.split("\n"))

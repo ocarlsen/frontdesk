@@ -157,7 +157,9 @@ function buildDetail(item, triage) {
   const actions = el("div", "actions");
   const proposed = triage && triage.proposed_reply ? triage.proposed_reply : "";
   const id = "reply-" + Math.random().toString(36).slice(2);
-  const label = el("label", null, proposed ? "Proposed reply (edit it, then save)" : "Reply");
+  const head = el("h3", "panelhead", "Reply");
+  const label = el("label", null, proposed ? "Proposed by FrontDesk: edit it, then save or send" :
+    "Write your reply");
   label.htmlFor = id;
   const ta = el("textarea");
   ta.id = id;
@@ -196,7 +198,7 @@ function buildDetail(item, triage) {
     }
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
-  reply.append(label, ta, hint);
+  reply.append(head, label, ta, hint);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
   if (isGmail) actions.append(save);
@@ -603,12 +605,13 @@ function renderNotes(notesBox, people, notes, refresh) {
 // Answers are model text from untrusted mail: shown as plain text; a draft only fills the box.
 function askPanel(item, replyBox) {
   const det = el("details", "ask");
-  det.append(el("summary", null, "Ask FrontDesk about this thread"));
+  const sum = el("summary", null, "Ask FrontDesk about this thread");
+  det.append(sum);
   const body = el("div", "askbody");
   det.append(body);
   let loaded = false;
   det.addEventListener("toggle", () => {
-    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body); }
+    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body, sum); }
   });
   return det;
 }
@@ -662,13 +665,58 @@ function renderAnswer(box, a, replyBox, refreshNotes) {
   box.append(ans);
 }
 
-async function buildAsk(item, replyBox, body) {
+// Stored owner questions for the two built-in modes start with these words (assist.py).
+const SECOND_PREFIX = "Give me a second opinion on your colleague's last answer";
+const POLISH_PREFIX = "Review this draft reply against my goals";
+
+function groupTurns(history) {
+  // One turn = an owner question and the answers to it (Ask all gives several). A second opinion
+  // joins the turn whose answer it reviews, so the two fold and show together.
+  const turns = [];
+  for (const h of history) {
+    if (h.role === "owner") {
+      if ((h.text || "").startsWith(SECOND_PREFIX) && turns.length) {
+        turns[turns.length - 1].entries.push({ kind: "second", h });
+      } else {
+        turns.push({ entries: [{ kind: "q", h }] });
+      }
+    } else {
+      if (!turns.length) turns.push({ entries: [] });
+      turns[turns.length - 1].entries.push({ kind: "a", h });
+    }
+  }
+  return turns;
+}
+
+function questionText(h) {
+  const t = h.text || "";
+  if (t.startsWith(POLISH_PREFIX)) return "Polish draft";
+  return t;
+}
+
+async function buildAsk(item, replyBox, body, summaryEl) {
   if (STATIC) {
     body.append(el("p", "kbdhint", "Demo: Ask needs a live model. In your own copy it reads this " +
       "thread, your other threads with the same people and your notes, then advises."));
     return;
   }
   const history = el("div", "askhistory");
+  const prev = el("details", "askprev");
+  const prevSum = el("summary");
+  prev.append(prevSum);
+  const latest = el("div", "asklatest");
+  history.append(prev, latest);
+  const turnEls = [];
+  const layout = () => {
+    // Every turn but the last folds into "Earlier"; the latest stays open with its draft.
+    turnEls.forEach((t, i) => (i < turnEls.length - 1 ? prev : latest).append(t));
+    const n = turnEls.length - 1;
+    prev.hidden = n < 1;
+    prevSum.textContent = "Earlier: " + n + (n === 1 ? " question" : " questions");
+    if (summaryEl) summaryEl.textContent = "Ask FrontDesk" + (turnEls.length ?
+      " (" + turnEls.length + (turnEls.length === 1 ? " exchange)" : " exchanges)") : "");
+  };
+  const newTurn = () => { const t = el("div", "askturn"); turnEls.push(t); return t; };
   const notesBox = el("div", "asknotes");
   const q = el("textarea");
   q.rows = 2;
@@ -696,7 +744,7 @@ async function buildAsk(item, replyBox, body) {
     if (ms.length < 2) all.hidden = true;
   }).catch(() => { all.hidden = true; });
   row.append(pick, advise, askBtn, all, second, polish);
-  body.append(notesBox, history, q, row, status);
+  body.append(history, q, row, status, notesBox);
 
   let people = [];
   const refreshNotes = async () => {
@@ -708,12 +756,18 @@ async function buildAsk(item, replyBox, body) {
     return data;
   };
   const data = await refreshNotes();
-  for (const h of (data && data.history) || []) {
-    if (h.role === "owner") {
-      history.append(el("p", "askq", h.text));
-      if (h.author !== "owner") history.append(el("p", "kbdhint authorlabel", askerLabel(h.author)));
-    } else renderAnswer(history, h, replyBox, refreshNotes);
+  const askedBy = (box, h) => {
+    if (h.author && h.author !== "owner") box.append(el("p", "kbdhint authorlabel", askerLabel(h.author)));
+  };
+  for (const turn of groupTurns((data && data.history) || [])) {
+    const t = newTurn();
+    for (const e of turn.entries) {
+      if (e.kind === "q") { t.append(el("p", "askq", questionText(e.h))); askedBy(t, e.h); }
+      else if (e.kind === "second") { t.append(el("p", "askq", "Second opinion on the answer above")); askedBy(t, e.h); }
+      else renderAnswer(t, e.h, replyBox, refreshNotes);
+    }
   }
+  layout();
   let lastDraft = "";
   for (const h of (data && data.history) || []) if (h.draft_reply) lastDraft = h.draft_reply;
   const buttons = [advise, askBtn, all, second, polish];
@@ -725,21 +779,22 @@ async function buildAsk(item, replyBox, body) {
       const out = await postAction("ask", item.id, { question, mode: mode || "ask",
                                                      draft: draft || "", model: chosen,
                                                      author: "owner" });
-      history.append(el("p", "askq", mode === "second" ? "Second opinion" :
+      // A second opinion joins the turn it reviews; anything else starts a new turn.
+      const t = mode === "second" && turnEls.length ? turnEls[turnEls.length - 1] : newTurn();
+      t.append(el("p", "askq", mode === "second" ? "Second opinion on the answer above" :
         mode === "polish" ? "Polish draft" : (question || "Advise me") +
         (chosen === "all" ? "  [all models]" : "")));
       if (out.answers) {                       // Ask all: one answer per model
         for (const a of out.answers) {
-          if (a.error) { history.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
+          if (a.error) { t.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
           if (a.draft_reply) lastDraft = a.draft_reply;
-          renderAnswer(history, a, replyBox, refreshNotes);
+          renderAnswer(t, a, replyBox, refreshNotes);
         }
-        q.value = "";
-        status.textContent = "";
-        return;
+      } else {
+        if (out.draft_reply) lastDraft = out.draft_reply;
+        renderAnswer(t, out, replyBox, refreshNotes);
       }
-      if (out.draft_reply) lastDraft = out.draft_reply;
-      renderAnswer(history, out, replyBox, refreshNotes);
+      layout();
       q.value = "";
       status.textContent = "";
     } catch (e) {
@@ -919,6 +974,12 @@ async function openProfile() {
   ta.maxLength = 2000;
   ta.placeholder = "For example: I'm job hunting, so recruiter mail is at least FYI. " +
     "Invoices from my landlord are always needs you.";
+  const signLabel = el("label", "kbdhint", "Sign-off for email replies (added to every " +
+    "suggested email reply, not Slack)");
+  const sign = el("textarea");
+  sign.maxLength = 200;
+  sign.placeholder = "For example: Best,\nAlex";
+  signLabel.htmlFor = sign.id = "signoff-box";
   const status = el("p", "kbdhint");
   const save = el("button", "btn primary", "Save");
   save.type = "button";
@@ -928,7 +989,7 @@ async function openProfile() {
   const row = el("div", "actions");
   row.append(save, cancel);
   const sitBox = el("div", "situation");
-  box.append(ta, status, row, sitBox);
+  box.append(ta, signLabel, sign, status, row, sitBox);
   panel.replaceChildren(box);
   panel.hidden = false;
   const load = async () => {
@@ -944,9 +1005,11 @@ async function openProfile() {
   try {
     const out = await load();
     ta.value = out.profile || "";
+    sign.value = out.signoff || "";
     if (out.demo) {
       save.disabled = true;
       ta.readOnly = true;
+      sign.readOnly = true;
       status.textContent = "Demo: the profile is off here. In your own copy, edit it above.";
     }
     renderSituation(sitBox, out.situation || [], out.demo, reloadSituation);
@@ -956,7 +1019,7 @@ async function openProfile() {
   save.addEventListener("click", async () => {
     save.disabled = true;
     try {
-      await postAction("profile", "", { text: ta.value });
+      await postAction("profile", "", { text: ta.value, signoff: sign.value });
       status.textContent = "Saved. Click Sync to re-rank with it.";
     } catch (e) {
       status.textContent = "Save failed: " + e.message;

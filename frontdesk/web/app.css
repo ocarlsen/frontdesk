@@ -78,11 +78,13 @@ section > details > summary { cursor: pointer; list-style-position: inside; }
 .msg-head .from { color: var(--text); font-weight: 600; }
 .msg.mine .msg-head .from::after { content: " (you)"; font-weight: 400; color: var(--muted); }
 .body { white-space: pre-wrap; margin: 0; font: inherit; }
-.reply { border-top: 1px solid var(--line); padding-top: 12px; }
+.reply { background: var(--field); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; margin-top: 14px; }
+.panelhead { margin: 0 0 6px; font-size: .95em; font-weight: 650; }
 .reply label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .reply textarea {
   width: 100%; min-height: 120px; resize: vertical; padding: 10px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--field); color: var(--text); font: inherit;
+  border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit;
 }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
 .btn {
@@ -181,9 +183,17 @@ li.card.leaving { opacity: .45; transition: opacity .15s; }
 li.card.unread .sender, li.card.unread .subject { font-weight: 700; }
 li.card:not(.unread) .sender { font-weight: 500; }
 
-.ask { margin: 12px 0 4px; }
+.ask { background: var(--field); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; margin: 14px 0 4px; }
 .ask > summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: .92em; }
-.askbody { margin-top: 8px; }
+.askbody { margin: 8px 0 0 14px; }
+@media (max-width: 560px) { .askbody { margin-left: 0; } }
+.askprev { margin: 4px 0 8px; }
+.askprev > summary { cursor: pointer; font-size: .85em; color: var(--muted); margin-bottom: 6px; }
+.askprev .answer { opacity: .92; }
+.askprev .sendbody { max-height: 24vh; overflow-y: auto; }
+.askturn + .askturn { border-top: 1px solid var(--line); padding-top: 4px; }
+.asknotes { margin-top: 12px; }
 .askbody textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px;
   border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .askq { font-weight: 600; margin: 10px 0 4px; }

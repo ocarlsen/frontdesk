@@ -27,6 +27,7 @@ DEFAULTS = {
     ],
     "review_model": "claude-fable-5-1",   # Ask's Second opinion and Polish draft
     "owner_profile": "",   # a few sentences on what matters to you; added to the model's prompt
+    "reply_signoff": "",   # e.g. "Best,\nAlex": ends every suggested email reply (not Slack)
     "keychain_service": "frontdesk-anthropic",
     "gmail_query": "in:inbox newer_than:7d",
     "gmail_max_threads": 100,
@@ -55,6 +56,7 @@ def settings() -> dict:
 
 
 PROFILE_MAX = 2000
+SIGNOFF_MAX = 200
 
 
 def save_setting(key: str, value) -> None:

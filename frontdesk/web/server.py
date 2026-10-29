@@ -59,9 +59,10 @@ LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 TEXT = "text/plain; charset=utf-8"
 
 
-def ranked_payload(store: Store) -> list[dict]:
+def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     """HTML bodies stay out of the list payload (fetched per message from /msg); each
-    message carries has_html instead."""
+    message carries has_html instead. A proposed email reply gets the owner's sign-off."""
+    from ..assist import with_signoff
     with_html = store.html_indexes()
     out = []
     for item, tri in store.ranked():
@@ -69,8 +70,22 @@ def ranked_payload(store: Store) -> list[dict]:
         for i, m in enumerate(d["messages"]):
             m.pop("html", None)
             m["has_html"] = i in with_html.get(item.id, set())
-        out.append({"item": d, "triage": asdict(tri) if tri else None})
+        t = asdict(tri) if tri else None
+        if t and item.source == "gmail":
+            t["proposed_reply"] = with_signoff(t["proposed_reply"], signoff)
+        out.append({"item": d, "triage": t})
     return out
+
+
+def signed_history(history: list[dict], source: str) -> list[dict]:
+    """Ask drafts saved before the sign-off existed (or before it changed) get the current one,
+    so "Use as reply" always carries it. Email only."""
+    from ..assist import with_signoff
+    if source != "gmail":
+        return history
+    sign = config.settings()["reply_signoff"]
+    return [{**h, "draft_reply": with_signoff(h["draft_reply"], sign)} if h.get("draft_reply")
+            else h for h in history]
 
 
 def message_html(store: Store, item_id: str, index: int) -> str | None:
@@ -212,7 +227,13 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         if not isinstance(text, str) or len(text) > config.PROFILE_MAX:
             return HTTPStatus.BAD_REQUEST, {"error": f"profile must be text, at most "
                                                      f"{config.PROFILE_MAX} characters"}
+        sign = req.get("signoff")
+        if sign is not None and (not isinstance(sign, str) or len(sign) > config.SIGNOFF_MAX):
+            return HTTPStatus.BAD_REQUEST, {"error": f"sign-off must be text, at most "
+                                                     f"{config.SIGNOFF_MAX} characters"}
         config.save_setting("owner_profile", text.strip())
+        if sign is not None:
+            config.save_setting("reply_signoff", sign.strip())
         return HTTPStatus.OK, {"status": "done", "kind": "profile"}
     if kind == "ask":
         if settings.get("demo"):
@@ -235,7 +256,8 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             if mode != "ask":            # the reviewer is a different, stronger model
                 s = {**s, "provider": "anthropic", "model": s["review_model"]}
                 return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
-                                                 s["owner_profile"], author=author, mode=mode,
+                                                 s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"], mode=mode,
                                                  draft=draft)
             available = available_models(s)
             if choice == "all":
@@ -245,9 +267,11 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                 s = {**s, "provider": m["provider"], "model": m["model"]}
                 return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
                                                  s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"],
                                                  label=m["label"])
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
-                                             s["owner_profile"], author=author)
+                                             s["owner_profile"], author=author,
+                                                 signoff=s["reply_signoff"])
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:
@@ -349,7 +373,8 @@ def ask_all(db_path: Path, settings: dict, models: list[dict], item_id: str,
         try:
             s = {**settings, "provider": m["provider"], "model": m["model"]}
             return assist.ask(st, get_provider(s), item_id, q, settings["owner_profile"],
-                              author=author, record_question=False, label=m["label"])
+                              author=author, record_question=False,
+                              signoff=settings.get("reply_signoff", ""), label=m["label"])
         except ProviderError as e:
             return {"model": m["label"], "error": str(e)}
         finally:
@@ -448,7 +473,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             elif path == "/api/profile":
                 # The profile plus "What's going on". The demo shows both empty and read-only.
                 demo = bool((settings or {}).get("demo"))
-                prof = "" if demo else config.settings()["owner_profile"]
+                cfg = {} if demo else config.settings()
+                prof, sign = cfg.get("owner_profile", ""), cfg.get("reply_signoff", "")
                 situation: list[dict] = []
                 if not demo:
                     store = Store(db_path)
@@ -456,8 +482,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                         situation = store.situation()
                     finally:
                         store.db.close()
-                self._send(HTTPStatus.OK, json.dumps({"profile": prof, "demo": demo,
-                                                      "situation": situation}).encode(),
+                body = {"profile": prof, "signoff": sign, "demo": demo, "situation": situation}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/ask":
                 from .. import assist
@@ -466,7 +492,7 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 try:
                     item = store.get_item(item_id)
                     out = None if item is None else {
-                        "history": store.ask_history(item_id),
+                        "history": signed_history(store.ask_history(item_id), item.source),
                         "notes": store.notes_for(assist.others(item)),
                         "people": assist.others(item)}
                 finally:
@@ -505,7 +531,10 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 # default and ThreadingHTTPServer runs each request on its own thread.
                 store = Store(db_path)
                 try:
-                    body = json.dumps(ranked_payload(store)).encode()
+                    # Read per request so a sign-off edited in the profile applies at once.
+                    sign = "" if (settings or {}).get("demo") else \
+                        config.settings()["reply_signoff"]
+                    body = json.dumps(ranked_payload(store, sign)).encode()
                 finally:
                     store.db.close()
                 self._send(HTTPStatus.OK, body, "application/json; charset=utf-8")
