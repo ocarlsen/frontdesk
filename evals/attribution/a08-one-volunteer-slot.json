@@ -1,0 +1,34 @@
+{
+ "id": "a08-one-volunteer-slot",
+ "domain": "school",
+ "item": {
+  "id": "gmail:attr08",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Volunteers needed in November",
+  "participants": [
+   "rosa@maplewood-pta.example.org",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Rosa Delgado <rosa@maplewood-pta.example.org>",
+    "sent_at": "2026-10-28T10:00:00Z",
+    "body": "Hi Alex!! We're short on hands. Could you chaperone the field trip on Nov 12 AND run the bake sale table on Nov 14? You'd be a lifesaver.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T10:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "rosa@maplewood-pta.example.org",
+  "text": "Alex told Rosa in September that Alex can take only one volunteer slot per month this fall because of work."
+ },
+ "question": "Should I take both slots?",
+ "fact": "The owner can take only one volunteer slot per month this fall, and told Rosa so in September."
+}

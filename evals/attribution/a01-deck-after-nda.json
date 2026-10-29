@@ -1,0 +1,34 @@
+{
+ "id": "a01-deck-after-nda",
+ "domain": "job_search",
+ "item": {
+  "id": "gmail:attr01",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Next steps: architecture review",
+  "participants": [
+   "dana@lumenworks.example.com",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Dana Whitfield <dana@lumenworks.example.com>",
+    "sent_at": "2026-10-28T12:00:00Z",
+    "body": "Hi Alex,\n\nGreat chatting yesterday. The panel would love to see the architecture deck you walked me through. Could you send it over so they can review before Friday's session?\n\nThanks,\nDana",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T12:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "dana@lumenworks.example.com",
+  "text": "Alex agreed to share the architecture deck only after Lumenworks returns the signed NDA. The NDA has not come back yet."
+ },
+ "question": "Should I send Dana the deck now?",
+ "fact": "The deck was to be shared only after Lumenworks returns a signed NDA, and the NDA has not been returned yet."
+}

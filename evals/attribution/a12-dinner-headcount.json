@@ -1,0 +1,34 @@
+{
+ "id": "a12-dinner-headcount",
+ "domain": "personal",
+ "item": {
+  "id": "gmail:attr12",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Saturday dinner headcount",
+  "participants": [
+   "sam@example.org",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Sam Okoye <sam@example.org>",
+    "sent_at": "2026-10-28T14:00:00Z",
+    "body": "yo! booking the table for saturday, still bringing 2?",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T14:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "sam@example.org",
+  "text": "Only Alex is coming to Saturday's dinner; Riley can't make it."
+ },
+ "question": "How many should I tell Sam?",
+ "fact": "Only the owner is attending Saturday's dinner, because Riley cannot come."
+}

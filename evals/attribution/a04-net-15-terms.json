@@ -1,0 +1,40 @@
+{
+ "id": "a04-net-15-terms",
+ "domain": "freelance",
+ "item": {
+  "id": "gmail:attr04",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Re: Invoice FC-0193",
+  "participants": [
+   "alex@example.com",
+   "theo@ferncastle.example.org"
+  ],
+  "messages": [
+   {
+    "sender": "Alex Rivera <alex@example.com>",
+    "sent_at": "2026-10-26T17:00:00Z",
+    "body": "Hi Theo, attached is invoice FC-0193 for the October work.",
+    "is_mine": true
+   },
+   {
+    "sender": "Theo Grant <theo@ferncastle.example.org>",
+    "sent_at": "2026-10-28T13:00:00Z",
+    "body": "Got it, thanks. Heads up that our AP team runs on net 45, so expect payment around mid-December.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T13:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "theo@ferncastle.example.org",
+  "text": "Contract terms with Ferncastle are net 15. Theo accepted net 15 in writing at kickoff."
+ },
+ "question": "Is net 45 okay, or should I push back?",
+ "fact": "The contract terms are net 15, which Theo accepted in writing at kickoff."
+}

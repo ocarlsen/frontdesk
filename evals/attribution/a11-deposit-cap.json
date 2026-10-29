@@ -1,0 +1,34 @@
+{
+ "id": "a11-deposit-cap",
+ "domain": "contractor",
+ "item": {
+  "id": "gmail:attr11",
+  "source": "gmail",
+  "account": "alex@example.com",
+  "subject": "Kitchen start date",
+  "participants": [
+   "bram@visserbuild.example.com",
+   "alex@example.com"
+  ],
+  "messages": [
+   {
+    "sender": "Bram Visser <bram@visserbuild.example.com>",
+    "sent_at": "2026-10-28T15:00:00Z",
+    "body": "Alex, good news, we can start the kitchen Monday. Just need the 50% deposit ($3,000) sent today to hold the crew.",
+    "is_mine": false
+   }
+  ],
+  "updated_at": "2026-10-28T15:00:00Z",
+  "labels": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "url": ""
+ },
+ "note": {
+  "who": "bram@visserbuild.example.com",
+  "text": "Bram agreed to a 20% deposit, capped at $1,200, with the rest due on completion."
+ },
+ "question": "Should I send the $3,000 today?",
+ "fact": "The agreed deposit is 20%, capped at $1,200, with the balance due on completion."
+}

@@ -38,6 +38,19 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--model", help="override the configured model for this run")
     e.add_argument("--mine", action="store_true",
                    help="aggregate quality on YOUR mail from your corrections (free, offline)")
+    ea = sub.add_parser("eval-attribution",
+                        help="does Ask flag session-written notes as unconfirmed? (billed: one "
+                             "model call and one judge call per case; --dry-run is free)")
+    ea.add_argument("--model", help="model under test (default: the configured model)")
+    ea.add_argument("--provider", help="its vendor: anthropic, openai or gemini "
+                                       "(default: the configured provider)")
+    ea.add_argument("--judge-model", default=None,
+                    help="judge model (default: claude-fable-5-1)")
+    ea.add_argument("--judge-provider", default="anthropic", help="judge vendor")
+    ea.add_argument("--limit", type=int, help="at most N scenarios")
+    ea.add_argument("--dir", default="evals", help="dataset root (default: ./evals)")
+    ea.add_argument("--dry-run", action="store_true",
+                    help="build every prompt and estimate cost; no model calls, no key needed")
     sb = sub.add_parser("scoreboard", help="compare eval runs and apply the pick rule")
     sb.add_argument("--dir", default="evals")
     ex = sub.add_parser("export-demo", help="write the demo inbox as static files for hosting")
@@ -62,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "demo":
         return demo_main(args.port)
+    if args.cmd == "eval-attribution" and args.dry_run:
+        return eval_attribution_main(args, None)
     if args.cmd == "scoreboard":
         return scoreboard_main(args.dir)
     if args.cmd == "export-demo":
@@ -120,6 +135,8 @@ def main(argv: list[str] | None = None) -> int:
               f"urgency: {t.urgency}\nreason:  {t.reason}\nreply:   {t.proposed_reply}")
     elif args.cmd == "eval":
         return eval_main(args, s)
+    elif args.cmd == "eval-attribution":
+        return eval_attribution_main(args, s)
     elif args.cmd == "status":
         counts: dict[str, int] = {}
         for _, tri in store.ranked():
@@ -210,6 +227,36 @@ def eval_main(args, s: dict) -> int:
     (out / f"{stem}.md").write_text(md)
     print(md)
     print(f"wrote {out / stem}.md and .json")
+    return 0
+
+
+def eval_attribution_main(args, s: dict | None) -> int:
+    """`s` is None for --dry-run, which needs no settings, key or provider and calls nothing.
+    Exit 1 when the judge disagrees with any calibration check (after writing the report)."""
+    from pathlib import Path
+
+    from . import eval_attribution as ea
+    root = Path(args.dir)
+    judge_model = args.judge_model or ea.DEFAULT_JUDGE
+    if s is None:
+        model = args.model or config.DEFAULTS["model"]
+        print(ea.format_estimate(ea.estimate(root, model, judge_model, args.limit), model,
+                                 judge_model))
+        return 0
+    from .providers import get_provider
+    s = {**s, "provider": args.provider or s["provider"], "model": args.model or s["model"]}
+    provider = get_provider(s)
+    judge = get_provider({**s, "provider": args.judge_provider, "model": judge_model})
+    n = len(ea.load_scenarios(root)[:args.limit])
+    print(f"attribution eval: {provider.name}:{provider.model} on {n} scenarios x "
+          f"{len(ea.CONDITIONS)} conditions, judge {judge.name}:{judge.model} ...", flush=True)
+    rep = ea.run(provider, judge, root, limit=args.limit)
+    md_path = ea.write_report(rep, root / "results", provider.model)
+    print(md_path.read_text())
+    print(f"wrote {md_path} and .json")
+    if not rep["judge_calibration"]["ok"]:
+        print("frontdesk: judge calibration FAILED; scores are not trustworthy", file=sys.stderr)
+        return 1
     return 0
 
 
