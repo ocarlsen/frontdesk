@@ -236,3 +236,21 @@ def test_a_real_plain_part_still_wins_over_similar_html():
     t = thread(msg("m1", 1000, "Ann <ann@example.com>",
                    alternative("Lunch at noon? Plain version.", "<p>Lunch at noon? <b>HTML</b> version.</p>")))
     assert thread_to_item(t, ME).messages[0].body == "Lunch at noon? Plain version."
+
+
+def test_html_links_keep_their_real_address():
+    from frontdesk.gmail.normalize import html_to_text
+    out = html_to_text('<p><a href="https://evil.example.net/login">View invoice</a> and '
+                       '<a href="https://example.com/x">https://example.com/x</a> and '
+                       '<a href="mailto:ann@example.com">ann@example.com</a> and '
+                       '<a href="javascript:alert(1)">click</a> and <a href="#top">top</a></p>')
+    assert "View invoice (https://evil.example.net/login)" in out
+    assert out.count("https://example.com/x") == 1      # text already shows the address
+    assert "mailto:" not in out and "javascript" not in out and "#top" not in out
+
+
+def test_long_tracking_links_are_capped_but_keep_the_host():
+    from frontdesk.gmail.normalize import URL_CAP, html_to_text
+    url = "https://track.example.org/c/" + "a" * 500
+    out = html_to_text(f'<a href="{url}">Unsubscribe</a>')
+    assert "Unsubscribe (https://track.example.org/c/" in out and len(out) < URL_CAP + 40
