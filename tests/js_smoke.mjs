@@ -191,6 +191,27 @@ fn("renderAnswer")(slab, { answer: "x", draft_reply: "", situation_suggestions: 
   note_suggestions: [{ who: SK, text: "Ships Friday.", label: "Ann Lee" }] }, new Node("textarea"), () => {}, "slack:C1:1.0");
 if (!texts(slab).includes("Save note for Ann Lee: Ships Friday.")) throw new Error("suggestion label");
 noKey(slab);
+// The demo's Slack threads live in a made-up workspace (examplecorp.example.com): no Open in
+// Slack link, no Save draft, and the static demo's Send names the Slack target, sending nothing.
+const demoSlack = { id: "slack:C01PLATFRM:1793200800.000900", source: "slack", subject: "#platform: review?",
+  url: "https://examplecorp.example.com/archives/C01PLATFRM/p1793200800000900?thread_ts=1793200800.000900",
+  updated_at: "2026-10-28T16:00:00Z", labels: ["slack", "channel"],
+  messages: [{ sender: "Ines", sent_at: "2026-10-28T16:00:00Z", body: "review?", is_mine: false, has_html: false }] };
+const sd = vm.runInContext("buildDetail", ctx)(demoSlack, triage);
+if (all(sd).some(n => n.tagName === "A" && n.textContent === "Open in Slack")) throw new Error("demo links Slack");
+if (texts(sd).includes("Save draft")) throw new Error("Slack thread offers a Gmail draft");
+const real = vm.runInContext("buildDetail", ctx)({ ...demoSlack, url: "https://acme.slack.com/archives/C1/p1" }, triage);
+if (!all(real).some(n => n.tagName === "A" && n.textContent === "Open in Slack")) throw new Error("real Slack link lost");
+const staticRoot = new Node("html");
+staticRoot.dataset = { static: "1" };
+const sctx = { document: { ...document, documentElement: staticRoot }, window: { __items: [{ item: demoSlack }] },
+               console, setTimeout: quietTimeout, clearTimeout, crypto: globalThis.crypto, navigator: {},
+               fetch: async () => { throw new Error("static demo fetched"); },
+               Date, Math, JSON, Promise, Set, Map, WeakMap, Number, String, Array, Object };
+vm.createContext(sctx);
+vm.runInContext(readFileSync(src, "utf8"), sctx);
+const prep = await vm.runInContext("postAction", sctx)("send_prepare", demoSlack.id, { body: "On it." });
+if (!prep.demo || prep.to.join() !== "#platform (thread)") throw new Error("static Slack send: " + JSON.stringify(prep));
 console.log("js smoke ok");
 // History folds into turns: a second opinion joins the turn it reviews.
 const turns = vm.runInContext("groupTurns", ctx)([

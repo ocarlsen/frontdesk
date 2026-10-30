@@ -1,0 +1,71 @@
+{
+ "auth_test": {
+  "user_id": "U01ALEXRIV",
+  "team_id": "T0EXMPLCO",
+  "url": "https://examplecorp.example.com/",
+  "team": "Example Corp",
+  "user": "alex"
+ },
+ "users": {
+  "U01ALEXRIV": {
+   "id": "U01ALEXRIV",
+   "team_id": "T0EXMPLCO",
+   "name": "alex",
+   "real_name": "Alex Rivera",
+   "profile": {
+    "real_name": "Alex Rivera",
+    "display_name": "Alex Rivera"
+   }
+  },
+  "U01BENYAMA": {
+   "id": "U01BENYAMA",
+   "team_id": "T0EXMPLCO",
+   "name": "ben.y",
+   "real_name": "Ben Yamamoto",
+   "profile": {
+    "real_name": "Ben Yamamoto",
+    "display_name": "Ben Yamamoto"
+   }
+  },
+  "U01INESMOR": {
+   "id": "U01INESMOR",
+   "team_id": "T0EXMPLCO",
+   "name": "ines",
+   "real_name": "Ines Moreau",
+   "profile": {
+    "real_name": "Ines Moreau",
+    "display_name": "Ines"
+   }
+  },
+  "U01DANAWHT": {
+   "id": "U01DANAWHT",
+   "team_id": "T0EXMPLCO",
+   "name": "dana.w",
+   "real_name": "Dana Whitfield",
+   "profile": {
+    "real_name": "Dana Whitfield",
+    "display_name": "Dana Whitfield"
+   }
+  },
+  "U01MAYALIN": {
+   "id": "U01MAYALIN",
+   "team_id": "T0EXMPLCO",
+   "name": "maya",
+   "real_name": "Maya Lindqvist",
+   "profile": {
+    "real_name": "Maya Lindqvist",
+    "display_name": "Maya"
+   }
+  },
+  "U01THEOPRK": {
+   "id": "U01THEOPRK",
+   "team_id": "T0EXMPLCO",
+   "name": "theo.park",
+   "real_name": "Theo Park",
+   "profile": {
+    "real_name": "Theo Park",
+    "display_name": "Theo Park (Stonebridge Metrics)"
+   }
+  }
+ }
+}

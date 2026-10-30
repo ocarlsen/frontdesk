@@ -315,6 +315,12 @@ async function postAction(kind, itemId, extra) {
         kind.startsWith("person_") || kind.startsWith("situation_")) throw new Error("demo mode");
     if (kind === "send_prepare") {
       const it = (window.__items || []).find(r => r.item.id === itemId);
+      if (it && it.item.source === "slack") {   // same label as sending._slack_target
+        const s = it.item.subject || "";
+        const to = itemId.endsWith(":dm") ? s.replace("Slack DM with ", "DM: ")
+          : s.split(":")[0] + " (thread)";
+        return { action_id: 1, to: [to], cc: [], demo: true, subject: s, body: extra.body };
+      }
       const inbound = it ? it.item.messages.filter(m => !m.is_mine) : [];
       const to = inbound.length ? parseSender(inbound[inbound.length - 1].sender).addr : "";
       return { action_id: 1, to: to ? [to] : [], cc: [], demo: true,

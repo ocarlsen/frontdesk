@@ -32,7 +32,8 @@ include = ["frontdesk*"]
 
 [tool.setuptools.package-data]
 "frontdesk.web" = ["*.html", "*.js", "*.css"]
-"frontdesk" = ["demo_data/*.json", "demo_data/threads/*.json"]
+"frontdesk" = ["demo_data/*.json", "demo_data/threads/*.json", "demo_data/slack/*.json",
+               "demo_data/slack/conversations/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -47,3 +48,4 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # Test fixtures embed long literal headers/bodies.
 "tests/**" = ["E501"]
+"tools/gen_demo_fixtures.py" = ["E501"]

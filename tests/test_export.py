@@ -9,9 +9,12 @@ from frontdesk.export import export_demo, static_file
 
 def test_export_is_complete_and_synthetic(tmp_path):
     out = tmp_path / "site"
-    assert export_demo(out, cname="frontdesk.example.com") == 20
+    assert export_demo(out, cname="frontdesk.example.com") == 24
     rows = json.loads((out / "api" / "items.json").read_text())
-    assert len(rows) == 20
+    assert len(rows) == 24
+    slack = [r for r in rows if r["item"]["source"] == "slack"]
+    assert len(slack) == 4
+    assert {r["item"]["labels"][1] for r in slack} == {"dm", "group_dm", "channel"}
     for r in rows:
         for i, m in enumerate(r["item"]["messages"]):
             assert (out / "msg" / f"{static_file(r['item']['id'])}-{i}.html").exists() \
@@ -29,6 +32,13 @@ def test_export_is_complete_and_synthetic(tmp_path):
     addrs = re.findall(r"[\w.+-]+@([\w-]+(?:\.[\w-]+)+)", blob)
     assert addrs and all(re.search(r"example\.(com|org|net)$", d) for d in addrs)
     assert "token" not in (out / "index.html").read_text().lower()
+    # every link host in the list is Gmail's (Open in Gmail) or a reserved example host; the
+    # Slack threads' links stay in the made-up workspace, never a real one
+    hosts = set(re.findall(r"https?://([\w.-]+)", (out / "api" / "items.json").read_text()))
+    assert "examplecorp.example.com" in hosts
+    assert all(h == "mail.google.com" or re.search(r"(^|\.)example\.(com|org|net)$", h)
+               for h in hosts), hosts
+    assert "slack.com" not in blob
 
 
 def test_static_file_names_match_the_page_script():

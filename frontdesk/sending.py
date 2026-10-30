@@ -116,6 +116,9 @@ def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
         p = {"source": "slack", "channel": channel, "thread_ts": thread_ts, "text": body,
              "to": [label], "cc": [], "subject": item.subject, "body_sha256": sha,
              "seen_updated_at": seen_updated_at}
+    elif gmail is None and item.source == "slack":   # demo: shown like a Slack send, posts nothing
+        p = {"demo": True, "to": [_slack_target(item)[2]], "cc": [], "subject": item.subject,
+             "body_sha256": sha, "seen_updated_at": seen_updated_at}
     elif gmail is None:   # demo: derive the visible recipient from the stored thread, send nothing
         inbound = [m for m in item.messages if not m.is_mine]
         to = [parseaddr(inbound[-1].sender)[1]] if inbound else []
