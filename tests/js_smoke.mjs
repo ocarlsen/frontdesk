@@ -242,10 +242,15 @@ click(askButtons[0]);
 await new Promise(r => setTimeout(r, 0));
 if (askPosts.length !== 1 || askPosts[0].kind !== "ask" || askPosts[0].question !== "Should I take the 3pm slot?" ||
     askPosts[0].mode !== "ask") throw new Error("Ask must send the box text: " + JSON.stringify(askPosts));
-if (askBox.value !== ADV) throw new Error("box must reset to the built-in question after an answer");
-click(askButtons[0]);                       // unchanged box: sends the built-in question as text
+if (askBox.value !== "" || askBox.placeholder !== "Ask a follow-up")
+  throw new Error("after an answer the box must empty for a follow-up, not repeat the question");
+const starterLink = all(askBody).find(n => n.tagName === "BUTTON" && n.textContent === "Use the starter question");
+if (!starterLink || starterLink.hidden) throw new Error("the starter-question link must appear after an answer");
+click(starterLink);
+if (askBox.value !== ADV) throw new Error("the link must put the starter question back");
+click(askButtons[0]);                       // restored starter: sends the built-in question as text
 await new Promise(r => setTimeout(r, 0));
-if (askPosts.length !== 2 || askPosts[1].question !== ADV) throw new Error("unchanged box sends the built-in question");
+if (askPosts.length !== 2 || askPosts[1].question !== ADV) throw new Error("the starter question sends as text");
 askBox.value = "   ";
 click(askButtons[0]);
 await new Promise(r => setTimeout(r, 0));

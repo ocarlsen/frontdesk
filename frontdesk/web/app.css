@@ -273,3 +273,7 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
   .syncbar .btn { white-space: nowrap; }
   .syncbar .kbdhint { display: none; }   /* no keyboard on a phone */
 }
+
+/* Move to: the section drop-down in the reply actions; a phone-sized target under 560px. */
+.moveto { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) { .movepick { min-height: 44px; } }
