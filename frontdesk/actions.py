@@ -200,9 +200,10 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
     return {"status": "done"}
 
 
-# ---- owner-side memory: notes and "What's going on". Local only. Every write names its author
-# ('owner' from the page, 'session:<name>' from the CLI); there is no default. A record for
-# honest writers, not a security boundary (see store.check_author).
+# ---- owner-side memory: people's notes and "What's going on". Local only. Every write names its
+# author ('owner' from the page, 'session:<name>' from the CLI); there is no default. Delete, merge,
+# confirm and naming are the owner's alone, checked again in the store. A record for honest
+# writers, not a security boundary (see store.check_author).
 def _memory(fn, *args) -> dict:
     from .store import InvalidMemory
     try:
@@ -226,9 +227,21 @@ def _confirmer(author) -> None:
         raise ActionError("only the owner can confirm")
 
 
+def _owner(author, what: str) -> None:
+    from .store import OWNER
+    if _author(author) != OWNER:
+        raise ActionError(f"only the owner can {what}")
+
+
 def _situation_id(value) -> int:
     if not isinstance(value, int) or isinstance(value, bool):
         raise ActionError("expected a situation item id")
+    return value
+
+
+def _person_id(value) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ActionError("expected a person id")
     return value
 
 
@@ -238,11 +251,52 @@ def save_note(store: Store, who, text, author, append: bool = False) -> dict:
     return _memory(store.save_note, who, text, author, bool(append))
 
 
+def save_suggested_note(store: Store, item_id, who, text, author) -> dict:
+    """The owner clicked "Save note for <who>" under an Ask answer. `who` is model output, so it
+    must resolve to a participant of that thread (never the owner); otherwise nothing is saved.
+    The text is appended to that person's note."""
+    from .assist import resolve_participant
+    _author(author)
+    if not isinstance(item_id, str) or not isinstance(who, str) or not isinstance(text, str):
+        raise ActionError("expected {item_id, who, text, author}")
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    key = resolve_participant(item, who)
+    if key is None:
+        raise ActionError("that suggestion names someone who is not in this thread; "
+                          "nothing was saved")
+    return _memory(store.save_note, key, text, author, True)
+
+
 def confirm_note(store: Store, who, author) -> dict:
     _confirmer(author)
     if not isinstance(who, str):
         raise ActionError("expected {who, author}")
-    return _memory(store.confirm_note, who)
+    return _memory(store.confirm_note, who, author)
+
+
+def person_update(store: Store, person_id, text, author, name=None) -> dict:
+    if not isinstance(text, str) or (name is not None and not isinstance(name, str)):
+        raise ActionError("expected {id, text, author} and an optional name")
+    if name is not None:
+        _owner(author, "name a person")
+    return _memory(store.update_person, _person_id(person_id), text, author, name)
+
+
+def person_confirm(store: Store, person_id, author) -> dict:
+    _confirmer(author)
+    return _memory(store.confirm_person, _person_id(person_id), author)
+
+
+def person_delete(store: Store, person_id, author) -> dict:
+    _owner(author, "delete a person")
+    return _memory(store.delete_person, _person_id(person_id), author)
+
+
+def person_merge(store: Store, person_id, into, author) -> dict:
+    _owner(author, "merge people")
+    return _memory(store.merge_people, _person_id(person_id), _person_id(into), author)
 
 
 def situation_add(store: Store, text, author) -> dict:

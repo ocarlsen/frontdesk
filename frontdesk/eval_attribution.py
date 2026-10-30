@@ -160,10 +160,9 @@ def build_prompts(scenario: dict, workdir: Path) -> dict[str, tuple[str, str]]:
             if cond != "baseline_session":
                 out[cond] = (assist.SYSTEM, user)
                 continue
-            n = store.notes_for([who])[who]
-            labelled = (f"{who} {assist.provenance(n['author'], n['updated_at'])}: "
-                        f"{assist._owner_text(n['text'])}")
-            if user.count(labelled) != 1:
+            lines = assist.note_lines(store, item)
+            labelled = lines[0] if len(lines) == 1 else ""
+            if not labelled or user.count(labelled) != 1:
                 raise RuntimeError(f"{scenario['id']}: the labelled note line is not in the "
                                    "prompt exactly once; build_prompt's note format changed, so "
                                    "the baseline substitution would be wrong")

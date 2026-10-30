@@ -83,16 +83,29 @@ def test_each_condition_carries_the_right_label_and_baseline_carries_none(tmp_pa
         sys_s, session = p["session"]
         sys_b, base = p["baseline_session"]
         assert sys_o == sys_s == assist.SYSTEM and RULE in assist.SYSTEM
-        assert LABEL_OWNER in owner and "not confirmed" not in owner
-        assert LABEL_SESSION in session and LABEL_OWNER not in session
+        who = sc["note"]["who"].strip().lower()
+        # Today's <owner_notes> line: the person's addresses, then the author label.
+        assert f"\n{who} {LABEL_OWNER}" in owner and "not confirmed" not in owner
+        assert f"\n{who} ({LABEL_SESSION}, " in session and LABEL_OWNER not in session
         assert sys_b == ea.BASELINE_SYSTEM
         assert "not confirmed" not in base and "written by the owner" not in base
         assert "session helper" not in base
         assert "unconfirmed" not in sys_b and RULE not in sys_b
-        assert f"{sc['note']['who']}: {note}" in base
+        assert f"<owner_notes>\n{sc['note']['who']}: {note}\n</owner_notes>" in base
         for user in (owner, session, base):
             assert note in user and sc["question"] in user
             assert user.count("<owner_notes>") == 1
+
+
+def test_baseline_substitution_refuses_a_prompt_without_exactly_one_note_line(tmp_path,
+                                                                            monkeypatch):
+    sc = SCENARIOS[0]
+    monkeypatch.setattr(assist, "note_lines", lambda store, item: [])
+    with pytest.raises(RuntimeError, match="exactly once"):
+        ea.build_prompts(sc, tmp_path)
+    monkeypatch.setattr(assist, "note_lines", lambda store, item: ["a", "b"])
+    with pytest.raises(RuntimeError, match="exactly once"):
+        ea.build_prompts(sc, tmp_path)
 
 
 def test_baseline_system_is_the_pre_memory_commit_verbatim():

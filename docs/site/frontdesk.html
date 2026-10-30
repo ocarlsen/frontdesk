@@ -94,10 +94,12 @@ with the model you choose.</p>
   <li><b>Ask.</b> Open any thread and ask what to do. FrontDesk answers with the thread, your
   other threads with the same people, your profile and your notes, and can draft the reply.
   Second opinion has a stronger model check the answer; Polish tightens your own draft.</li>
-  <li><b>Remember.</b> Notes on people and a short "What's going on" list carry context from one
-  thread to the next. Ask suggests additions and you save them with a click. Every memory
-  records who wrote it and when, and anything you did not write yourself is marked unconfirmed,
-  to you and to the model.</li>
+  <li><b>Remember.</b> A note on each person and a short "What's going on" list carry context
+  from one thread to the next. A person can have several addresses, so their note follows them
+  whichever one they write from. Ask suggests additions and you save them with a click. Every
+  memory records who wrote it and when, and anything you did not write yourself is marked
+  unconfirmed, to you and to the model. The Memory page shows everything FrontDesk remembers in
+  one place: edit, confirm, delete or merge people there, or download it all.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
   Archive or mark done with one click, with keyboard shortcuts like Gmail's.</li>
@@ -187,14 +189,15 @@ anything. It sends nothing anywhere else, stores nothing, and uses no model.</p>
 
 <h3>Where your data goes</h3>
 <p>FrontDesk keeps the threads it syncs, its rankings, your Google and Slack sign-in tokens, and
-what you tell it (your profile, your notes on people, your "What's going on" list and your Ask
-conversations) on your computer, in a folder only your user account can read. It sends data to these places only: to
+what you tell it (your profile, the people you keep notes on with their addresses, any names you
+type for them, your "What's going on" list and your Ask conversations) on your computer, in a folder only your user account can read. It sends data to these places only: to
 Google, to read your mail and, if you allow it, to archive threads, save drafts and send replies;
 to Slack, if you connect it, to read your conversations and post replies you confirm; and to the AI
 model provider you configure, which receives the text of each thread so it can rank it and
 suggest a reply. For HTML mail that text includes where its links point, but not its markup,
 images or attachments. When you use Ask, the provider also receives your profile, your "What's
-going on" list, your notes on the people in that thread, your other threads with them, and the
+going on" list, your notes on the people in that thread (with their addresses and any name you
+typed), your other threads with them, and the
 conversation so far. Ask all sends the same question to each provider you have set up. Each
 provider's own data terms apply to what it receives.</p>
 
@@ -209,7 +212,8 @@ API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
 <h3>Keeping and deleting</h3>
 <p>Threads you archive, or that leave your inbox, are removed from FrontDesk's local store on the
-next sync. Deleting the <code>~/.frontdesk</code> folder removes everything FrontDesk has stored.
+next sync. The Memory page deletes any person you keep a note on, with their addresses. Deleting
+the <code>~/.frontdesk</code> folder removes everything FrontDesk has stored.
 To revoke its access to your Google account, remove it at
 <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
 

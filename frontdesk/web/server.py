@@ -34,6 +34,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .. import config
+from ..items import Item
 from ..store import Store
 
 STATIC_DIR = Path(__file__).parent
@@ -86,6 +87,28 @@ def signed_history(history: list[dict], source: str) -> list[dict]:
     sign = config.settings()["reply_signoff"]
     return [{**h, "draft_reply": with_signoff(h["draft_reply"], sign)} if h.get("draft_reply")
             else h for h in history]
+
+
+def ask_payload(store: Store, item: Item) -> dict:
+    """The Ask panel's data: history, and one notes box per PERSON in the thread (`people` lists
+    one address per person, `notes` is keyed by it, `aliases` holds their other addresses and
+    `names` the name the owner typed). The owner is never among them."""
+    from ..assist import others
+    oth = others(item)
+    rep: dict[str, str] = {}
+    aliases: dict[str, list[str]] = {}
+    names: dict[str, str] = {}
+    for p in store.people_for(oth):
+        first = p["matched"][0]
+        for k in p["matched"]:
+            rep[k] = first
+        aliases[first] = [a for a in p["addresses"] if a != first]
+        if p["name"]:
+            names[first] = p["name"]
+    people = [a for a in oth if rep.get(a.lower(), a.lower()) == a.lower()]
+    return {"history": signed_history(store.ask_history(item.id), item.source),
+            "notes": store.notes_for(people), "people": people, "aliases": aliases,
+            "names": names}
 
 
 def message_html(store: Store, item_id: str, index: int) -> str | None:
@@ -161,15 +184,16 @@ def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
     return t
 
 
-# Owner-side memory writes (notes, "What's going on"): local only, each names its author.
-MEMORY_KINDS = ("note", "note_confirm", "situation_add", "situation_update", "situation_confirm",
-                "situation_delete")
+# Owner-side memory writes (people's notes, "What's going on"): local only, each names its author.
+MEMORY_KINDS = ("note", "note_suggestion", "note_confirm", "person_update", "person_confirm",
+                "person_delete", "person_merge", "situation_add", "situation_update",
+                "situation_confirm", "situation_delete")
 
 
 def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int, dict]:
     from .. import actions
     if settings.get("demo"):   # like the profile: the demo's memory is empty and read-only
-        what = "notes need" if kind.startswith("note") else "What's going on needs"
+        what = "What's going on needs" if kind.startswith("situation") else "Memory needs"
         return HTTPStatus.CONFLICT, {"error": f"Demo mode: {what} your own copy."}
     store = Store(db_path)
     try:
@@ -177,8 +201,20 @@ def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int
         if kind == "note":
             out = actions.save_note(store, req.get("who"), req.get("text"), a,
                                     bool(req.get("append")))
+        elif kind == "note_suggestion":
+            out = actions.save_suggested_note(store, req.get("item_id"), req.get("who"),
+                                              req.get("text"), a)
         elif kind == "note_confirm":
             out = actions.confirm_note(store, req.get("who"), a)
+        elif kind == "person_update":
+            out = actions.person_update(store, req.get("id"), req.get("text"), a,
+                                        req.get("name"))
+        elif kind == "person_confirm":
+            out = actions.person_confirm(store, req.get("id"), a)
+        elif kind == "person_delete":
+            out = actions.person_delete(store, req.get("id"), a)
+        elif kind == "person_merge":
+            out = actions.person_merge(store, req.get("id"), req.get("into"), a)
         elif kind == "situation_add":
             out = actions.situation_add(store, req.get("text"), a)
         elif kind == "situation_update":
@@ -192,6 +228,36 @@ def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int
         return HTTPStatus.BAD_REQUEST, {"error": str(e)}
     finally:
         store.db.close()
+
+
+DEMO_MEMORY = {"demo": True, "profile": "", "signoff": "", "situation": [], "people": [],
+               "migration": None}
+
+
+def memory_payload(store: Store) -> dict:
+    """Everything owner-side FrontDesk keeps, for the Memory page (GET /api/memory). Each person
+    carries `mail_names`: display names seen in mail for their addresses, which the page shows
+    greyed as unconfirmed; they are sender-controlled and never reach a model."""
+    cfg = config.settings()
+    names = store.mail_names()
+    people = [{**p, "mail_names": sorted({names[a] for a in p["addresses"] if a in names})}
+              for p in store.people_all()]
+    mig = store.meta("people_migrated")
+    return {"demo": False, "profile": cfg.get("owner_profile", ""),
+            "signoff": cfg.get("reply_signoff", ""), "situation": store.situation(),
+            "people": people, "migration": json.loads(mig) if mig else None}
+
+
+def memory_export(store: Store) -> dict:
+    """"Download my memory": the same records as the Memory page, minus the display names
+    from mail (those are mail, not memory)."""
+    from ..store import now
+    m = memory_payload(store)
+    return {"exported_at": now(), "format": "frontdesk-memory-1", "profile": m["profile"],
+            "signoff": m["signoff"], "situation": m["situation"],
+            "people": [{k: p[k] for k in ("id", "name", "addresses", "note", "author",
+                                          "created_at", "updated_at")} for p in m["people"]],
+            "migration": m["migration"]}
 
 
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
@@ -485,16 +551,29 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 body = {"profile": prof, "signoff": sign, "demo": demo, "situation": situation}
                 self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
+            elif path in ("/api/memory", "/api/memory/export"):
+                demo = bool((settings or {}).get("demo"))
+                if demo and path.endswith("/export"):
+                    self._send(HTTPStatus.NOT_FOUND, b"Not found\n", TEXT)
+                    return
+                body = DEMO_MEMORY
+                if not demo:
+                    store = Store(db_path)
+                    try:
+                        body = memory_export(store) if path.endswith("/export") \
+                            else memory_payload(store)
+                    finally:
+                        store.db.close()
+                extra = {"Content-Disposition": 'attachment; filename="frontdesk-memory.json"'} \
+                    if path.endswith("/export") else None
+                self._send(HTTPStatus.OK, json.dumps(body, indent=1).encode(),
+                           "application/json; charset=utf-8", extra=extra)
             elif path == "/api/ask":
-                from .. import assist
                 item_id = parse_qs(query).get("item", [""])[0]
                 store = Store(db_path)
                 try:
                     item = store.get_item(item_id)
-                    out = None if item is None else {
-                        "history": signed_history(store.ask_history(item_id), item.source),
-                        "notes": store.notes_for(assist.others(item)),
-                        "people": assist.others(item)}
+                    out = None if item is None else ask_payload(store, item)
                 finally:
                     store.db.close()
                 if out is None:
