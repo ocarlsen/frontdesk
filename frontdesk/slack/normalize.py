@@ -4,7 +4,14 @@ fixtures: user names come in through a name_of(user_id) callable rather than API
 Two shapes become Items: a DM or group DM (all its recent messages are ONE item, since DMs
 rarely use threads), and a channel thread or lone channel message. Slack's markup (<@U1>,
 <#C1|name>, <url|label>, &amp;) is rewritten into plain readable text, and system events
-(joins, topic changes, pins) are dropped, since neither helps the model or the owner."""
+(joins, topic changes, pins) are dropped, since neither helps the model or the owner.
+
+People are keyed by stable IDs, not display names (a rename would orphan a note, and two people
+with one name would share one): a user is "slack:<team_id>:<user_id>", a bot or app
+"slack:<team_id>:bot:<bot_id>", both lowercase like every stored address. Each message keeps the
+display name in `sender` and the key in `sender_key`; the item's `names` maps keys to display
+names for the page. Bots are not participants: notes and related threads are about people, and a
+bot that posts in every deploy thread would otherwise make unrelated threads look related."""
 from __future__ import annotations
 
 import re
@@ -59,6 +66,32 @@ def is_bot(m: dict) -> bool:
     return m.get("subtype") == "bot_message" or bool(m.get("bot_id"))
 
 
+def user_key(team: str, user_id: str) -> str:
+    """The participant key of a Slack user: 'slack:<team_id>:<user_id>', lowercase."""
+    return f"slack:{team}:{user_id}".lower()
+
+
+def bot_key(team: str, bot_id: str) -> str:
+    return f"slack:{team}:bot:{bot_id}".lower()
+
+
+def sender_key(m: dict, team: str) -> str:
+    """The stable key of who sent `m`: a bot by its bot_id (an app message may also carry the
+    user who installed it), a person by user id; '' when Slack gives neither."""
+    if is_bot(m):
+        if m.get("bot_id"):
+            return bot_key(team, m["bot_id"])
+        return user_key(team, m["user"]) if m.get("user") else ""
+    return user_key(team, m["user"]) if m.get("user") else ""
+
+
+def _team(team: str) -> str:
+    if not isinstance(team, str) or not team.strip():
+        # A key without a workspace would collide across workspaces: refuse, never guess.
+        raise ValueError("Slack items need the workspace's team id (auth.test team_id)")
+    return team.strip()
+
+
 def mentions(m: dict, user_id: str) -> bool:
     text = m.get("text") or ""
     return f"<@{user_id}>" in text or f"<@{user_id}|" in text
@@ -81,7 +114,7 @@ def sender_name(m: dict, name_of: NameOf) -> str:
     return name_of(m.get("user", ""))
 
 
-def to_message(m: dict, owner_id: str, name_of: NameOf) -> Message | None:
+def to_message(m: dict, owner_id: str, name_of: NameOf, team: str) -> Message | None:
     """None for system events. Attached files show as '[file: name]' so a file-only message
     is not an empty body."""
     if is_system(m):
@@ -93,7 +126,8 @@ def to_message(m: dict, owner_id: str, name_of: NameOf) -> Message | None:
     if len(body) > BODY_CAP:
         body = body[:BODY_CAP] + TRUNCATED
     return Message(sender=sender_name(m, name_of), sent_at=iso(m["ts"]), body=body,
-                   is_mine=bool(owner_id) and m.get("user") == owner_id, html="")
+                   is_mine=bool(owner_id) and m.get("user") == owner_id,
+                   html="", sender_key=sender_key(m, _team(team)))
 
 
 def _ordered(raw: Iterable[dict]) -> list[dict]:
@@ -106,10 +140,23 @@ def _ordered(raw: Iterable[dict]) -> list[dict]:
 
 
 def _participants(messages: list[Message]) -> list[str]:
+    """The people who wrote in it, as keys, first appearance first. Bots are left out (see the
+    module docstring); so is a message Slack gave no sender for."""
     out: list[str] = []
     for msg in messages:
-        if msg.sender not in out:
-            out.append(msg.sender)
+        k = msg.sender_key
+        if k and ":bot:" not in k and k not in out:
+            out.append(k)
+    return out
+
+
+def _names(messages: list[Message], extra: dict[str, str]) -> dict[str, str]:
+    """{key: display name} for the page: each sender as their newest message shows them, plus
+    `extra` (the owner, the other side of a DM)."""
+    out = dict(extra)
+    for msg in messages:
+        if msg.sender_key:
+            out[msg.sender_key] = msg.sender
     return out
 
 
@@ -121,22 +168,30 @@ def _mpdm_handles(name: str) -> list[str]:
 
 
 def dm_to_item(conv: dict, raw: Iterable[dict], owner_id: str, host: str,
-               name_of: NameOf) -> Item | None:
-    """A DM or group DM as one item. None when nothing in it is a real message."""
+               name_of: NameOf, team: str) -> Item | None:
+    """A DM or group DM as one item. None when nothing in it is a real message. Subjects are
+    built from display names, never keys."""
+    team = _team(team)
     msgs = _ordered(raw)[-MAX_MESSAGES:]
-    messages = [to_message(m, owner_id, name_of) for m in msgs]
+    messages = [to_message(m, owner_id, name_of, team) for m in msgs]
     if not messages:
         return None
     channel = conv["id"]
     participants = _participants(messages)
+    me = user_key(team, owner_id) if owner_id else ""
+    extra = {me: name_of(owner_id)} if me else {}
     if conv.get("is_im"):
         subject = f"Slack DM with {name_of(conv.get('user', ''))}"
         kind = "dm"
+        if conv.get("user"):
+            extra[user_key(team, conv["user"])] = name_of(conv["user"])
     else:
-        me = name_of(owner_id)
-        others = [p for p in participants if p != me] or _mpdm_handles(conv.get("name", ""))
-        subject = f"Slack group DM: {', '.join(others)}"
         kind = "group_dm"
+    names = _names(messages, extra)
+    if kind == "group_dm":
+        others = [names[p] for p in participants if p != me] \
+            or _mpdm_handles(conv.get("name", ""))
+        subject = f"Slack group DM: {', '.join(others)}"
     return Item(
         id=f"slack:{channel}:dm",
         source="slack",
@@ -147,6 +202,8 @@ def dm_to_item(conv: dict, raw: Iterable[dict], owner_id: str, host: str,
         updated_at=messages[-1].sent_at,
         labels=["slack", kind],
         url=permalink(host, channel, msgs[-1]["ts"]),
+        names=names,
+        owner_key=me,
     )
 
 
@@ -158,9 +215,10 @@ def _first_line(text: str) -> str:
 
 
 def thread_to_item(conv: dict, raw: Iterable[dict], owner_id: str, host: str,
-                   name_of: NameOf) -> Item | None:
+                   name_of: NameOf, team: str) -> Item | None:
     """A channel thread (root + replies) or a lone channel message. The root is the message
     whose ts is the thread's ts; the newest replies are kept when the thread is long."""
+    team = _team(team)
     msgs = _ordered(raw)
     if not msgs:
         return None
@@ -168,9 +226,10 @@ def thread_to_item(conv: dict, raw: Iterable[dict], owner_id: str, host: str,
     root_ts = root.get("thread_ts") or root["ts"]
     if len(msgs) > MAX_MESSAGES:
         msgs = [root, *msgs[-(MAX_MESSAGES - 1):]]
-    messages = [to_message(m, owner_id, name_of) for m in msgs]
+    messages = [to_message(m, owner_id, name_of, team) for m in msgs]
     channel = conv["id"]
     threaded = len(msgs) > 1 or bool(root.get("reply_count"))
+    me = user_key(team, owner_id) if owner_id else ""
     return Item(
         id=f"slack:{channel}:{root_ts}",
         source="slack",
@@ -181,4 +240,6 @@ def thread_to_item(conv: dict, raw: Iterable[dict], owner_id: str, host: str,
         updated_at=messages[-1].sent_at,
         labels=["slack", "channel"],
         url=permalink(host, channel, root_ts, root_ts if threaded else ""),
+        names=_names(messages, {me: name_of(owner_id)} if me else {}),
+        owner_key=me,
     )

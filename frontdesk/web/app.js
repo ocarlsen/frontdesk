@@ -555,12 +555,15 @@ function askerLabel(author) {
   return "Author not recorded";
 }
 
-function renderNotes(notesBox, people, notes, refresh, aliases, names) {
+function renderNotes(notesBox, people, notes, refresh, aliases, names, display) {
   // One box per person in the thread. people: one address per person; notes: {address: {text,
   // author, updated_at}}; aliases: {address: [their other addresses]}; names: {address: the
-  // name you typed}. Saving from here records you as the author.
+  // name you typed}; display: {key: how to show it} for keys that are not readable (a Slack
+  // user's display name), so a raw key never shows. Saving from here records you as the author.
   aliases = aliases || {};
   names = names || {};
+  display = display || {};
+  const shown = a => display[a.toLowerCase()] || a;
   notesBox.replaceChildren();
   const nd = el("details", "notes");
   nd.append(el("summary", null, "Your notes on these people (" + Object.keys(notes).length + ")"));
@@ -577,7 +580,7 @@ function renderNotes(notesBox, people, notes, refresh, aliases, names) {
     const t = el("textarea");
     t.rows = 2;
     t.value = n ? n.text : "";
-    t.placeholder = "What should FrontDesk remember about " + p + "?";
+    t.placeholder = "What should FrontDesk remember about " + shown(p) + "?";
     const sv = el("button", "btn small", "Save");
     sv.type = "button";
     sv.addEventListener("click", async () => {
@@ -591,9 +594,9 @@ function renderNotes(notesBox, people, notes, refresh, aliases, names) {
         refresh();
       } catch (e) { toast("Save failed: " + e.message); }
     });
-    nd.append(el("p", "notewho", names[key] ? names[key] + " (" + p + ")" : p));
+    nd.append(el("p", "notewho", names[key] ? names[key] + " (" + shown(p) + ")" : shown(p)));
     const more = aliases[key] || [];
-    if (more.length) nd.append(el("p", "kbdhint authorlabel", "Also " + more.join(", ")));
+    if (more.length) nd.append(el("p", "kbdhint authorlabel", "Also " + more.map(shown).join(", ")));
     nd.append(t);
     if (n) nd.append(el("p", "kbdhint authorlabel", authorLabel(n.author, n.updated_at)));
     const row = el("div", "actions");
@@ -646,7 +649,8 @@ function renderAnswer(box, a, replyBox, refreshNotes, itemId) {
     ans.append(el("pre", "sendbody", draft));
   }
   for (const n of a.note_suggestions || []) {
-    const b = el("button", "btn small", "Save note for " + n.who + ": " + n.text);
+    const who = n.label || n.who;   // label: a Slack user's display name for a key
+    const b = el("button", "btn small", "Save note for " + who + ": " + n.text);
     b.type = "button";
     b.addEventListener("click", async () => {
       b.disabled = true;
@@ -654,7 +658,7 @@ function renderAnswer(box, a, replyBox, refreshNotes, itemId) {
         // The server saves it only if n.who is someone in this thread (model output never
         // creates a person), appending to their note.
         await postAction("note_suggestion", itemId, { who: n.who, text: n.text, author: "owner" });
-        b.textContent = "Saved note for " + n.who;
+        b.textContent = "Saved note for " + who;
         refreshNotes();
       } catch (e) { b.disabled = false; toast("Save failed: " + e.message); }
     });
@@ -766,7 +770,7 @@ async function buildAsk(item, replyBox, body, summaryEl) {
     if (!res.ok) return null;
     const data = await res.json();
     people = data.people || [];
-    renderNotes(notesBox, people, data.notes || {}, refreshNotes, data.aliases, data.names);
+    renderNotes(notesBox, people, data.notes || {}, refreshNotes, data.aliases, data.names, data.display);
     return data;
   };
   const data = await refreshNotes();
@@ -1178,12 +1182,40 @@ function renderMemory(box, data, reload) {
   }
 }
 
+function addrText(p, a) {
+  // An address as the page shows it: a Slack user key as "Name (Slack)", an old Slack name as
+  // itself, marked when it is not linked to a user; anything else (an email address) as is.
+  const l = (p.address_labels || {})[a];
+  if (!l) return a;
+  if (l.kind === "slack") return l.text + " (Slack)";
+  if (l.kind === "slack_unlinked") return l.text + " (Slack name, not linked to a user)";
+  return l.text + " (old Slack name)";
+}
+
+function addrLine(p, addrs, prefix) {
+  // The address line. With a Slack key in it, one span per address, the key in that span's
+  // title only (hover shows it; the text never does).
+  const labels = p.address_labels || {};
+  if (!addrs.some(a => (labels[a] || {}).kind === "slack")) {
+    return el("p", "kbdhint personaddrs", prefix + addrs.map(a => addrText(p, a)).join(", "));
+  }
+  const line = el("p", "kbdhint personaddrs", prefix);
+  addrs.forEach((a, i) => {
+    const span = el("span", null, (i ? ", " : "") + addrText(p, a));
+    if ((labels[a] || {}).kind === "slack") span.title = a;
+    line.append(span);
+  });
+  return line;
+}
+
 function personTitle(p) {
-  return p.name || (p.addresses || [])[0] || "(no address)";
+  const first = (p.addresses || [])[0];
+  return p.name || (first ? addrText(p, first) : "(no address)");
 }
 
 function renderPeople(box, people, demo, reload) {
-  // people: [{id, name, note, author, created_at, updated_at, addresses, mail_names}], newest first.
+  // people: [{id, name, note, author, created_at, updated_at, addresses, mail_names,
+  // address_labels}], newest first.
   box.replaceChildren(el("h3", null, "People"));
   const act = async (kind, extra, failMsg) => {
     try { await postAction(kind, "", Object.assign({ author: "owner" }, extra)); reload(); }
@@ -1196,10 +1228,12 @@ function renderPeople(box, people, demo, reload) {
   for (const p of people) {
     const li = el("div", "situationitem person");
     const title = el("p", "personname", personTitle(p));
+    const first = (p.addresses || [])[0];
+    if (!p.name && ((p.address_labels || {})[first] || {}).kind === "slack") title.title = first;
     // Unnamed: the title already is the address, so list only the others (no repeat).
     const rest = p.name ? (p.addresses || []) : (p.addresses || []).slice(1);
     const parts = [title];
-    if (rest.length) parts.push(el("p", "kbdhint personaddrs", (p.name ? "" : "also ") + rest.join(", ")));
+    if (rest.length) parts.push(addrLine(p, rest, p.name ? "" : "also "));
     if (!p.name && (p.mail_names || []).length) {
       parts.push(el("p", "kbdhint unconfirmed", "From mail, unconfirmed: " + p.mail_names.join(", ")));
     }
@@ -1232,7 +1266,7 @@ function renderPeople(box, people, demo, reload) {
         cancel.addEventListener("click", reload);
         const r2 = el("div", "actions");
         r2.append(sv, cancel);
-        li.replaceChildren(addrs, nameLabel, name, ta, r2);
+        li.replaceChildren(addrLine(p, p.addresses || [], ""), nameLabel, name, ta, r2);
         name.focus();
       });
       row.append(edit);
@@ -1267,7 +1301,7 @@ function mergeStep(li, p, others, act, reload) {
   const pick = el("select", "modelpick");
   pick.append(Object.assign(el("option", null, "Choose a person"), { value: "" }));
   for (const o of others) {
-    pick.append(Object.assign(el("option", null, personTitle(o) + " (" + o.addresses.join(", ") + ")"),
+    pick.append(Object.assign(el("option", null, personTitle(o) + " (" + o.addresses.map(a => addrText(o, a)).join(", ") + ")"),
                               { value: String(o.id) }));
   }
   const next = el("button", "btn small", "Merge");
@@ -1290,7 +1324,7 @@ function mergeStep(li, p, others, act, reload) {
     const r2 = el("div", "actions");
     r2.append(yes, no);
     li.replaceChildren(el("p", "personname", "Merge " + personTitle(p) + " into " + personTitle(into) + "?"),
-      el("p", "kbdhint", (p.addresses || []).join(", ") + " and this note move to " + personTitle(into) +
+      el("p", "kbdhint", (p.addresses || []).map(a => addrText(p, a)).join(", ") + " and this note move to " + personTitle(into) +
         ", and " + personTitle(p) + " is removed. This cannot be undone."), r2);
   });
 }
