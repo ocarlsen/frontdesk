@@ -1,0 +1,25 @@
+{
+ "channel": {
+  "id": "D01BENALEX",
+  "is_im": true,
+  "user": "U01BENYAMA",
+  "last_read": "1792994400.000000"
+ },
+ "history": [
+  {
+   "type": "message",
+   "user": "U01BENYAMA",
+   "text": "does the ledger-sync backfill retry on 429s by itself, or do I need to set a retry budget on the connector? setting up the Quillfeather trial connector and want the config right the first time",
+   "ts": "1793027580.000200",
+   "team": "T0EXMPLCO"
+  },
+  {
+   "type": "message",
+   "user": "U01BENYAMA",
+   "text": "hey, quick one before standup tomorrow",
+   "ts": "1793027520.000100",
+   "team": "T0EXMPLCO"
+  }
+ ],
+ "replies": {}
+}

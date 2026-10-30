@@ -49,17 +49,28 @@ def _all_fixture_text() -> str:
         chunks.append(f.read_text())
         for m in json.loads(f.read_text())["messages"]:
             chunks.extend(_decoded_parts(m["payload"]))
+    slack = sorted((demo.DEMO_DIR / "slack").rglob("*.json"))
+    assert len(slack) == 5   # workspace.json + 4 conversations
+    chunks.extend(f.read_text() for f in slack)
     return "\n".join(chunks)
 
 
 def test_loads_and_triages_everything(loaded):
+    """Every Gmail thread has a recording; a Slack thread is triaged exactly when it has one, so
+    this holds before and after the Slack answers are recorded."""
     n, items, _ = loaded
-    assert 18 <= n <= 25
+    assert n == 24
     assert len(items) == n
-    assert all(tri is not None for _, tri in items.values())
-    assert all(tri.model == "replay:recorded" for _, tri in items.values())
-    buckets = {tri.bucket for _, tri in items.values()}
-    assert buckets == {"needs_you", "fyi", "ignore"}
+    assert sum(it.source == "slack" for it, _ in items.values()) == 4
+    assert all(tri is not None for it, tri in items.values() if it.source == "gmail")
+    recs = json.loads((demo.DEMO_DIR / "triage.json").read_text())
+    for it, tri in items.values():
+        if it.source == "slack":
+            assert (tri is not None) == any(k.startswith(it.id.rsplit(":", 1)[0] + ":")
+                                            for k in recs), it.id
+    triaged = [tri for _, tri in items.values() if tri is not None]
+    assert all(tri.model == "replay:recorded" for tri in triaged)
+    assert {tri.bucket for tri in triaged} == {"needs_you", "fyi", "ignore"}
 
 
 def test_dates_shifted_to_now(loaded):
@@ -128,10 +139,22 @@ def test_fixtures_use_only_reserved_domains():
     assert hosts and all(re.search(r"(^|\.)example\.(com|org|net)$", h) for h in hosts)
 
 
-def test_every_fixture_has_a_recording():
+def test_every_fixture_has_a_recording(tmp_path):
+    """Every Gmail fixture is recorded (under its bare thread id, the original form, or its item
+    id); Slack recordings are optional until the billed step runs; no recording is orphaned."""
     recs = json.loads((demo.DEMO_DIR / "triage.json").read_text())
-    ids = {t["id"] for t in demo.load_threads()}
-    assert ids == set(recs)
+    store = Store(tmp_path / "demo.db")
+    keys = set(demo.load_items(store, now=NOW).values())
+    store.db.close()
+    gmail = {k for k in keys if k.startswith("gmail:")}
+    assert len(gmail) == 20
+    replay = ReplayProvider(recs)
+    assert all(replay.key_for(k) is not None for k in gmail)
+    assert set(recs) <= keys | {k.split(":", 1)[1] for k in gmail}
+    for r in recs.values():
+        triage.validate({k: v for k, v in r.items() if k != "_usage"})
+        if r["bucket"] != "needs_you":
+            assert r["proposed_reply"] == ""
     for r in recs.values():
         triage.validate({k: v for k, v in r.items() if k != "_usage"})
         if r["bucket"] != "needs_you":

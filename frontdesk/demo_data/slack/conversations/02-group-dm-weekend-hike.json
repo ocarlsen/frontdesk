@@ -1,0 +1,39 @@
+{
+ "channel": {
+  "id": "G01WKNDHIK",
+  "is_mpim": true,
+  "name": "mpdm-alex--ben.y--ines-1",
+  "last_read": "1793019600.000600"
+ },
+ "history": [
+  {
+   "type": "message",
+   "user": "U01INESMOR",
+   "text": "great, see you both at 9 at the north lot",
+   "ts": "1793019600.000600",
+   "team": "T0EXMPLCO"
+  },
+  {
+   "type": "message",
+   "user": "U01BENYAMA",
+   "text": "in. I'll bring snacks :hiking_boot:",
+   "ts": "1793018400.000500",
+   "team": "T0EXMPLCO"
+  },
+  {
+   "type": "message",
+   "user": "U01ALEXRIV",
+   "text": "I'm in",
+   "ts": "1793013000.000400",
+   "team": "T0EXMPLCO"
+  },
+  {
+   "type": "message",
+   "user": "U01INESMOR",
+   "text": "saturday hike still on? thinking the Mission Ridge loop, 9am at the north lot",
+   "ts": "1793012400.000300",
+   "team": "T0EXMPLCO"
+  }
+ ],
+ "replies": {}
+}

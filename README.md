@@ -17,9 +17,10 @@ python3.12 -m venv .venv && .venv/bin/pip install -e .
 ```
 
 The demo loads 20 synthetic threads (all `example.com`) through the **real** Gmail normalizer and
-triage pipeline, replaying answers recorded once from Claude Opus 5.5 (`tools/record_demo.py`),
-so each thread's "Why this ranking" panel shows the real model, tokens and cost. It includes a phishing mail
-and two prompt-injection attempts so you can see how they are handled:
+triage pipeline, plus 4 Slack conversations from a made-up workspace through the real Slack sync,
+replaying answers recorded once from Claude Opus 5.5 (`tools/record_demo.py`), so each thread's
+"Why this ranking" panel shows the real model, tokens and cost. It includes a phishing mail and
+three prompt-injection attempts (one in Slack) so you can see how they are handled:
 
 ![An injection attempt inside a real request: still ranked Needs you, reply drafted with placeholders](docs/screenshot-thread.jpg)
 
