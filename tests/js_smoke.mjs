@@ -448,3 +448,48 @@ const turns = vm.runInContext("groupTurns", ctx)([
   { role: "owner", text: "Next?", author: "owner" }, { role: "assistant", text: "A3" }]);
 if (turns.length !== 2 || turns[0].entries.length !== 4) throw new Error("turn grouping");
 console.log("turns ok");
+// ---- A saved Gmail draft is read from Gmail when the thread opens and fills the reply box,
+// unless the owner has already typed; a failed check says so instead of failing silently.
+{
+  const findTa = d => all(d).find(n => n.tagName === "TEXTAREA" && n.placeholder === "Write a reply");
+  const findBtn = (d, t) => all(d).find(n => n.tagName === "BUTTON" && n.textContent === t);
+  const drafts = [];
+  ctx.fetch = async url => {
+    if (String(url).startsWith("/api/gmail-draft?")) { drafts.push(url);
+      return { ok: true, json: async () => ({ draft: { body: "My edited draft.\n\nBest,\nAlex", url: "x" } }) }; }
+    return { ok: true, json: async () => [] };
+  };
+  const d1 = fn("buildDetail")(item, triage);
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (drafts.length !== 1 || !drafts[0].includes("item=gmail%3At1")) throw new Error("draft fetch: " + drafts);
+  if (findTa(d1).value !== "My edited draft.\n\nBest,\nAlex") throw new Error("draft not loaded: " + findTa(d1).value);
+  if (!texts(d1).includes("Your Gmail draft: edit, then save or send")) throw new Error("draft label");
+  const saved = findBtn(d1, "Saved");
+  if (!saved || !saved.disabled) throw new Error("a loaded draft starts as Saved");
+  // Typed before Gmail answered: kept.
+  let release;
+  ctx.fetch = async url => {
+    if (String(url).startsWith("/api/gmail-draft?")) { await new Promise(r => { release = r; });
+      return { ok: true, json: async () => ({ draft: { body: "Old draft.", url: "x" } }) }; }
+    return { ok: true, json: async () => [] };
+  };
+  const d2 = fn("buildDetail")(item, triage);
+  findTa(d2).value = "I am typing.";
+  await new Promise(r => setTimeout(r, 0)); release(); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (findTa(d2).value !== "I am typing.") throw new Error("a loaded draft overwrote typing");
+  // Gmail unreachable: the proposal stays and a note says why.
+  ctx.fetch = async url => String(url).startsWith("/api/gmail-draft?")
+    ? { ok: false, status: 502, json: async () => ({ error: "Gmail did not answer" }) }
+    : { ok: true, json: async () => [] };
+  const d3 = fn("buildDetail")(item, triage);
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (findTa(d3).value !== "Yes.") throw new Error("proposal lost on a failed draft check");
+  if (!texts(d3).includes("Couldn't check Gmail for a saved draft: Gmail did not answer")) throw new Error("silent draft failure");
+  // Slack threads never ask Gmail.
+  drafts.length = 0;
+  ctx.fetch = async url => { if (String(url).startsWith("/api/gmail-draft?")) drafts.push(url); return { ok: true, json: async () => [] }; };
+  fn("buildDetail")({ ...item, id: "slack:C1:1", source: "slack" }, triage);
+  await new Promise(r => setTimeout(r, 0));
+  if (drafts.length) throw new Error("a Slack thread asked Gmail for a draft");
+}
+console.log("drafts ok");

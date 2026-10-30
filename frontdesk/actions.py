@@ -171,7 +171,7 @@ def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
         return result
     try:
         _check_account(gmail, item.account)
-        d = drafting.draft_reply(gmail, _native_id(item_id), body)
+        d = drafting.save_reply(gmail, _native_id(item_id), body)
     except (GmailError, ActionError, drafting.DraftError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
