@@ -71,6 +71,13 @@ def main(argv: list[str] | None = None) -> int:
     sa = ss.add_parser("add")
     sa.add_argument("text", metavar="TEXT")
     sa.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
+    un = sub.add_parser("unanswered",
+                        help="threads whose newest message is from a person, not you "
+                             "(optional; read-only IMAP, headers only, no model)")
+    un.add_argument("--json", action="store_true", help="print the JSON contract on stdout")
+    un.add_argument("--days", type=int, default=14, help="inbox window in days (default: 14)")
+    un.add_argument("--limit", type=int, default=15,
+                    help="list at most N threads, oldest first (default: 15); total is uncapped")
     args = p.parse_args(argv)
 
     if args.cmd == "demo":
@@ -79,6 +86,8 @@ def main(argv: list[str] | None = None) -> int:
         return eval_attribution_main(args, None)
     if args.cmd == "scoreboard":
         return scoreboard_main(args.dir)
+    if args.cmd == "unanswered":
+        return unanswered_main(args)
     if args.cmd == "export-demo":
         from pathlib import Path
 
@@ -179,6 +188,34 @@ def draft_main(args) -> int:
         return 2
     print(json.dumps({"draftId": d.draft_id, "messageId": d.message_id,
                       "threadId": d.thread_id, "url": d.url}, indent=1))
+    return 0
+
+
+def unanswered_main(args) -> int:
+    """Read-only; creates no files. Any failure is one stderr line naming the step, exit 2."""
+    import json
+
+    from .gmail import imap_unanswered as iu
+    try:
+        if args.limit < 0 or args.days < 1:
+            raise iu.UnansweredError("args", "--days must be >= 1 and --limit >= 0")
+        try:
+            s = config.settings()
+        except Exception as e:  # noqa: BLE001 - malformed settings.json is a config failure
+            raise iu.UnansweredError("config", str(e)) from e
+        rep = iu.report(iu.find_unanswered(iu.resolve_config(s), days=args.days),
+                        args.limit)
+    except iu.UnansweredError as e:
+        print(f"frontdesk unanswered: {e}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(rep, ensure_ascii=False))
+    else:
+        for it in rep["items"]:
+            print(f"{it['age_days']:>3}d  {it['from_name'] or it['from_addr']}: {it['subject']}"
+                  f"\n      {it['gmail_url']}")
+        print(f"{rep['total']} unanswered" + (f", showing {len(rep['items'])}"
+                                              if rep["total"] > len(rep["items"]) else ""))
     return 0
 
 

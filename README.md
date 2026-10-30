@@ -144,7 +144,51 @@ expire after 7 days, after which `sync` asks you to consent again.
 
 Settings (`~/.frontdesk/settings.json`, all optional): `model`, `provider_options`,
 `gmail_query` (default `in:inbox newer_than:7d`), `gmail_max_threads`, `serve_host`,
-`serve_port`, `serve_display_host`, `serve_allowed_hosts`. Unknown keys are an error, not ignored.
+`serve_port`, `serve_display_host`, `serve_allowed_hosts`, and the IMAP settings below.
+Unknown keys are an error, not ignored.
+
+## Unanswered email (optional, IMAP)
+
+`frontdesk unanswered` lists Gmail threads still waiting on your reply: threads from the last 14
+days, archived or not (promotions, social, updates and forums left out) whose newest message in that
+window, counting your own sent replies (`from:me`), is from a person and not from you. Mail with
+`List-Unsubscribe`, `List-Id`, a bulk/list/junk `Precedence`, an `Auto-Submitted` header, or a
+sender like `noreply@` or `notifications@` is treated as automated and skipped. It is separate from
+`sync`: no OAuth token, no model call, nothing stored.
+
+It is read-only. It opens mailboxes with `EXAMINE`, fetches only a few headers with `BODY.PEEK`,
+and never sends `STORE`, `COPY`, `MOVE` or `EXPUNGE`, so nothing is marked read, moved or
+labelled.
+
+Setup: create a Gmail app password (Google Account, Security, App passwords; needs 2-Step
+Verification), store it in the login Keychain, and name both in `~/.frontdesk/settings.json`:
+
+```
+security add-generic-password -U -s my-gmail-imap -a you@gmail.com -w
+```
+
+```json
+{"imap_account": "you@gmail.com", "imap_keychain_service": "my-gmail-imap"}
+```
+
+`IMAP_ACCOUNT` and `IMAP_APP_PASSWORD` override these; `imap_host` defaults to `imap.gmail.com`.
+
+```
+frontdesk unanswered                      # a short list
+frontdesk unanswered --json --days 14 --limit 15
+```
+
+`--json` prints `{"total": N, "items": [...]}`, oldest first; `total` counts every unanswered thread
+and `items` holds at most `--limit`. Each item has `thread_id` (decimal), `gmail_url`, `from_name`,
+`from_addr`, `subject`, `last_at` (ISO 8601 with offset), `age_days` and `n_messages` (messages in
+the window, not the thread's whole history). It takes a fixed number of IMAP round trips: two
+searches plus fetches in chunks of 300. Any failure exits nonzero with one line naming the step (for
+example `imap login: [AUTHENTICATIONFAILED] ...`), never an empty list, and the whole run is capped
+at 60 seconds.
+
+To leave out senders that are never a person waiting on you (your own reports, a tool that writes
+from a normal address), list them in `unanswered_ignore_senders`: exact addresses
+(`"reports@example.com"`) or whole domains (`"@example.org"`, which also covers its subdomains).
 
 ## Development
 

@@ -40,6 +40,13 @@ DEFAULTS = {
     "mark_read_on_open": True,  # open ~2 s: mark read in Gmail / Slack DMs
     "serve_display_host": "",   # address to print when serve_host is 0.0.0.0
     "serve_allowed_hosts": [],  # extra Host names to accept besides localhost and IP literals
+    # Optional, only for `frontdesk unanswered` (read-only IMAP, headers only, no model):
+    "imap_account": "",            # your Gmail address: the IMAP login and "you"; or IMAP_ACCOUNT
+    "imap_keychain_service": "",   # Keychain item (account = imap_account) holding a Gmail app
+                                   # password; or set IMAP_APP_PASSWORD
+    "imap_host": "imap.gmail.com",
+    # Senders `frontdesk unanswered` never lists: addresses or domains ("@example.org").
+    "unanswered_ignore_senders": [],
 }
 
 
