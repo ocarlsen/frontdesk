@@ -288,6 +288,7 @@ function buildCard(item, triage) {
   let detail = null;
   row.addEventListener("click", () => {
     if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe
+    setCurrent(li);   // a clicked row is the current one, so j/k continue from it
     const open = row.getAttribute("aria-expanded") === "true";
     if (open) {
       detail.hidden = true;
@@ -1574,6 +1575,13 @@ function setCurrent(li) {
   li.classList.add("current");
   currentId = li.dataset.id;
   li.scrollIntoView({ block: "nearest" });
+  // Keep one selection on screen: if a row button holds focus (after a click), move focus to the
+  // new current row so its focus ring does not stay behind on the old one.
+  const a = document.activeElement;
+  if (a && a.classList && a.classList.contains("row") && a.closest("li.card") !== li) {
+    const row = li.querySelector(":scope > .row");
+    if (row) row.focus({ preventScroll: true });
+  }
 }
 
 function currentCard() {
