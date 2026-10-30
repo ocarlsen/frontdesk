@@ -32,9 +32,10 @@ from email.utils import parseaddr
 PORT = 993
 TIMEOUT_S = 60   # all mail, two searches; the brief runs unattended, so allow headroom
 ALL_MAIL_FALLBACK = "[Gmail]/All Mail"
-# All mail, not just the inbox: a thread archived without a reply still waits on the owner.
-CANDIDATE_QUERY = ("newer_than:{days}d -in:chats -in:drafts -category:promotions -category:social "
-                   "-category:updates -category:forums")
+# Threads in the inbox, plus threads with an unread message anywhere in All Mail (archived
+# unread still waits on the owner; archived and read was dealt with). Gmail's {a b} is OR.
+CANDIDATE_QUERY = ("{{in:inbox is:unread}} newer_than:{days}d -in:chats -in:drafts "
+                   "-category:promotions -category:social -category:updates -category:forums")
 HEADER_FIELDS = "FROM SUBJECT LIST-UNSUBSCRIBE LIST-ID PRECEDENCE AUTO-SUBMITTED"
 FETCH_ITEMS = f"(UID X-GM-THRID INTERNALDATE FLAGS BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
 # Compared against the from-address local part with '-', '_' and '.' removed.
