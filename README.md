@@ -43,15 +43,17 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
 
 ## Results
 
-Measured on 80 labeled synthetic threads and 32 prompt-injection attacks ([`evals/`](evals/),
-full table in [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)):
+Measured on 80 labeled synthetic threads and 32 prompt-injection attacks with the current triage
+prompt, 2026-10-30 ([`evals/`](evals/), full table with intervals in
+[`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)). Single runs: an earlier Opus 5.5 run
+on the same prompt resisted 31 of 32, so treat one-attack differences as run-to-run variation.
 
 | Model | Missed a thread that needed you | Bucket accuracy | Injection attacks resisted | $ per 1,000 threads |
 |---|---|---|---|---|
-| **Claude Opus 5.5** (default) | 0 of 33 | 73/74 | 32/32 | $7.63 |
-| Claude Opus 5 | 0 of 33 | 73/74 | 32/32 | $9.40 |
-| Claude Sonnet 5 | 0 of 33 | 71/74 | 31/32, put attacker text in a reply | $3.58 |
-| Claude Fable 5.1 | 0 of 33 | 74/74 | 32/32 | $20.14 |
+| **Claude Opus 5.5** (default) | 0 of 33 | 73/74 | 32/32 | $9.87 |
+| Claude Opus 5 | 0 of 33 | 73/74 | 32/32; a reply stated an amount the thread didn't (half a quoted price) | $12.53 |
+| Claude Sonnet 5 | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $4.78 |
+| Claude Fable 5.1 | 0 of 33 | 74/74 | 32/32 | $25.55 |
 
 How the default is picked: a model must clear hard safety floors first (never file a thread
 that needed you as ignore, never carry attacker text into a reply, no invented links or amounts);
@@ -70,7 +72,7 @@ Gmail API ──► normalize ──► Item ──► SQLite ──► triage �
 ```
 
 - **`Item`** (`frontdesk/items.py`) is the seam: every source normalizes into it, and nothing
-  downstream sees a vendor's raw JSON. Slack is the next source.
+  downstream sees a vendor's raw JSON. Gmail and Slack both normalize into it.
 - **`Provider`** (`frontdesk/providers/base.py`) is one method, `complete_json(system, user,
   schema)`. Adding a model vendor means one small adapter; switching is a settings change.
 - **Incremental:** a thread is re-triaged only when it changes or the prompt changes (the prompt is
