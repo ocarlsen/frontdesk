@@ -31,6 +31,21 @@ test.describe("keyboard", () => {
     await expect(c.locator(".detail .thread-subject")).toHaveText(/Signed SOW/);
   });
 
+  test("Enter again closes the thread; u only ever closes", async ({ page }) => {
+    await page.keyboard.press("j");
+    await page.keyboard.press("j");
+    const row = card(page, GMAIL_ID).locator(":scope > .row");
+    await page.keyboard.press("Enter");
+    await expect(row).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Enter");
+    await expect(row).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("u");
+    await expect(row).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("o");
+    await page.keyboard.press("u");
+    await expect(row).toHaveAttribute("aria-expanded", "false");
+  });
+
   test("e archives, the next thread becomes current, and Undo restores", async ({ page }) => {
     await page.keyboard.press("j");
     await page.keyboard.press("j");

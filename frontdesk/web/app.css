@@ -274,9 +274,68 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
   .syncbar .kbdhint { display: none; }   /* no keyboard on a phone */
 }
 
-/* Move to: the section drop-down in the reply actions; a phone-sized target under 560px. */
+/* Move to: the section drop-down in the reply actions. */
 .moveto { display: inline-flex; align-items: center; gap: 6px; }
-@media (max-width: 560px) { .movepick { min-height: 44px; } }
+
+/* The reply action row. Two groups: reply (Save, Send, Copy) and thread (Move to, Star,
+   Archive or Done, then the Open in Gmail/Slack link), the thread group pushed right. Every
+   control is one height. Blue marks the one recommended next action (Save as Gmail draft); the
+   rest share one neutral look, and a disabled control is neutral too, so a disabled Save never
+   reads as pale blue. Scoped to .replyactions, so the syncbar and dialogs keep their own look. */
+.replyactions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.replygroup, .threadgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.threadgroup { margin-left: auto; }
+/* .reply label sets a bottom margin for the textarea label; the Move to label must not inherit it. */
+.replyactions .moveto { margin: 0; }
+/* Secondary controls sit on --card so they read as raised from the --field reply panel;
+   disabled ones drop back to the panel grey with muted text. */
+.replyactions .btn, .replyactions .movepick {
+  height: 36px; padding: 0 14px; font: inherit; font-size: 14px; line-height: 34px;
+  border: 1px solid var(--line); border-radius: 8px; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+  background-color: var(--card); color: var(--text); cursor: pointer;
+}
+.replyactions .btn:hover:not([disabled]), .replyactions .movepick:hover:not([disabled]) {
+  background-color: color-mix(in srgb, var(--text) 6%, var(--card)); }
+.replyactions .btn:active:not([disabled]), .replyactions .movepick:active:not([disabled]) {
+  background-color: color-mix(in srgb, var(--text) 10%, var(--card)); }
+.replyactions .btn.primary { background-color: var(--accent); border-color: var(--accent);
+  color: var(--card); }
+.replyactions .btn.primary:hover:not([disabled]) {
+  background-color: color-mix(in srgb, var(--text) 12%, var(--accent)); }
+.replyactions .btn.primary:active:not([disabled]) {
+  background-color: color-mix(in srgb, var(--text) 20%, var(--accent)); }
+.replyactions .btn[disabled]:not(.pending), .replyactions .movepick[disabled] {
+  background-color: var(--field); border-color: var(--line); color: var(--muted); opacity: 1;
+  cursor: not-allowed; }
+/* The star's glyph is its own colour (amber when starred); the button stays neutral. A flex
+   container has no ::first-letter, so the star button lays its text out as a block. */
+.replyactions .btn.btn-star { display: inline-block; }
+/* Our own chevron, in --muted, so the select matches the buttons. Drawn with two gradients, not
+   an SVG data URI: the page's CSP (img-src 'self') blocks data: images. Being var(--muted), it
+   follows dark mode by itself; background-color stays separate so the theme fill applies. */
+.replyactions .movepick {
+  -webkit-appearance: none; appearance: none; display: inline-block; padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%, var(--muted) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+                    linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  background-size: 6px 6px, 6px 6px; background-repeat: no-repeat;
+  background-position: right 18px top 50%, right 12px top 50%;
+}
+.movepick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Open in Gmail / Slack leaves FrontDesk, so it is a link, not a button. */
+.replyactions .openlink { display: inline-flex; align-items: center; height: 36px; padding: 0 2px;
+  font-size: 14px; color: var(--accent); border: 0; background: none; white-space: nowrap;
+  text-decoration: none; }
+.replyactions .openlink:hover { text-decoration: underline; }
+.replyactions .openlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;
+  border-radius: 4px; }
+@media (max-width: 560px) {
+  .threadgroup { margin-left: 0; }
+  .replyactions .btn, .replyactions .movepick { height: 44px; min-height: 44px; line-height: 42px;
+    padding: 0 12px; }
+  .replyactions .movepick { padding-right: 30px; }
+  .replyactions .openlink { height: 44px; min-height: 44px; }
+}
 
 /* People strip: one chip per person in the thread, between the subject and the summary; a chip
    opens that person's note right under the strip. */
