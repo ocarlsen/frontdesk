@@ -3,7 +3,8 @@
 // - static: `frontdesk export-demo <tmp>` (the public demo, Slack threads included) served by a
 //   tiny Node static server on 127.0.0.1. Set FD_E2E_APP_JS=<file> to serve that file as app.js
 //   instead (how a red proof runs a broken copy without touching the repo).
-// - live: tests/e2e/live_server.py, the real server in demo mode on a throwaway store, for Ask.
+// - live: tests/e2e/live_server.py, the real server in demo mode on a throwaway store, for Ask
+//   and the People strip's editor (FD_E2E_APP_JS swaps its app.js too).
 //
 // Python: FRONTDESK_PYTHON, else the repo's .venv, else python3. FRONTDESK_HOME always points at
 // a temp dir, so nothing here reads ~/.frontdesk.

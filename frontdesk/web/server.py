@@ -99,11 +99,19 @@ def signed_history(history: list[dict], source: str) -> list[dict]:
 
 
 def ask_payload(store: Store, item: Item) -> dict:
-    """The Ask panel's data: the built-in question the Ask box starts with (`advise`), history,
-    and one notes box per PERSON in the thread (`people` lists
-    one address per person, `notes` is keyed by it, `aliases` holds their other addresses and
-    `names` the name the owner typed, `display` how to show a key that is not readable: a Slack
-    user's display name, from the thread first). The owner is never among them."""
+    """The Ask panel's data: the built-in question the Ask box starts with (`advise`) and
+    history, plus the thread's people (people_payload), which the People strip shows too."""
+    from ..assist import ADVISE
+    return {"advise": ADVISE,
+            "history": signed_history(store.ask_history(item.id), item.source),
+            **people_payload(store, item)}
+
+
+def people_payload(store: Store, item: Item) -> dict:
+    """One notes box per PERSON in the thread (`people` lists one address per person, `notes`
+    is keyed by it, `aliases` holds their other addresses and `names` the name the owner typed,
+    `display` how to show a key that is not readable: a Slack user's display name, from the
+    thread first). The owner is never among them. The static demo exports this per thread."""
     from ..assist import others
     oth = others(item)
     rep: dict[str, str] = {}
@@ -120,10 +128,7 @@ def ask_payload(store: Store, item: Item) -> dict:
     shown = {**store.slack_names(), **{k.lower(): v for k, v in item.names.items()}}
     display = {a: label for a in [*people, *(x for v in aliases.values() for x in v)]
                if (label := address_label(a, shown))}
-    from ..assist import ADVISE
-    return {"advise": ADVISE,
-            "history": signed_history(store.ask_history(item.id), item.source),
-            "notes": store.notes_for(people), "people": people, "aliases": aliases,
+    return {"notes": store.notes_for(people), "people": people, "aliases": aliases,
             "names": names, "display": display}
 
 

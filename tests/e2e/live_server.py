@@ -6,7 +6,8 @@ Prints one JSON line, {"live": URL}, then serves on 127.0.0.1 until stdin closes
 runner's global setup starts it as a child and closes stdin in teardown).
 
 Same settings as `frontdesk demo` ({"demo": True}: sync, profile and Ask's model calls are off),
-on a throwaway store in a temp FRONTDESK_HOME. Ask's model list is stubbed empty, so nothing
+on a throwaway store in a temp FRONTDESK_HOME. FD_E2E_APP_JS=<file> serves that file as app.js
+(a red proof against another version of the page, as for the static demo). Ask's model list is stubbed empty, so nothing
 asks the Keychain whether a key exists, and nothing here calls a model. The real ~/.frontdesk is
 never read: FRONTDESK_HOME is set before frontdesk.config is imported, and the script refuses to
 run if that did not take."""
@@ -37,6 +38,11 @@ def main() -> int:
     from frontdesk.web import server
     config.ensure_home()
     server.available_models = lambda _settings: []   # no Keychain lookups for Ask's model list
+    if os.environ.get("FD_E2E_APP_JS"):
+        web = work / "web"
+        shutil.copytree(server.STATIC_DIR, web, ignore=shutil.ignore_patterns("*.py", "__pycache__"))
+        shutil.copyfile(os.environ["FD_E2E_APP_JS"], web / "app.js")
+        server.STATIC_DIR = web
     db = work / "e2e.db"
     st = Store(db)
     load_demo(st, now=datetime.now(UTC))

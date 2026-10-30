@@ -2,7 +2,7 @@
 // once). Exact viewport, deviceScaleFactor 2, so the image is exactly 2x the CSS size with no
 // strip of unpainted pixels (Chrome's --screenshot flag had a viewport shorter than its window).
 //
-//   node tools/capture.mjs URL OUT.jpg WIDTH HEIGHT|auto [STAGE.js]
+//   node tools/capture.mjs URL OUT.jpg|OUT.png WIDTH HEIGHT|auto [STAGE.js]
 //
 // STAGE.js is the body of an async function run in the page before the shot (open a thread,
 // hide the rest). HEIGHT "auto" sizes the viewport to the staged page's full height, so nothing
@@ -44,7 +44,9 @@ try {
   }
   await page.evaluate(() => window.scrollTo(0, 0));
   await settle();
-  await page.screenshot({ path: out, type: "jpeg", quality: 82, animations: "disabled" });
+  const png = out.toLowerCase().endsWith(".png");   // the type follows OUT's extension
+  await page.screenshot({ path: out, animations: "disabled",
+                          ...(png ? { type: "png" } : { type: "jpeg", quality: 82 }) });
   console.log("wrote", out);
 } finally {
   await browser.close();

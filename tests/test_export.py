@@ -39,6 +39,15 @@ def test_export_is_complete_and_synthetic(tmp_path):
     assert all(h == "mail.google.com" or re.search(r"(^|\.)example\.(com|org|net)$", h)
                for h in hosts), hosts
     assert "slack.com" not in blob
+    # the People strip's data per thread: the people half of /api/ask, read-only, no history
+    for r in rows:
+        ppl = json.loads((out / "api" / "people" / f"{static_file(r['item']['id'])}.json")
+                         .read_text())
+        assert set(ppl) == {"people", "notes", "aliases", "names", "display", "demo"}
+        assert ppl["demo"] is True and ppl["notes"] == {}
+    assert any(r["item"]["source"] == "slack" and json.loads(
+        (out / "api" / "people" / f"{static_file(r['item']['id'])}.json").read_text())["display"]
+        for r in rows)                                 # Slack keys come with display names
 
 
 def test_static_file_names_match_the_page_script():
