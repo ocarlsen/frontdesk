@@ -221,7 +221,7 @@ def test_cid_image_becomes_data_uri():
 
 
 def test_stub_plain_part_falls_back_to_the_html():
-    html = ("<html><body><h1>Personal brief</h1><p>Today: call with Gee at 9am. Invoice from "
+    html = ("<html><body><h1>Personal brief</h1><p>Today: call with Dana at 9am. Invoice from "
             "the landlord is due Friday. Two recruiter replies are waiting.</p>"
             + "<ul>" + "".join(f"<li>Item {i}: follow up on the open thread.</li>" for i in range(8))
             + "</ul></body></html>")
@@ -229,7 +229,7 @@ def test_stub_plain_part_falls_back_to_the_html():
                    alternative("This message is HTML; open it in a mail client that renders HTML.",
                                html)))
     body = thread_to_item(t, ME).messages[0].body
-    assert "call with Gee at 9am" in body and "This message is HTML" not in body
+    assert "call with Dana at 9am" in body and "This message is HTML" not in body
 
 
 def test_a_real_plain_part_still_wins_over_similar_html():

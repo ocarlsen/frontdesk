@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory Needs an Author</title>
+<style>
+:root { --bg: #fbfaf8; --text: #1f2328; --muted: #5f6873; --line: #dde1e6; --accent: #2f5fd0;
+        --code: #f1f2f4; --todo: #a15c00; --todo-bg: #fff4e0; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #121417; --text: #e6e8eb; --muted: #9aa2ad; --line: #2e333b;
+          --accent: #8fb0ff; --code: #1d2026; --todo: #f0b35a; --todo-bg: #2a2215; }
+}
+:root[data-theme="dark"] { --bg: #121417; --text: #e6e8eb; --muted: #9aa2ad; --line: #2e333b;
+        --accent: #8fb0ff; --code: #1d2026; --todo: #f0b35a; --todo-bg: #2a2215; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 17px/1.65 Georgia, "Iowan Old Style", serif; }
+main { max-width: 700px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font: 700 32px/1.2 system-ui, -apple-system, sans-serif; letter-spacing: -.015em; margin: 0 0 8px; }
+.dek { color: var(--muted); font-size: 1.05em; margin: 0 0 28px; }
+h2 { font: 650 21px/1.3 system-ui, -apple-system, sans-serif; margin: 36px 0 8px; }
+a { color: var(--accent); }
+code, pre { font: 14px/1.5 ui-monospace, Menlo, monospace; background: var(--code); border-radius: 4px; }
+code { padding: 1px 4px; }
+pre { padding: 12px 14px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font: 15px/1.4 system-ui, sans-serif; margin: 12px 0; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.todo { background: var(--todo-bg); color: var(--todo); border-radius: 6px; padding: 8px 12px;
+        font: 600 14px/1.4 system-ui, sans-serif; margin: 14px 0; }
+blockquote { margin: 14px 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); color: var(--muted); }
+figure { margin: 22px 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; display: block; }
+figcaption { color: var(--muted); font: 14px/1.45 system-ui, sans-serif; margin-top: 8px; }
+hr { border: 0; border-top: 2px solid var(--line); margin: 56px 0 24px; }
+.notes { font: 15px/1.5 system-ui, sans-serif; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>FrontDesk believed a note I never wrote</h1>
+<p class="dek">Memory needs an author. How my inbox agent came to quote a helper's note back to
+me as my own, and the fix, tested on three vendors' models.</p>
+
+<p><a href="https://ocarlsen.ai/frontdesk.html">FrontDesk</a> is an inbox agent I built that runs
+on my own computer. It reads my Gmail and Slack, ranks what needs me, and drafts replies. The part
+I use most is Ask: open a thread, ask "what should I do here?", and it answers like a chief of
+staff who has read the thread, my other threads with the same people, a short profile of what I
+care about, and my notes on the people involved.</p>
+
+<p>Those notes are the interesting part. They are how an advisor remembers that a recruiter
+already asked for my salary floor, or that a client agreed to net 15. They are also, it turns
+out, the easiest place for an agent to be confidently wrong about me.</p>
+
+<h2>The note</h2>
+<p>One evening I was working through a reply to someone I had been corresponding with. I was
+doing it in an AI coding session, the same kind of session I had used to build FrontDesk, and
+I asked it to get that analysis into FrontDesk so I could use it there next time. It did that by
+writing a note about the person into FrontDesk's memory, in the first person, the way I would
+have written it myself.</p>
+<p>One line in it was false: that I had promised them something I had only drafted and never
+sent.</p>
+<p>FrontDesk treated notes as the owner's own words, because until then only the owner wrote
+them. So Ask took the note at its word. Later answers quoted the session's text back to me as
+"your notes say...". Several of the questions in that thread's history were also typed by the
+session, not by me, and nothing on the page said so.</p>
+<figure>
+  <img src="article-before.jpg" width="760" height="560" loading="lazy"
+       alt="FrontDesk's Ask panel on a class baking-day email. The answer says: your notes say Jordan has a peanut allergy.">
+  <figcaption>Recreated on synthetic data: Opus 5.5's actual answer from my test, with the old
+  prompt. The note was written by a helper, but the answer says "your notes say".</figcaption>
+</figure>
+<p>I caught it because I knew what I had and hadn't promised. An assistant that is only useful
+when you already know the answer isn't much of an assistant.</p>
+
+<h2>Why it happened</h2>
+<p>FrontDesk already had a trust boundary, and it held. Mail is written by other people, so it
+goes to the model as quoted data it is told never to obey. My profile and notes are mine, so they
+go in as trusted context. Prompt injection gets most of the attention in this area, and FrontDesk
+is tested against 32 injection attacks on every model it supports.</p>
+<p>The gap was inside "trusted". "Written by the owner" really meant "came in through the owner's
+side", and that side includes every tool acting for me. That is not an edge case. The whole point
+of an agent is that other agents and tools write on your behalf. A memory that cannot tell you
+from your helpers will eventually put words in your mouth, and the model will repeat them with
+your authority.</p>
+
+<h2>How FrontDesk's memory works</h2>
+<p>The model keeps no memory between calls. Each time I Ask, FrontDesk rebuilds the context from a local SQLite file and sends the same assembled text to
+whichever model I picked:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Section</th><th>Written by</th><th>Treated as</th></tr></thead>
+<tbody>
+<tr><td>The thread, and related threads with the same people</td><td>Other people</td><td>Untrusted data</td></tr>
+<tr><td>Profile: who I am, what matters to me</td><td>Me</td><td>Trusted</td></tr>
+<tr><td>"What's going on": open matters, decisions, dated</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
+<tr><td>Notes on each person in the thread</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
+<tr><td>The conversation so far on this thread</td><td>Me, a helper, the model</td><td>Each turn labelled</td></tr>
+</tbody></table></div>
+<p>Keeping memory in the assembled prompt, rather than in any one vendor's memory feature, is
+what lets FrontDesk run the same on every model, and it keeps the memory where I can see it, test
+it and label it.</p>
+
+<h2>The fix: every memory has an author</h2>
+<p>Every note, every "What's going on" item and every question in Ask's history now records who
+wrote it and when. There are three possible authors: me, a named helper session, or "not
+recorded" for anything saved before the change. The prompt carries that label on every line:</p>
+<pre>def provenance(author: str, at: str) -> str:
+    day = (at or "")[:10] or "date unknown"
+    if author == OWNER:
+        return f"(written by the owner, {day})"
+    if author.startswith("session:"):
+        return (f"(written on the owner's behalf by session {author[len('session:'):]}, "
+                f"not confirmed by the owner, {day})")
+    return f"(author not recorded, not confirmed by the owner, {day})"</pre>
+<p>The instructions say what to do with it: lines I wrote are trusted. Unconfirmed lines are a
+likely but unverified statement of my view. The model may use them, but when it relies on one it
+has to say so ("an unconfirmed note says..."), never "you said" or "your notes say".</p>
+<p>On the page, each note shows who wrote it and when, with a Confirm button on anything I didn't
+write. Helper sessions get a command-line path that writes as themselves and can never write as
+me. One honest limit: this is a record kept by honest writers, not a security boundary. Any
+program running as me could claim to be me. What it fixes is the common case, where a helper
+means well and nothing records that it was the one writing.</p>
+<p>Labels also don't make a memory true. A false note marked unconfirmed is still false, and
+confirming a note doesn't check it. What the label settles is whose claim it is, so the model
+stops putting a helper's words in my mouth and I know which lines to check.</p>
+<figure>
+  <img src="article-after.jpg" width="760" height="560" loading="lazy"
+       alt="The same thread after the fix. The answer says: an unconfirmed note says Jordan has a peanut allergy. Below, the note is labelled written by session helper, not confirmed, with a Confirm button.">
+  <figcaption>The same thread, model and note with authorship labels. The answer calls the note
+  unconfirmed, and the note says who wrote it, with a Confirm button.</figcaption>
+</figure>
+
+<h2>Does the model actually say "unconfirmed"?</h2>
+<p>Instructions are cheap. I wanted to know whether models follow this one without becoming
+useless, by ignoring the note, or annoying, by hedging on notes I did write.</p>
+<p>So I built a small test: 12 invented threads (a recruiter, a freelance client, a landlord, a
+school, a vendor and so on), each with one note carrying a fact the right answer depends on, such
+as "you agreed to share the deck only after they return the signed NDA". Each thread is asked
+three ways, through FrontDesk's real prompt code:</p>
+<ol>
+<li>The note is labelled as written by me.</li>
+<li>The same note is labelled as written by a helper, unconfirmed.</li>
+<li>The old instructions and the old unlabelled note line, with the same helper's note.</li>
+</ol>
+<p>A separate model judges each answer without knowing which way it was asked: did it use the
+fact, did it credit me with it, did it flag it as unconfirmed. Every run also has the judge grade
+hand-labelled answers with known right answers (nine at the time of these runs); if it gets any
+wrong, the report opens with a failure banner and the command exits with an error.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>With labels</th><th>My own notes used, no false hedge</th></tr></thead>
+<tbody>
+<tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+<tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+<tr><td>Gemini 3.8 Flash</td><td class="num">9 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+</tbody></table></div>
+<p>"With labels" counts answers that credited the helper's note to me without flagging it. Every
+model flagged all 12 and still used the fact. Without labels, every model credited the helper's
+words to me most of the time. That is the original failure, reproduced on demand.</p>
+<p>The difference is easiest to see on one thread. Asked about a class's peanut butter cookie
+day, with a helper's note about an allergy, Opus 5.5 answered without labels: "your notes say Jordan has a
+peanut allergy". With labels, the same model, note and question gave: "An unconfirmed note says
+Jordan has a peanut allergy". Same fact, used the same way; only the claim of whose it is
+changed.</p>
+<p>With 12 cases per condition these are counts, not precise rates. Zero of 12 is still
+consistent with a true rate as high as about one in four, the top of its 95% interval. The Opus
+run cost about $1.50 including the judge; the other two weren't priced at the time.</p>
+<p>The judge needed checking too. On a strict reading, two or three answers per model missed,
+and every one was the same shape: "An unconfirmed note says you agreed to share the deck only
+after the NDA." The answer flagged the note correctly, but the judge counted "you agreed" as
+crediting me. The note was the source; I was only the subject. Those misses lower the fully
+correct count to 10, 10 and 9 of 12; they don't touch the "credited to me" count in the table,
+which is zero for every model. I tightened the judge's
+instructions and added that exact case to its calibration set. I left the published runs as they
+were rather than rescoring them in my favor. The
+<a href="https://github.com/ocarlsen/frontdesk/tree/main/evals/results">reports</a>, with every
+answer and every judgment, are in the repository.</p>
+
+<h2>Memory that goes stale</h2>
+<p>Notes are about people. Much of what an advisor needs is about the situation: what is open,
+what I decided and why. FrontDesk keeps that as a short "What's going on" list, separate from the
+profile. Ask suggests additions and nothing is saved until I click.</p>
+<p>Dates turned out to matter as much as authors. "Pending since October 22" is true for a week
+and then quietly false. Even a one-click suggestion slipped a wrong date into a note on its first
+day: it said "October 29" for an email that arrived on the 28th. Every memory now shows its date
+next to its author, so I can see when it might be stale and who to blame for it.</p>
+
+<h2>What's next</h2>
+<p>Notes are keyed by address today, so one person with two addresses has two notes. Next is a
+"person" with any number of addresses, and one page listing everything FrontDesk remembers, with
+author, date, edit and delete. After that, retrieval by topic, for when memory outgrows "send
+everything relevant".</p>
+<p>The principle won't change: the memory is mine, it lives on my machine, and I can see who
+wrote every line of it. When a model leans on something I didn't write, it says so.</p>
+<p><a href="https://ocarlsen.ai/frontdesk.html">More about FrontDesk</a>, including
+<a href="https://frontdesk.ocarlsen.com/index.html">a live demo</a> on a synthetic inbox. The code
+is open source on <a href="https://github.com/ocarlsen/frontdesk">GitHub</a>.</p>
+
+<hr>
+<div class="notes">
+<p><b>Draft notes (not published).</b> Draft 3, 2026-10-29: screenshots added; approved by Owen.</p>
+<ul>
+<li>Disclosure: no names, company or thread content from the real incident. "Someone I'd been
+corresponding with" is the only description. Both screenshots are staged on synthetic data with the real page and server, using the
+model's real answers from the eval: tools/article_screenshots.py. Answers are cropped to their
+opening paragraph.</li>
+<li>Evidence: the false note and session-typed questions are observed (FrontDesk store and Owen's
+2026-10-29 screenshots). Eval numbers: evals/results/attribution-2026-10-29-*.md (main
+8655beb). The "October 29 vs 28" date slip is observed (note text vs email date).</li>
+<li>Venue: ocarlsen.ai, hosted from this file on main (session ocarlsen-ai). Repo public since 2026-10-29; reports linked.</li>
+<li>Word count about 1,550 after the Fable edits.</li>
+</ul>
+</div>
+</main>
+</body>
+</html>
