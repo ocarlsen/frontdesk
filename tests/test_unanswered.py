@@ -221,7 +221,8 @@ def test_candidate_and_owner_queries():
     _, stub = run([msg(1, 1001, at(1), "Eve <eve@example.org>")], days=21)
     raw = [c for c in stub.calls if c[:3] == ("UID", "SEARCH", "X-GM-RAW")]
     assert raw == [("UID", "SEARCH", "X-GM-RAW",
-                    '"newer_than:21d -in:chats -in:drafts -category:promotions -category:social '
+                    '"{in:inbox is:unread} newer_than:21d -in:chats -in:drafts '
+                    '-category:promotions -category:social '
                     '-category:updates -category:forums"'),
                    ("UID", "SEARCH", "X-GM-RAW", '"from:me newer_than:21d -in:chats -in:drafts"')]
 

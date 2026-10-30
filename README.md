@@ -150,7 +150,8 @@ Unknown keys are an error, not ignored.
 ## Unanswered email (optional, IMAP)
 
 `frontdesk unanswered` lists Gmail threads still waiting on your reply: threads from the last 14
-days, archived or not (promotions, social, updates and forums left out) whose newest message in that
+days that are in your inbox or have an unread message anywhere (so archived and read threads drop
+out; promotions, social, updates and forums left out) whose newest message in that
 window, counting your own sent replies (`from:me`), is from a person and not from you. Mail with
 `List-Unsubscribe`, `List-Id`, a bulk/list/junk `Precedence`, an `Auto-Submitted` header, or a
 sender like `noreply@` or `notifications@` is treated as automated and skipped. It is separate from
