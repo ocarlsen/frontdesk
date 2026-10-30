@@ -51,12 +51,18 @@ _MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
 
 
-class UnansweredError(Exception):
-    """One line, '<step>: <detail>', for stderr."""
+class _StepError(Exception):
+    """Base for this module's (and imap_buckets') failures: one line, '<step>: <detail>', for
+    stderr. Shared so `_step`/`_ignore_list`-style helpers work for either command's own
+    exception subclass."""
 
     def __init__(self, step: str, detail: str):
         self.step = step
         super().__init__(f"{step}: {_one_line(detail)}")
+
+
+class UnansweredError(_StepError):
+    pass
 
 
 def _one_line(detail) -> str:
@@ -70,16 +76,17 @@ class _Timeout(Exception):
 
 
 @contextmanager
-def _step(name: str):
-    """Any exception inside becomes UnansweredError naming this step."""
+def _step(name: str, error_cls: type[_StepError] = UnansweredError):
+    """Any exception inside becomes error_cls naming this step (imap_buckets passes its own
+    BucketsError so the two commands' failures stay separately typed with identical shape)."""
     try:
         yield
-    except UnansweredError:
+    except error_cls:
         raise
     except (_Timeout, TimeoutError) as e:
-        raise UnansweredError(name, f"timed out ({e})" if str(e) else "timed out") from e
+        raise error_cls(name, f"timed out ({e})" if str(e) else "timed out") from e
     except Exception as e:  # noqa: BLE001 - the contract is one named line, never a traceback
-        raise UnansweredError(name, str(e) or type(e).__name__) from e
+        raise error_cls(name, str(e) or type(e).__name__) from e
 
 
 @contextmanager
@@ -129,13 +136,19 @@ def ignored(addr: str, ignore) -> bool:
     return False
 
 
-def _ignore_list(settings: dict) -> tuple[str, ...]:
-    raw = settings.get("unanswered_ignore_senders", [])
+def _validate_address_list(raw, key: str,
+                           error_cls: type[_StepError] = UnansweredError) -> tuple[str, ...]:
+    """Shared by unanswered_ignore_senders here and newsletter_senders in imap_buckets: a list
+    of lowercase addresses or domains, same `ignored()` matching rules either way."""
     if not isinstance(raw, list) or not all(isinstance(x, str) and x.strip() for x in raw):
-        raise UnansweredError("config", "unanswered_ignore_senders must be a list of addresses "
-                                        "or domains, e.g. [\"reports@example.com\", "
-                                        "\"@example.org\"]")
+        raise error_cls("config", f"{key} must be a list of addresses or domains, e.g. "
+                                  "[\"reports@example.com\", \"@example.org\"]")
     return tuple(x.strip().lower() for x in raw)
+
+
+def _ignore_list(settings: dict) -> tuple[str, ...]:
+    return _validate_address_list(settings.get("unanswered_ignore_senders", []),
+                                  "unanswered_ignore_senders")
 
 
 def resolve_config(settings: dict, environ=None, keychain=None) -> ImapConfig:
