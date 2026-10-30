@@ -55,11 +55,12 @@ def cfg(ignore=()):
     return iu.ImapConfig(host="imap.example.com", account=OWNER, password="app-pw", ignore=ignore)
 
 
-def run(msgs, since=SINCE, newsletter_senders=(), person_senders=(), ignore=(), **kw):
+def run(msgs, since=SINCE, newsletter_senders=(), person_senders=(), ignore=(), other_senders=(),
+        **kw):
     stub = BucketStub(msgs, **kw)
     classified = ib.find_buckets(cfg(ignore), since, newsletter_senders=newsletter_senders,
-                                 person_senders=person_senders, now=NOW,
-                                 connect=lambda h, p, t: stub)
+                                 person_senders=person_senders, other_senders=other_senders,
+                                 now=NOW, connect=lambda h, p, t: stub)
     return classified, stub
 
 
@@ -317,7 +318,7 @@ def test_cli_count_invariant_exits_2(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(iu.imaplib, "IMAP4_SSL", lambda h, p, timeout=None: stub)
 
     def broken(cand, mine, account, owner, since, now, ignore, newsletter_senders,
-              person_senders, category_uids):
+              person_senders, category_uids, other_senders=()):
         return {"2001"}, set(), {"unanswered": [], "newsletters": [], "other": []}
     monkeypatch.setattr(ib, "_classify", broken)
     assert cli.main(["inbox-buckets", "--json", "--since", SINCE.isoformat()]) == 2
@@ -503,3 +504,35 @@ def test_newsletter_and_person_senders_are_lowercased_and_trimmed():
         ("shop@example.com",)
     assert ib._person_senders({"person_senders": [" @Greenhouse.Example "]}) == \
         ("@greenhouse.example",)
+
+
+# ---------- other_senders: notices that look exactly like newsletters ----------
+
+GOOGLE_NOTICE_HEADERS = [("List-Id", "<98b5bb@google.com>"),
+                         ("List-Unsubscribe", "<https://myaccount.google.com/unsubscribe>")]
+
+
+def test_account_notice_with_newsletter_headers_is_a_newsletter_without_the_setting():
+    classified = run([cmsg(1, 1101, at(0.1), "Google <noreply-accounts@google.com>",
+                           headers=GOOGLE_NOTICE_HEADERS, categories={"updates"})])[0]
+    assert bucket_ids(classified, "newsletters") == ["1101"]
+
+
+def test_other_senders_pins_it_to_other_by_address_or_domain():
+    for entry in ("noreply-accounts@google.com", "@google.com"):
+        classified = run([cmsg(1, 1102, at(0.1), "Google <noreply-accounts@google.com>",
+                               headers=GOOGLE_NOTICE_HEADERS, categories={"updates"})],
+                         other_senders=(entry,))[0]
+        assert bucket_ids(classified, "other") == ["1102"], entry
+        assert bucket_ids(classified, "newsletters") == []
+
+
+def test_person_senders_beats_other_senders():
+    classified = run([cmsg(1, 1103, at(0.1), "Pat <pat@example.org>")],
+                     person_senders=("pat@example.org",), other_senders=("@example.org",))[0]
+    assert bucket_ids(classified, "unanswered") == ["1103"]
+
+
+def test_malformed_other_senders_is_a_loud_config_failure():
+    with pytest.raises(ib.BucketsError, match="other_senders"):
+        ib._other_senders({"other_senders": "noreply-accounts@google.com"})

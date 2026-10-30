@@ -54,6 +54,8 @@ DEFAULTS = {
     # if Gmail categorized the mail out of the primary inbox or it carries list headers (e.g. a
     # recruiter mailing through Greenhouse/Lever, or a person posting through a Google Group).
     "person_senders": [],
+    # inbox-buckets: senders always filed as other (e.g. account notices with newsletter headers).
+    "other_senders": [],
 }
 
 

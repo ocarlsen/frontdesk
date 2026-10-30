@@ -249,9 +249,15 @@ category check, the newsletter headers, the automated/ignore check -- and always
 as `unanswered`; use it for a sender that looks automated but is really a person, like a
 recruiter mailing through Greenhouse or Lever, or someone posting through a Google Group.
 
+`other_senders` works the other way: a match always lands in `other`, even with newsletter
+headers. Use it for notices that look exactly like newsletters, such as Google's account-security
+mail, which carries List-Id and List-Unsubscribe and sits in Gmail's Updates category.
+`person_senders` still wins if a sender is on both lists.
+
 ```json
 {"imap_account": "you@gmail.com", "imap_keychain_service": "my-gmail-imap",
- "newsletter_senders": ["@substack.com"], "person_senders": ["@greenhouse.io"]}
+ "newsletter_senders": ["@substack.com"], "person_senders": ["@greenhouse.io"],
+ "other_senders": ["noreply-accounts@google.com"]}
 ```
 
 ```
