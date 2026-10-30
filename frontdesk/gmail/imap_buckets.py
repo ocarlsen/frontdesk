@@ -31,7 +31,8 @@ person posting through a Google Group, who should always land in `unanswered`.
 
 Each candidate thread lands in exactly one of three buckets, or is left out as "replied" (the
 owner's own message is the newest). Precedence when more than one rule could apply: replied-out
-first (not really a candidate for anything else), then a person_senders pin, then newsletter
+first (not really a candidate for anything else), then a person_senders pin, then an
+other_senders pin (notices that look like newsletters), then newsletter
 signals (including the category rule once nothing pins or newsletter-flags it), then the ordinary
 is_automated/ignore-list check, then other. A newsletter is never "unanswered".
 
@@ -72,6 +73,11 @@ def _newsletter_senders(settings: dict) -> tuple[str, ...]:
                                      "newsletter_senders", BucketsError)
 
 
+def _other_senders(settings: dict) -> tuple[str, ...]:
+    return iu._validate_address_list(settings.get("other_senders", []),
+                                     "other_senders", BucketsError)
+
+
 def _person_senders(settings: dict) -> tuple[str, ...]:
     return iu._validate_address_list(settings.get("person_senders", []),
                                      "person_senders", BucketsError)
@@ -98,6 +104,7 @@ def _newer_than_days(now: datetime, since: datetime) -> int:
 
 def find_buckets(cfg: iu.ImapConfig, since: datetime, newsletter_senders: tuple[str, ...] = (),
                  person_senders: tuple[str, ...] = (), now: datetime | None = None,
+                 other_senders: tuple[str, ...] = (),
                  connect: Callable | None = None,
                  timeout: float = TIMEOUT_S) -> tuple[set[str], set[str], dict[str, list[dict]]]:
     """Returns (expected, replied, buckets): `expected` is every candidate thread id, `replied`
@@ -112,7 +119,7 @@ def find_buckets(cfg: iu.ImapConfig, since: datetime, newsletter_senders: tuple[
                 client = connect(cfg.host, iu.PORT, timeout)
             try:
                 return _run(client, cfg, owner, since, now or datetime.now(UTC),
-                           newsletter_senders, person_senders, cfg.ignore)
+                           newsletter_senders, person_senders, cfg.ignore, other_senders)
             finally:
                 with suppress(Exception):   # the result (or the real error) stands
                     client.logout()
@@ -126,7 +133,8 @@ def _empty_result() -> tuple[set[str], set[str], dict[str, list[dict]]]:
 
 def _run(client, cfg: iu.ImapConfig, owner: str, since: datetime, now: datetime,
         newsletter_senders: tuple[str, ...], person_senders: tuple[str, ...],
-        ignore: tuple[str, ...]) -> tuple[set[str], set[str], dict[str, list[dict]]]:
+        ignore: tuple[str, ...],
+        other_senders: tuple[str, ...] = ()) -> tuple[set[str], set[str], dict[str, list[dict]]]:
     with iu._step("imap login", error_cls=BucketsError):
         client.login(cfg.account, cfg.password)
     with iu._step("imap list", error_cls=BucketsError):
@@ -153,7 +161,7 @@ def _run(client, cfg: iu.ImapConfig, owner: str, since: datetime, now: datetime,
         cand_msgs, mine_msgs = iu._parse_fetch(cand_dat), iu._parse_fetch(mine_dat)
     with iu._step("classify", error_cls=BucketsError):
         return _classify(cand_msgs, mine_msgs, cfg.account, owner, since, now, ignore,
-                         newsletter_senders, person_senders, category_uids)
+                         newsletter_senders, person_senders, category_uids, other_senders)
 
 
 def _in_window(m: iu._Msg, since: datetime) -> bool:
@@ -162,9 +170,13 @@ def _in_window(m: iu._Msg, since: datetime) -> bool:
 
 def _bucket_for(headers, addr: str, newsletter_senders: tuple[str, ...],
                 ignore: tuple[str, ...], person_senders: tuple[str, ...],
-                in_category: bool) -> str:
+                in_category: bool, other_senders: tuple[str, ...] = ()) -> str:
     if addr and iu.ignored(addr, person_senders):
         return "unanswered"          # pinned: overrides the newsletter and category rules below
+    if addr and iu.ignored(addr, other_senders):
+        # Pinned to other: notices that carry newsletter headers anyway (Google's account-security
+        # mail has List-Id and List-Unsubscribe and sits in Updates, exactly like a newsletter).
+        return "other"
     has_newsletter_signal = (
         headers.get("List-Unsubscribe") is not None
         or headers.get("List-Id") is not None
@@ -197,7 +209,8 @@ def _item(account: str, thrid: int, name: str, addr: str, last: iu._Msg, now: da
 def _classify(cand: list[iu._Msg], mine: list[iu._Msg], account: str, owner: str,
               since: datetime, now: datetime, ignore: tuple[str, ...],
               newsletter_senders: tuple[str, ...], person_senders: tuple[str, ...],
-              category_uids: set[int]) -> tuple[set[str], set[str], dict[str, list[dict]]]:
+              category_uids: set[int], other_senders: tuple[str, ...] = (),
+              ) -> tuple[set[str], set[str], dict[str, list[dict]]]:
     """Threads come from the candidates only (an INBOX message at or after --since); the owner's
     own messages only decide whether the owner spoke last, exactly as imap_unanswered._classify
     does. `expected` is computed here, straight from the in-window candidates, independently of
@@ -225,7 +238,7 @@ def _classify(cand: list[iu._Msg], mine: list[iu._Msg], account: str, owner: str
             replied_ids.add(str(thrid))
             continue
         bucket = _bucket_for(last.headers, addr, newsletter_senders, ignore, person_senders,
-                             last.uid in category_uids)
+                             last.uid in category_uids, other_senders)
         item = _item(account, thrid, name, addr, last, now, len(ms))
         if bucket == "newsletters":
             item["read_url"] = item["gmail_url"]

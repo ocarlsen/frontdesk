@@ -251,9 +251,10 @@ def inbox_buckets_main(args) -> int:
         # config failure that never reaches a Keychain read.
         newsletter_senders = ib._newsletter_senders(s)
         person_senders = ib._person_senders(s)
+        other_senders = ib._other_senders(s)
         cfg = iu.resolve_config(s)
         classified = ib.find_buckets(cfg, since, newsletter_senders=newsletter_senders,
-                                     person_senders=person_senders)
+                                     person_senders=person_senders, other_senders=other_senders)
         rep = ib.report(classified, args.limit, args.since)
     except iu._StepError as e:
         print(f"frontdesk inbox-buckets: {e}", file=sys.stderr)
