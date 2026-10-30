@@ -160,7 +160,11 @@ function buildDetail(item, triage) {
   if (!summary) { full.open = true; buildThread(); }
   d.append(full);
   const reply = el("div", "reply");
-  const actions = el("div", "actions");
+  // The reply action row: a "reply" group (Save, Send, Copy) and a "thread" group pushed right
+  // (Move to, Star, Archive or Done, then the Open in Gmail/Slack link, which leaves FrontDesk).
+  const actions = el("div", "actions replyactions");
+  const replyGroup = el("div", "replygroup");
+  const threadGroup = el("div", "threadgroup");
   const proposed = triage && triage.proposed_reply ? triage.proposed_reply : "";
   const id = "reply-" + Math.random().toString(36).slice(2);
   const head = el("h3", "panelhead", "Reply");
@@ -207,12 +211,12 @@ function buildDetail(item, triage) {
   reply.append(head, label, ta, hint);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
-  if (isGmail) actions.append(save);
-  actions.append(send, copy);
+  if (isGmail) replyGroup.append(save);
+  replyGroup.append(send, copy);
   if (triage) {
     // One native drop-down showing the current section (Gmail's "Move to"); v focuses it.
     const moveTo = el("label", "moveto");
-    const pick = el("select", "modelpick movepick");
+    const pick = el("select", "movepick");
     pick.setAttribute("aria-label", "Move to");
     for (const [b, name] of BUCKET_NAMES) {
       pick.append(Object.assign(el("option", null, name), { value: b, selected: b === triage.bucket }));
@@ -221,10 +225,11 @@ function buildDetail(item, triage) {
       const to = pick.value;
       relabel(item, to, bucketName(to), pick, triage.bucket);
     });
-    moveTo.append(el("span", "kbdhint", "Move to"), pick);
-    actions.append(moveTo);
+    pick.title = "Move to another section (v)";   // no visible label: the drop-down speaks for itself
+    moveTo.append(pick);
+    threadGroup.append(moveTo);
   }
-  actions.append(starButton(item, "btn"));
+  threadGroup.append(starButton(item, "btn"));
   const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
@@ -233,23 +238,24 @@ function buildDetail(item, triage) {
     const back = el("button", "btn", item.hidden === "archived" ? "Move to inbox" : "Show in the list");
     back.type = "button";
     back.addEventListener("click", () => restore(item, back));
-    actions.append(back);
-  } else if (isGmail) actions.append(arch);
+    threadGroup.append(back);
+  } else if (isGmail) threadGroup.append(arch);
   else {
     const doneBtn = el("button", "btn btn-archive", "Done");
     doneBtn.type = "button";
     doneBtn.title = "Hide it here until someone posts again (nothing changes in Slack)";
     doneBtn.addEventListener("click", () => markDone(item, doneBtn));
-    actions.append(doneBtn);
+    threadGroup.append(doneBtn);
   }
   const url = safeOpenUrl(item.url);
   if (url) {
-    const a = el("a", "btn", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
+    const a = el("a", "openlink", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
     a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
-    actions.append(a);
+    threadGroup.append(a);
   }
+  for (const g of [replyGroup, threadGroup]) if (g.childNodes.length) actions.append(g);
   if (actions.childNodes.length) reply.append(actions);
   d.append(askPanel(item, ta, people));
   d.append(reply);
@@ -1661,12 +1667,12 @@ function mergeStep(li, p, others, act, reload) {
   });
 }
 
-// ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open, u close, e archive,
+// ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open and close, u only closes, e archive,
 // r reply, m memory, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
 const SHORTCUTS = [
   ["j / k", "Next / previous thread"],
-  ["o or Enter", "Open or close the thread"],
-  ["u", "Close the thread"],
+  ["o or Enter", "Open the thread; press again to close it"],
+  ["u", "Close the thread (never opens one)"],
   ["e", "Archive (Gmail) or Done (Slack)"],
   ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
   ["r", "Reply (jump to the reply box)"],
