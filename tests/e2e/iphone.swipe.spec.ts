@@ -94,3 +94,19 @@ test.describe("swipe on a phone", () => {
     await touchEnd(cdp);
   });
 });
+
+// The undo toast uses the phone's width: it is not squeezed into the right half of the screen,
+// and "Undo" stays on one line (it once wrapped one letter per line).
+test("the undo toast is readable on a phone", async ({ page }) => {
+  await openDemo(page);
+  await page.keyboard.press("j");
+  await page.keyboard.press("j");
+  await page.keyboard.press("e");
+  const toast = page.locator("#toast");
+  await expect(toast).toBeVisible();
+  const vw = page.viewportSize()!.width;
+  const box = (await toast.boundingBox())!;
+  expect(box.width).toBeGreaterThan(vw * 0.6);
+  const undo = (await toast.getByRole("button", { name: "Undo" }).boundingBox())!;
+  expect(undo.width).toBeGreaterThan(30);   // one letter per line made it about 10 px wide
+});
