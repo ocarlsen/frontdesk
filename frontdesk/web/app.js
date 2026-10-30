@@ -312,7 +312,7 @@ async function postAction(kind, itemId, extra) {
     if (kind === "read") return { status: "done" };
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile" || kind === "note" || kind.startsWith("note_") ||
-        kind.startsWith("situation_")) throw new Error("demo mode");
+        kind.startsWith("person_") || kind.startsWith("situation_")) throw new Error("demo mode");
     if (kind === "send_prepare") {
       const it = (window.__items || []).find(r => r.item.id === itemId);
       const inbound = it ? it.item.messages.filter(m => !m.is_mine) : [];
@@ -555,8 +555,12 @@ function askerLabel(author) {
   return "Author not recorded";
 }
 
-function renderNotes(notesBox, people, notes, refresh) {
-  // notes: {who: {text, author, updated_at}}. Saving from here records you as the author.
+function renderNotes(notesBox, people, notes, refresh, aliases, names) {
+  // One box per person in the thread. people: one address per person; notes: {address: {text,
+  // author, updated_at}}; aliases: {address: [their other addresses]}; names: {address: the
+  // name you typed}. Saving from here records you as the author.
+  aliases = aliases || {};
+  names = names || {};
   notesBox.replaceChildren();
   const nd = el("details", "notes");
   nd.append(el("summary", null, "Your notes on these people (" + Object.keys(notes).length + ")"));
@@ -568,7 +572,8 @@ function renderNotes(notesBox, people, notes, refresh) {
     return;
   }
   for (const p of people) {
-    const n = notes[p.toLowerCase()];
+    const key = p.toLowerCase();
+    const n = notes[key];
     const t = el("textarea");
     t.rows = 2;
     t.value = n ? n.text : "";
@@ -576,13 +581,20 @@ function renderNotes(notesBox, people, notes, refresh) {
     const sv = el("button", "btn small", "Save");
     sv.type = "button";
     sv.addEventListener("click", async () => {
+      if (!t.value.trim()) {   // saving empty text never deletes; Delete lives on the Memory page
+        toast("A note needs text. To remove one, use Delete on the Memory page (key m).");
+        return;
+      }
       try {
         await postAction("note", "", { who: p, text: t.value, author: "owner" });
         toast("Note saved.");
         refresh();
       } catch (e) { toast("Save failed: " + e.message); }
     });
-    nd.append(el("p", "notewho", p), t);
+    nd.append(el("p", "notewho", names[key] ? names[key] + " (" + p + ")" : p));
+    const more = aliases[key] || [];
+    if (more.length) nd.append(el("p", "kbdhint authorlabel", "Also " + more.join(", ")));
+    nd.append(t);
     if (n) nd.append(el("p", "kbdhint authorlabel", authorLabel(n.author, n.updated_at)));
     const row = el("div", "actions");
     row.append(sv);
@@ -616,7 +628,7 @@ function askPanel(item, replyBox) {
   return det;
 }
 
-function renderAnswer(box, a, replyBox, refreshNotes) {
+function renderAnswer(box, a, replyBox, refreshNotes, itemId) {
   const ans = el("div", "answer");
   ans.append(el("p", "answertext", a.text || a.answer || ""));
   const row = el("div", "actions");
@@ -639,7 +651,9 @@ function renderAnswer(box, a, replyBox, refreshNotes) {
     b.addEventListener("click", async () => {
       b.disabled = true;
       try {
-        await postAction("note", "", { who: n.who, text: n.text, append: true, author: "owner" });
+        // The server saves it only if n.who is someone in this thread (model output never
+        // creates a person), appending to their note.
+        await postAction("note_suggestion", itemId, { who: n.who, text: n.text, author: "owner" });
         b.textContent = "Saved note for " + n.who;
         refreshNotes();
       } catch (e) { b.disabled = false; toast("Save failed: " + e.message); }
@@ -752,7 +766,7 @@ async function buildAsk(item, replyBox, body, summaryEl) {
     if (!res.ok) return null;
     const data = await res.json();
     people = data.people || [];
-    renderNotes(notesBox, people, data.notes || {}, refreshNotes);
+    renderNotes(notesBox, people, data.notes || {}, refreshNotes, data.aliases, data.names);
     return data;
   };
   const data = await refreshNotes();
@@ -764,7 +778,7 @@ async function buildAsk(item, replyBox, body, summaryEl) {
     for (const e of turn.entries) {
       if (e.kind === "q") { t.append(el("p", "askq", questionText(e.h))); askedBy(t, e.h); }
       else if (e.kind === "second") { t.append(el("p", "askq", "Second opinion on the answer above")); askedBy(t, e.h); }
-      else renderAnswer(t, e.h, replyBox, refreshNotes);
+      else renderAnswer(t, e.h, replyBox, refreshNotes, item.id);
     }
   }
   layout();
@@ -788,11 +802,11 @@ async function buildAsk(item, replyBox, body, summaryEl) {
         for (const a of out.answers) {
           if (a.error) { t.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
           if (a.draft_reply) lastDraft = a.draft_reply;
-          renderAnswer(t, a, replyBox, refreshNotes);
+          renderAnswer(t, a, replyBox, refreshNotes, item.id);
         }
       } else {
         if (out.draft_reply) lastDraft = out.draft_reply;
-        renderAnswer(t, out, replyBox, refreshNotes);
+        renderAnswer(t, out, replyBox, refreshNotes, item.id);
       }
       layout();
       q.value = "";
@@ -1101,14 +1115,195 @@ function renderSituation(box, items, demo, reload) {
   box.append(add, r3);
 }
 
+// ---- Memory: everything FrontDesk remembers for Ask, in one place. Profile, What's going on,
+// then people, newest first. Delete, Merge and Confirm are yours alone (the server checks too).
+// A display name seen in mail is shown greyed as unconfirmed and never reaches the model: a
+// person has a name only once you type one.
+async function openMemory() {
+  const panel = document.getElementById("profilepanel");
+  panel.setAttribute("aria-label", "Memory");
+  const box = el("div", "helpbox memorybox");
+  box.append(el("h2", null, "Memory"), el("p", "kbdhint", "Loading"));
+  panel.replaceChildren(box);
+  panel.hidden = false;
+  const reload = async () => {
+    try {
+      const res = await fetch(STATIC ? "api/memory.json" : "/api/memory", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      renderMemory(box, await res.json(), reload);
+    } catch (e) {
+      box.replaceChildren(el("h2", null, "Memory"),
+                          el("p", "kbdhint", "Could not load your memory: " + e.message));
+    }
+  };
+  await reload();
+}
+
+function renderMemory(box, data, reload) {
+  const demo = !!data.demo;
+  const head = el("div", "memhead");
+  const close = el("button", "btn small", "Close");
+  close.type = "button";
+  close.addEventListener("click", () => { document.getElementById("profilepanel").hidden = true; });
+  head.append(el("h2", null, "Memory"), close);
+  box.replaceChildren(head, el("p", "kbdhint", "Everything FrontDesk remembers for Ask, kept on " +
+    "this computer. Ask sends the parts about a thread's people with each question."));
+  if (!demo) {
+    const dl = el("a", "btn small", "Download my memory (JSON)");
+    dl.href = "/api/memory/export";
+    dl.setAttribute("download", "frontdesk-memory.json");
+    const r = el("div", "actions");
+    r.append(dl);
+    box.append(r);
+  }
+  const prof = el("div", "memsection");
+  prof.append(el("h3", null, "Profile"));
+  prof.append(el("p", "situationtext", data.profile || "Not set."));
+  if (data.signoff) prof.append(el("p", "kbdhint", "Sign-off: " + data.signoff));
+  const edit = el("button", "btn small", demo ? "Open profile" : "Edit profile");
+  edit.type = "button";
+  edit.addEventListener("click", openProfile);
+  const pr = el("div", "actions");
+  pr.append(edit);
+  prof.append(pr);
+  const sit = el("div", "situation");
+  renderSituation(sit, data.situation || [], demo, reload);
+  const ppl = el("div", "situation people");
+  renderPeople(ppl, data.people || [], demo, reload);
+  box.append(prof, sit, ppl);
+  const mig = data.migration;
+  if (mig && (mig.skipped_owner_address || []).length) {
+    box.append(el("p", "kbdhint", "When notes moved to people, " + mig.skipped_owner_address.length +
+      " note on your own address was left out: " + mig.skipped_owner_address.join(", ") + "."));
+  }
+}
+
+function personTitle(p) {
+  return p.name || (p.addresses || [])[0] || "(no address)";
+}
+
+function renderPeople(box, people, demo, reload) {
+  // people: [{id, name, note, author, created_at, updated_at, addresses, mail_names}], newest first.
+  box.replaceChildren(el("h3", null, "People"));
+  const act = async (kind, extra, failMsg) => {
+    try { await postAction(kind, "", Object.assign({ author: "owner" }, extra)); reload(); }
+    catch (e) { toast(failMsg + ": " + e.message); }
+  };
+  if (!people.length) {
+    box.append(el("p", "kbdhint", demo ? "Demo: nothing is remembered here. In your own copy, " +
+      "notes you save from Ask appear here." : "No one yet. Notes you save from Ask appear here."));
+  }
+  for (const p of people) {
+    const li = el("div", "situationitem person");
+    const title = el("p", "personname", personTitle(p));
+    // Unnamed: the title already is the address, so list only the others (no repeat).
+    const rest = p.name ? (p.addresses || []) : (p.addresses || []).slice(1);
+    const parts = [title];
+    if (rest.length) parts.push(el("p", "kbdhint personaddrs", (p.name ? "" : "also ") + rest.join(", ")));
+    if (!p.name && (p.mail_names || []).length) {
+      parts.push(el("p", "kbdhint unconfirmed", "From mail, unconfirmed: " + p.mail_names.join(", ")));
+    }
+    parts.push(el("p", "situationtext", p.note),
+               el("p", "kbdhint authorlabel", authorLabel(p.author, p.updated_at)));
+    const row = el("div", "actions");
+    if (!demo) {
+      const edit = el("button", "btn small", "Edit");
+      edit.type = "button";
+      edit.addEventListener("click", () => {
+        const nameLabel = el("label", "kbdhint", "Name (only you set this; mail never does)");
+        const name = el("input", "nameinput");
+        name.type = "text";
+        name.maxLength = 100;
+        name.value = p.name || "";
+        name.id = "person-name-" + p.id;
+        nameLabel.htmlFor = name.id;
+        const ta = el("textarea");
+        ta.rows = 3;
+        ta.maxLength = 2000;
+        ta.value = p.note;
+        const sv = el("button", "btn small primary", "Save");
+        sv.type = "button";
+        sv.addEventListener("click", () => {
+          if (!ta.value.trim()) { toast("A note needs text. To remove the person, use Delete."); return; }
+          act("person_update", { id: p.id, text: ta.value, name: name.value }, "Save failed");
+        });
+        const cancel = el("button", "btn small", "Cancel");
+        cancel.type = "button";
+        cancel.addEventListener("click", reload);
+        const r2 = el("div", "actions");
+        r2.append(sv, cancel);
+        li.replaceChildren(addrs, nameLabel, name, ta, r2);
+        name.focus();
+      });
+      row.append(edit);
+      if (p.author !== "owner") {
+        const ok = el("button", "btn small", "Confirm");
+        ok.type = "button";
+        ok.title = "Mark this note as yours, as written";
+        ok.addEventListener("click", () => act("person_confirm", { id: p.id }, "Confirm failed"));
+        row.append(ok);
+      }
+      const del = el("button", "btn small", "Delete");
+      del.type = "button";
+      del.title = "Forget this person, their addresses and their note";
+      del.addEventListener("click", () => act("person_delete", { id: p.id }, "Delete failed"));
+      row.append(del);
+      const others = people.filter(o => o.id !== p.id);
+      if (others.length) {
+        const merge = el("button", "btn small", "Merge into...");
+        merge.type = "button";
+        merge.addEventListener("click", () => mergeStep(li, p, others, act, reload));
+        row.append(merge);
+      }
+    }
+    parts.push(row);
+    li.append(...parts);
+    box.append(li);
+  }
+}
+
+function mergeStep(li, p, others, act, reload) {
+  // Pick who to merge into, then confirm: merging cannot be undone.
+  const pick = el("select", "modelpick");
+  pick.append(Object.assign(el("option", null, "Choose a person"), { value: "" }));
+  for (const o of others) {
+    pick.append(Object.assign(el("option", null, personTitle(o) + " (" + o.addresses.join(", ") + ")"),
+                              { value: String(o.id) }));
+  }
+  const next = el("button", "btn small", "Merge");
+  next.type = "button";
+  const cancel = el("button", "btn small", "Cancel");
+  cancel.type = "button";
+  cancel.addEventListener("click", reload);
+  const r = el("div", "actions");
+  r.append(pick, next, cancel);
+  li.replaceChildren(el("p", "personname", "Merge " + personTitle(p) + " into..."), r);
+  next.addEventListener("click", () => {
+    const into = others.find(o => String(o.id) === pick.value);
+    if (!into) { toast("Choose who to merge into."); return; }
+    const yes = el("button", "btn small primary", "Yes, merge");
+    yes.type = "button";
+    yes.addEventListener("click", () => act("person_merge", { id: p.id, into: into.id }, "Merge failed"));
+    const no = el("button", "btn small", "Cancel");
+    no.type = "button";
+    no.addEventListener("click", reload);
+    const r2 = el("div", "actions");
+    r2.append(yes, no);
+    li.replaceChildren(el("p", "personname", "Merge " + personTitle(p) + " into " + personTitle(into) + "?"),
+      el("p", "kbdhint", (p.addresses || []).join(", ") + " and this note move to " + personTitle(into) +
+        ", and " + personTitle(p) + " is removed. This cannot be undone."), r2);
+  });
+}
+
 // ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open, u close, e archive,
-// r reply, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
+// r reply, m memory, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
 const SHORTCUTS = [
   ["j / k", "Next / previous thread"],
   ["o or Enter", "Open or close the thread"],
   ["u", "Close the thread"],
   ["e", "Archive (Gmail) or Done (Slack)"],
   ["r", "Reply (jump to the reply box)"],
+  ["m", "Memory: everything FrontDesk remembers"],
   ["?", "Show or hide this list"],
   ["Esc", "Leave the reply box / close this list"],
 ];
@@ -1211,6 +1406,7 @@ function onKey(e) {
         if (ta) { ta.focus(); ta.scrollIntoView({ block: "center" }); }
       }
       break;
+    case "m": openMemory(); break;
     case "?": toggleHelp(); break;
     default: return;
   }
@@ -1267,6 +1463,7 @@ async function pollStatus() {
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sync").addEventListener("click", syncNow);
   document.getElementById("profile").addEventListener("click", openProfile);
+  document.getElementById("memory").addEventListener("click", openMemory);
   buildHelp();
   document.addEventListener("keydown", onKey);
   load();

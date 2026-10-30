@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from email.utils import parseaddr
 
 from .items import Item
 from .pricing import cost_usd
 from .providers import Provider, ProviderError
-from .store import OWNER, Store, check_author
+from .store import OWNER, Store, check_author, owner_keys
 
 ADVISE = ("What do you think? Read what this person is really asking for, how it fits my goals "
           "and my history with them, and tell me what I should do next. Be candid. If a reply "
@@ -147,8 +148,51 @@ def with_signoff(text: str, signoff: str) -> str:
 
 def others(item: Item) -> list[str]:
     """The thread's participants minus the owner: notes are about other people, never the owner
-    (a note keyed on the owner's own address would otherwise ride along on every Ask)."""
-    return [p for p in item.participants if p.lower() != item.account.lower()]
+    (a note keyed on the owner's own address would otherwise ride along on every Ask). The owner
+    is the mailbox on Gmail; on Slack, whoever sent the owner's own messages (store.owner_keys)."""
+    mine = owner_keys(item)
+    return [p for p in item.participants if p.lower() not in mine]
+
+
+def resolve_participant(item: Item, who: str) -> str | None:
+    """The participant key (lowercase) a model's note suggestion names, or None. `who` may be
+    the key itself, an address in "Name <addr>" form, or (Gmail) the display name of exactly one
+    other sender. Only the resolved key is stored, never the display name, so model output can
+    only add a note to someone already in this thread, never create a person from nothing."""
+    if not isinstance(who, str) or not who.strip():
+        return None
+    keys = {p.lower() for p in others(item)}
+    w = who.strip().lower()
+    if w in keys:
+        return w
+    addr = parseaddr(who)[1].strip().lower()
+    if "@" in addr and addr in keys:
+        return addr
+    if item.source == "gmail":
+        found = {a.strip().lower() for n, a in (parseaddr(m.sender) for m in item.messages
+                                                if not m.is_mine)
+                 if n.strip().lower() == w and a.strip().lower() in keys}
+        if len(found) == 1:
+            return found.pop()
+    return None
+
+
+def note_line(person: dict, exclude: set[str] = frozenset()) -> str:
+    """One person in <owner_notes>: their addresses, the name only when the owner typed one
+    (people.name has no other writer; display names from mail never get here), then who wrote
+    the note and when. 'fab@x.com, f@x.com (written by the owner, 2026-10-28): text'."""
+    who = ", ".join(_owner_text(a) for a in person["addresses"] if a not in exclude)
+    if person["name"]:
+        who += f" (named {_owner_text(person['name'])} by the owner)"
+    return (f"{who} {provenance(person['author'], person['updated_at'])}: "
+            f"{_owner_text(person['note'])}")
+
+
+def note_lines(store: Store, item: Item) -> list[str]:
+    """The <owner_notes> lines for a thread: one per person with a note, however many of their
+    addresses are in it."""
+    mine = owner_keys(item)
+    return [note_line(p, mine) for p in store.people_for(others(item)) if p["note"]]
 
 
 def build_prompt(store: Store, item: Item, question: str, profile: str, *, author: str) -> str:
@@ -162,7 +206,7 @@ def build_prompt(store: Store, item: Item, question: str, profile: str, *, autho
                         "summary": summary, "source": other.source,
                         "last_message": {"sender": last.sender, "body":
                                          last.body[:RELATED_BODY_CAP]} if last else None})
-    notes = store.notes_for(others(item))
+    notes = note_lines(store, item)
     history = store.ask_history(item.id)
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     parts = [f"Today is {today}. The owner is {item.account}."]
@@ -171,9 +215,7 @@ def build_prompt(store: Store, item: Item, question: str, profile: str, *, autho
                  for s in store.situation()]
     parts.append("<owner_situation>\n" + ("\n".join(situation) or "(none)")
                  + "\n</owner_situation>")
-    parts.append("<owner_notes>\n" + ("\n".join(
-        f"{k} {provenance(v['author'], v['updated_at'])}: {_owner_text(v['text'])}"
-        for k, v in notes.items()) or "(none)") + "\n</owner_notes>")
+    parts.append("<owner_notes>\n" + ("\n".join(notes) or "(none)") + "\n</owner_notes>")
     parts.append(f"<untrusted_thread>\n{_quote(thread)}\n</untrusted_thread>")
     parts.append(f"<untrusted_related>\n{_quote(related)}\n</untrusted_related>")
     if history:

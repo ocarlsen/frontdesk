@@ -49,6 +49,8 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
         # Same shape as GET /api/profile in demo mode: empty and read-only.
         (out / "api" / "profile.json").write_text(
             json.dumps({"profile": "", "signoff": "", "demo": True, "situation": []}))
+        # Same shape as GET /api/memory in demo mode: the Memory page shows empty, read-only.
+        (out / "api" / "memory.json").write_text(json.dumps(server.DEMO_MEMORY))
         meta = _meta_csp(server.MSG_CSP)
         for r in rows:
             for i, m in enumerate(r["item"]["messages"]):

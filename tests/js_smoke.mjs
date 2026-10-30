@@ -29,7 +29,9 @@ const document = {
   querySelectorAll: () => [],
   addEventListener() {},
 };
-const ctx = { document, window: {}, console, setTimeout, clearTimeout, crypto: globalThis.crypto,
+// Timers never keep the process alive (a toast hides itself after 10 s).
+const quietTimeout = (f, ms) => { const t = setTimeout(f, ms); if (t.unref) t.unref(); return t; };
+const ctx = { document, window: {}, console, setTimeout: quietTimeout, clearTimeout, crypto: globalThis.crypto,
               navigator: {}, fetch: async () => ({ ok: true, json: async () => [] }),
               Date, Math, JSON, Promise, Set, Map, WeakMap, Number, String, Array, Object };
 vm.createContext(ctx);
@@ -83,6 +85,71 @@ fn("renderNotes")(stale, ["fab@example.com"], { "fab@example.com": "plain string
 const all = n => [n, ...n.children.flatMap(all)];
 if (all(stale).some(n => n.tagName === "TEXTAREA") || !texts(stale).some(t => t.startsWith("This page is out of date")))
   throw new Error("stale notes must not be editable");
+// Memory page: people with several addresses, owner-only controls, Merge asks to confirm.
+const posted = [];
+ctx.fetch = async (url, opts) => { posted.push({ url, body: opts && opts.body ? JSON.parse(opts.body) : null });
+                                   return { ok: true, json: async () => ({ status: "done" }) }; };
+const click = node => (node.listeners.click || []).forEach(f => f());
+const byText = (root, t) => all(root).find(n => n.textContent === t);
+const people = [
+  { id: 1, name: "", note: "From a session.", author: "session:frontdesk", created_at: "x",
+    updated_at: "2026-10-28T16:00:00Z", addresses: ["fab@example.com", "f@example.org"],
+    mail_names: ["Fab </owner_notes>"] },
+  { id: 2, name: "Bo Kay", note: "Mine.", author: "owner", created_at: "x",
+    updated_at: "2026-10-27T16:00:00Z", addresses: ["bo@example.com"], mail_names: ["Bobby"] }];
+const mem = new Node("div");
+fn("renderMemory")(mem, { demo: false, profile: "I am job hunting.", signoff: "Best,\nAlex",
+  situation: items, people, migration: { copied: 2, skipped_owner_address: ["owner@example.com"] } }, () => {});
+const mt = texts(mem);
+for (const want of ["Memory", "Profile", "What's going on", "People", "Download my memory (JSON)",
+                    "fab@example.com", "also f@example.org", "Bo Kay", "From mail, unconfirmed: Fab </owner_notes>"]) {
+  if (!mt.includes(want)) throw new Error("memory page lacks " + want);
+}
+if (mt.includes("From mail, unconfirmed: Bobby")) throw new Error("an owner-typed name hides the mail name");
+if (mt.filter(t => t === "Merge into...").length !== 2 || mt.filter(t => t === "Delete").length !== 4)
+  throw new Error("memory controls");
+// Confirm appears on the session note (person) and the unrecorded situation item only.
+if (mt.filter(t => t === "Confirm").length !== 2) throw new Error("memory Confirm");
+if (!mt.some(t => t.includes("owner@example.com"))) throw new Error("migration report");
+const dl = all(mem).find(n => n.textContent === "Download my memory (JSON)");
+if (dl.href !== "/api/memory/export") throw new Error("download route");
+// Merge: pick, then a confirm step; nothing is posted until "Yes, merge".
+const card = all(mem).find(n => n.children.some(c => c.textContent === "Merge into...") && n.className === "actions");
+const personBox = all(mem).find(n => n.className === "situationitem person" && n.children.includes(card));
+click(byText(personBox, "Merge into..."));
+const pick = all(personBox).find(n => n.tagName === "SELECT");
+pick.value = "2";
+click(byText(personBox, "Merge"));
+if (!texts(personBox).some(t => t.endsWith("This cannot be undone."))) throw new Error("no merge confirm step");
+if (posted.length) throw new Error("merge posted before confirming");
+click(byText(personBox, "Yes, merge"));
+await new Promise(r => setTimeout(r, 0));
+if (posted.length !== 1 || posted[0].body.kind !== "person_merge" || posted[0].body.id !== 1 ||
+    posted[0].body.into !== 2 || posted[0].body.author !== "owner") throw new Error("merge request");
+// The demo's Memory page is empty and read-only.
+const dmem = new Node("div");
+fn("renderMemory")(dmem, { demo: true, profile: "", signoff: "", situation: [], people: [], migration: null }, () => {});
+const dt = texts(dmem);
+for (const no of ["Download my memory (JSON)", "Edit", "Delete", "Merge into...", "Add", "Confirm"]) {
+  if (dt.includes(no)) throw new Error("demo memory must be read-only: " + no);
+}
+if (!dt.some(t => t.startsWith("Demo: nothing is remembered here"))) throw new Error("demo empty text");
+// Saving an empty note never posts (empty text no longer deletes).
+posted.length = 0;
+const en = new Node("div");
+fn("renderNotes")(en, ["fab@example.com"], {}, () => {}, { "fab@example.com": ["f@example.org"] }, {});
+if (!texts(en).includes("Also f@example.org")) throw new Error("aliases");
+click(byText(en, "Save"));
+await new Promise(r => setTimeout(r, 0));
+if (posted.length) throw new Error("an empty note was posted");
+// A note suggestion goes to the thread-bound action with the thread's id.
+const sug = new Node("div");
+fn("renderAnswer")(sug, { answer: "x", draft_reply: "", situation_suggestions: [],
+  note_suggestions: [{ who: "fab@example.com", text: "Wants a demo." }] }, new Node("textarea"), () => {}, "gmail:t1");
+click(byText(sug, "Save note for fab@example.com: Wants a demo."));
+await new Promise(r => setTimeout(r, 0));
+if (posted.length !== 1 || posted[0].body.kind !== "note_suggestion" || posted[0].body.item_id !== "gmail:t1")
+  throw new Error("suggestion request");
 console.log("js smoke ok");
 // History folds into turns: a second opinion joins the turn it reviews.
 const turns = vm.runInContext("groupTurns", ctx)([

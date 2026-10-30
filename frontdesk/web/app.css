@@ -152,10 +152,10 @@ details > .linkbtn { display: block; margin: 0 0 6px auto; }
 
 li.card.current { box-shadow: inset 3px 0 0 var(--accent); }
 .help { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
-  background: rgba(0,0,0,.35); padding: 16px; }
+  grid-template-columns: minmax(0, 1fr); background: rgba(0,0,0,.35); padding: 16px; }
 .help[hidden] { display: none; }
 .helpbox { background: var(--card); color: var(--text); border-radius: 10px; padding: 18px 22px;
-  max-width: 420px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  max-width: 420px; width: 100%; min-width: 0; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
 .helpbox h2 { margin: 0 0 10px; font-size: 1rem; }
 .helpbox dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
 .helpbox dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
@@ -216,3 +216,20 @@ li.card:not(.unread) .sender { font-weight: 500; }
 
 /* Text boxes size to their content (app.js fitText is the fallback); long ones scroll. */
 textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-y: auto; }
+
+/* Memory page: wider than the other dialogs, scrolls inside the overlay, fits a phone. */
+.helpbox.memorybox { max-width: 720px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.memhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.memhead h2 { margin: 0; }
+.memsection { margin-top: 12px; }
+.memsection h3 { font-size: 1em; margin: 4px 0; }
+.personname { margin: 2px 0; font-weight: 600; }
+.personaddrs { margin: 0 0 2px; overflow-wrap: anywhere; }
+.unconfirmed { margin: 0 0 2px; font-style: italic; opacity: .85; }
+.nameinput { width: 100%; font: inherit; padding: 6px 8px; margin: 2px 0 6px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.memorybox .actions select { max-width: 100%; }
+@media (max-width: 560px) {
+  .helpbox.memorybox { padding: 14px 14px; max-height: calc(100vh - 16px); }
+  .help { padding: 8px; }
+}

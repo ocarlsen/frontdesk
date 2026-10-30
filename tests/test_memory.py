@@ -103,11 +103,11 @@ def test_note_records_author_and_confirm_keeps_text_and_date(tmp_path):
     s.save_note(FAB, "Wants a demo.", "session:frontdesk")
     before = s.notes_for([FAB])[FAB]
     assert before["author"] == "session:frontdesk"
-    s.confirm_note(FAB)
+    s.confirm_note(FAB, "owner")
     after = s.notes_for([FAB])[FAB]
     assert after == {**before, "author": "owner"}
     with pytest.raises(InvalidMemory):
-        s.confirm_note("nobody@example.com")
+        s.confirm_note("nobody@example.com", "owner")
     with pytest.raises(InvalidMemory):
         s.save_note(FAB, "x", "unrecorded")
 
@@ -130,8 +130,11 @@ def test_prompt_labels_notes_history_and_situation_by_author(tmp_path):
     item = mk(s)
     s.save_note(FAB, "Owner wrote this.", "owner")
     s.save_note("bo@example.com", "Session wrote this.", "session:frontdesk")
-    s.db.execute("INSERT INTO notes (who, text, updated_at) VALUES (?,?,?)",
-                 ("cy@example.com", "Old note.", "2026-10-01T00:00:00Z"))
+    # A note from before authorship, as the people migration copies it.
+    pid = s.db.execute("INSERT INTO people (note, author, created_at, updated_at) VALUES "
+                       "(?,?,?,?)", ("Old note.", "unrecorded", "2026-10-01T00:00:00Z",
+                                     "2026-10-01T00:00:00Z")).lastrowid
+    s.db.execute("INSERT INTO addresses VALUES (?,?)", ("cy@example.com", pid))
     s.db.commit()
     item.participants.extend(["bo@example.com", "cy@example.com"])
     s.add_ask(item.id, "owner", "I typed this", "owner")
@@ -407,10 +410,22 @@ def test_static_export_profile_has_the_same_shape(tmp_path):
     assert got == {"profile": "", "signoff": "", "demo": True, "situation": []}
 
 
+def owner_person(s: Store, key: str) -> None:
+    """A person on the owner's own key, as one saved before that mailbox was synced would be
+    (save_note refuses it once the store knows the key is the owner's)."""
+    pid = s.db.execute("INSERT INTO people (note, author, created_at, updated_at) VALUES "
+                       "('SELF NOTE','session:x','2026-10-01T00:00:00Z','2026-10-01T00:00:00Z')"
+                       ).lastrowid
+    s.db.execute("INSERT INTO addresses VALUES (?,?)", (key, pid))
+    s.db.commit()
+
+
 def test_a_note_on_the_owners_own_address_never_reaches_the_prompt(tmp_path):
     s = Store(tmp_path / "o.db")
     item = mk(s)
-    s.save_note(ME, "SELF NOTE", "session:x")
+    with pytest.raises(InvalidMemory, match="your own address"):
+        s.save_note(ME, "SELF NOTE", "session:x")
+    owner_person(s, ME)
     s.save_note(FAB, "Fab note.", "owner")
     prompt = assist.build_prompt(s, item, "Thoughts?", "", author="owner")
     assert "Fab note." in prompt and "SELF NOTE" not in prompt
@@ -418,7 +433,7 @@ def test_a_note_on_the_owners_own_address_never_reaches_the_prompt(tmp_path):
 
 def test_api_does_not_return_a_note_on_the_owners_own_address(api):
     post, get, db, _ = api
-    Store(db).save_note(ME, "SELF NOTE", "session:x")
+    owner_person(Store(db), ME)
     data = get("/api/ask?item=gmail:t1")
     assert ME not in data["notes"] and ME not in data["people"]
 

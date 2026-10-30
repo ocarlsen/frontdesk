@@ -60,10 +60,12 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--port", type=int, default=8766)
     # Memory writes for tools and agent sessions. --by is required and always records
     # 'session:<NAME>': this path can never write as the owner (only the page's clicks do).
-    nt = sub.add_parser("note", help="set (replace) the note on a person, as a session; "
-                                     "empty TEXT deletes it")
-    nt.add_argument("who", metavar="WHO", help="their address or Slack name")
+    nt = sub.add_parser("note", help="set the note on a person, as a session (unconfirmed); "
+                                     "a session cannot delete one, or replace one the owner "
+                                     "wrote: use --append")
+    nt.add_argument("who", metavar="WHO", help="any of their addresses, or their Slack name")
     nt.add_argument("text", metavar="TEXT")
+    nt.add_argument("--append", action="store_true", help="add TEXT to the existing note")
     nt.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
     si = sub.add_parser("situation", help="What's going on: list, or add an item as a session")
     ss = si.add_subparsers(dest="situation_cmd", required=True)
@@ -224,7 +226,7 @@ def memory_main(args, store: Store) -> int:
     from .store import InvalidMemory
     try:
         if args.cmd == "note":
-            store.save_note(args.who, args.text, f"session:{args.by}")
+            store.save_note(args.who, args.text, f"session:{args.by}", append=args.append)
             print(f"note on {args.who.strip().lower()} saved as session:{args.by} "
                   "(not confirmed until the owner confirms it)")
         elif args.situation_cmd == "add":

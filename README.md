@@ -80,7 +80,7 @@ Gmail API ──► normalize ──► Item ──► SQLite ──► triage �
 
 Ask ("Ask FrontDesk about this thread") works from four kinds of owner-side memory: your
 **profile** (a few sentences in `settings.json`), **What's going on** (up to 50 short items on
-what is live for you now: decisions, open matters), **notes** on each person, and the **Ask
+what is live for you now: decisions, open matters), a **note** on each person, and the **Ask
 history** of each thread. All of it is local SQLite (the profile is local settings), assembled
 into every call; the model keeps no state between calls, so any vendor's model gets the same
 context. Triage does not use What's going on or notes.
@@ -93,6 +93,29 @@ rows from before authors were recorded. Only `owner` counts as confirmed: the pr
 other line "not confirmed", and the model is told to say so when it relies on one instead of
 writing "you said". The page shows who wrote each item, and **Confirm** (or editing and saving)
 makes it yours.
+
+A **person** owns any number of addresses (Gmail addresses; on Slack, for now, display names)
+and one note, so Ask finds the note through whichever address a thread uses. A person has a name
+only when you type one: the display name in a From header is written by the sender, so the Memory
+page shows it greyed as "from mail, unconfirmed" and it never enters the prompt. Ask's notes block
+lists a person as their addresses, the name only if you typed it, then the same author and date
+label, e.g. `fab@example.com, f@example.org (written by the owner, 2026-10-28): Pre-seed, no pay.`
+Your own address is never a person: on Gmail that is the mailbox, on Slack whoever sent your own
+messages.
+
+**Memory** (header button, or `m`; `Esc` closes) lists everything kept: your profile, What's going
+on, then people, newest first, each with addresses, name, note, author and date. Edit there; only
+you can **Confirm**, **Delete** or **Merge into...** another person (merge asks first and cannot be
+undone; the merged note is yours only if both notes were). **Download my memory** saves it all as
+JSON. Sessions can add a note or append to one, never delete, merge, confirm, name, or replace a
+note you wrote; saving empty text is refused rather than deleting. Ask's "Save note for ..."
+suggestions save only when the person they name is in that thread, so model output never creates a
+person. The demo shows Memory empty and read-only.
+
+Older databases are migrated once on open (under a write lock, so two FrontDesk processes cannot
+copy twice): each per-address note becomes a person with that address, keeping its text, author
+and date. A note on your own address is left out and listed on the Memory page. The old `notes`
+table stays read-only for one release.
 
 This is a record for honest writers, not a security boundary: any process on your machine can
 open the database or call the local API and claim any author.

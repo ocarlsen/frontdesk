@@ -86,13 +86,18 @@ def test_validate_caps_note_suggestions():
     assert len(out["note_suggestions"]) == 3
 
 
-def test_notes_save_replace_and_delete(tmp_path):
+def test_notes_save_replace_and_empty_text_never_deletes(tmp_path):
+    from frontdesk.store import InvalidMemory
     s = Store(tmp_path / "d.db")
     s.save_note("Fab@Example.com", "one", "owner")
     got = s.notes_for(["fab@example.com"])
     assert got["fab@example.com"]["text"] == "one" and got["fab@example.com"]["author"] == "owner"
-    s.save_note("fab@example.com", "", "owner")
-    assert s.notes_for(["fab@example.com"]) == {}
+    s.save_note("fab@example.com", "two", "owner")
+    assert s.notes_for(["fab@example.com"])["fab@example.com"]["text"] == "two"
+    for author in ("owner", "session:x"):
+        with pytest.raises(InvalidMemory, match="needs text"):
+            s.save_note("fab@example.com", "  ", author)
+    assert s.notes_for(["fab@example.com"])["fab@example.com"]["text"] == "two"
 
 
 def test_second_opinion_needs_a_first_and_sees_it(tmp_path):
