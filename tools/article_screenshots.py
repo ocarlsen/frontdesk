@@ -3,8 +3,10 @@
 Seeds a throwaway FrontDesk home with one synthetic eval thread (evals/attribution/a07), a note
 written by a helper session, and one Ask exchange whose answer is the model's actual answer from
 the 2026-10-29 Opus 5.5 attribution run: the unlabelled-prompt answer for "before", the labelled
-one for "after". No model call, no network, no real mail. Writes docs/site/article-before.jpg and
-article-after.jpg. Usage: .venv/bin/python tools/article_screenshots.py"""
+one for "after". No model call, no network, no real mail, and Ask's model list is stubbed empty so
+nothing asks the Keychain about keys. Captured with tools/capture.mjs (Playwright, 2x; run `npm ci`
+in tests/e2e once). Writes docs/site/article-before.jpg and article-after.jpg.
+Usage: PYTHONPATH=. .venv/bin/python tools/article_screenshots.py"""
 from __future__ import annotations
 
 import json
@@ -24,9 +26,10 @@ from frontdesk.items import Item, Message, Triage  # noqa: E402
 from frontdesk.store import Store  # noqa: E402
 from frontdesk.web import server  # noqa: E402
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+STAGE = Path(__file__).parent / "article_screenshots/stage.js"
 SCENARIO = json.loads((ROOT / "evals/attribution/a07-cookie-day-allergy.json").read_text())
-REPORT = json.loads((ROOT / "evals/results/attribution-2026-10-29-claude-opus-5-5.json").read_text())
+REPORT = json.loads(
+    (ROOT / "evals/results/attribution-2026-10-29-claude-opus-5-5.json").read_text())
 
 
 def answer(condition: str) -> str:
@@ -43,12 +46,16 @@ def seed(db: Path, condition: str) -> None:
                        messages=[Message(m["sender"], m["sent_at"], m["body"], is_mine=m["is_mine"])
                                  for m in it["messages"]]))
     s.save_triage(Triage(item_id=it["id"], bucket="needs_you", urgency=4,
-                         reason="Form for a peanut butter baking day; check against the allergy plan.",
+                         reason="Form for a peanut butter baking day; check against the "
+                                "allergy plan.",
                          proposed_reply="", model="anthropic:claude-opus-5-5",
                          triaged_at="2026-10-28T09:00:00Z", item_updated_at=it["updated_at"],
                          summary="Ms. Okafor asks families to sign a form for a peanut butter "
                                  "cookie baking afternoon on Thursday."))
     s.save_note(SCENARIO["note"]["who"], SCENARIO["note"]["text"], "session:helper")
+    # Date the note to the eval run, so its label reads the same on every re-run.
+    s.db.execute("UPDATE people SET created_at=?, updated_at=?", ("2026-10-29T09:00:00Z",) * 2)
+    s.db.commit()
     s.add_ask(it["id"], "owner", SCENARIO["question"], "owner")
     s.add_ask(it["id"], "assistant", answer(condition), "owner",
               {"draft_reply": "", "note_suggestions": [], "situation_suggestions": [],
@@ -57,36 +64,26 @@ def seed(db: Path, condition: str) -> None:
 
 
 def main() -> None:
+    if Path(config.HOME) != TMP / "home":
+        raise SystemExit("frontdesk.config did not pick up the temp FRONTDESK_HOME; refusing")
     config.ensure_home()
-    config.SETTINGS_PATH.write_text(json.dumps({"mark_read_on_open": False, "auto_sync_minutes": 0}))
-    web = TMP / "web"
-    shutil.copytree(ROOT / "frontdesk/web", web, ignore=shutil.ignore_patterns("*.py", "__pycache__"))
-    shutil.copy(Path(__file__).parent / "article_screenshots/shot.js", web / "shot.js")
-    html = (web / "index.html").read_text()
-    (web / "index.html").write_text(html.replace('<script src="app.js" defer></script>',
-                                                 '<script src="app.js" defer></script>'
-                                                 '<script src="shot.js" defer></script>'))
-    server.STATIC_DIR = web
-    server.STATIC["/shot.js"] = ("shot.js", "text/javascript; charset=utf-8")
+    config.SETTINGS_PATH.write_text(
+        json.dumps({"mark_read_on_open": False, "auto_sync_minutes": 0}))
+    server.available_models = lambda _settings: []   # no Keychain lookups for Ask's model list
     shots = [("before", "baseline_session", ""), ("after", "session", "?notes=1")]
     for name, condition, query in shots:
         db = TMP / f"{name}.db"
         seed(db, condition)
         httpd = server.make_server(Store(db), "127.0.0.1", 0, settings={})
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
-        png = TMP / f"{name}.png"
-        subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-                        "--force-device-scale-factor=2", "--window-size=760,560",
-                        "--virtual-time-budget=8000", f"--screenshot={png}",
-                        f"http://127.0.0.1:{httpd.server_address[1]}/index.html{query}"],
-                       check=True, capture_output=True)
-        httpd.shutdown()
-        subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", str(png),
-                        "--out", str(ROOT / f"docs/site/article-{name}.jpg")],
-                       check=True, capture_output=True)
-        print("wrote", f"docs/site/article-{name}.jpg")
+        out = ROOT / f"docs/site/article-{name}.jpg"
+        try:
+            subprocess.run(["node", str(ROOT / "tools/capture.mjs"),
+                            f"http://127.0.0.1:{httpd.server_address[1]}/index.html{query}",
+                            str(out), "760", "auto", str(STAGE)], check=True)
+        finally:
+            httpd.shutdown()
     shutil.rmtree(TMP)
-
 
 if __name__ == "__main__":
     main()
