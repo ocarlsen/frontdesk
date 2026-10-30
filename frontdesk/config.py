@@ -47,6 +47,13 @@ DEFAULTS = {
     "imap_host": "imap.gmail.com",
     # Senders `frontdesk unanswered` never lists: addresses or domains ("@example.org").
     "unanswered_ignore_senders": [],
+    # `frontdesk inbox-buckets` only: addresses or domains always bucketed as "newsletters",
+    # same matching rules as unanswered_ignore_senders (an exact address, or a domain/subdomain).
+    "newsletter_senders": [],
+    # `frontdesk inbox-buckets` only: addresses or domains always bucketed as "unanswered", even
+    # if Gmail categorized the mail out of the primary inbox or it carries list headers (e.g. a
+    # recruiter mailing through Greenhouse/Lever, or a person posting through a Google Group).
+    "person_senders": [],
 }
 
 

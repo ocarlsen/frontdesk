@@ -80,6 +80,16 @@ def main(argv: list[str] | None = None) -> int:
     un.add_argument("--days", type=int, default=14, help="inbox window in days (default: 14)")
     un.add_argument("--limit", type=int, default=15,
                     help="list at most N threads, oldest first (default: 15); total is uncapped")
+    ib = sub.add_parser("inbox-buckets",
+                        help="every inbox thread new since a time, sorted into buckets "
+                             "(optional; read-only IMAP, headers only, no model)")
+    ib.add_argument("--json", action="store_true", help="print the JSON contract on stdout")
+    ib.add_argument("--since", required=True, metavar="ISO8601",
+                    help="only threads with an inbox message at or after this time, e.g. "
+                         "2026-10-29T09:00:00-07:00 (must carry a UTC offset)")
+    ib.add_argument("--limit", type=int, default=15,
+                    help="list at most N threads per bucket, oldest first (default: 15); each "
+                         "bucket's total is uncapped")
     args = p.parse_args(argv)
 
     if args.cmd == "demo":
@@ -90,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
         return scoreboard_main(args.dir)
     if args.cmd == "unanswered":
         return unanswered_main(args)
+    if args.cmd == "inbox-buckets":
+        return inbox_buckets_main(args)
     if args.cmd == "export-demo":
         from pathlib import Path
 
@@ -218,6 +230,44 @@ def unanswered_main(args) -> int:
                   f"\n      {it['gmail_url']}")
         print(f"{rep['total']} unanswered" + (f", showing {len(rep['items'])}"
                                               if rep["total"] > len(rep["items"]) else ""))
+    return 0
+
+
+def inbox_buckets_main(args) -> int:
+    """Read-only; creates no files. Any failure is one stderr line naming the step, exit 2."""
+    import json
+
+    from .gmail import imap_buckets as ib
+    from .gmail import imap_unanswered as iu
+    try:
+        if args.limit < 0:
+            raise ib.BucketsError("args", "--limit must be 0 or more")
+        since = ib.parse_since(args.since)
+        try:
+            s = config.settings()
+        except Exception as e:  # noqa: BLE001 - malformed settings.json is a config failure
+            raise ib.BucketsError("config", str(e)) from e
+        # Validate the new sender lists before resolve_config, so a typo in either one is a
+        # config failure that never reaches a Keychain read.
+        newsletter_senders = ib._newsletter_senders(s)
+        person_senders = ib._person_senders(s)
+        cfg = iu.resolve_config(s)
+        classified = ib.find_buckets(cfg, since, newsletter_senders=newsletter_senders,
+                                     person_senders=person_senders)
+        rep = ib.report(classified, args.limit, args.since)
+    except iu._StepError as e:
+        print(f"frontdesk inbox-buckets: {e}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(rep, ensure_ascii=False))
+    else:
+        for name in ib.BUCKET_NAMES:
+            b = rep["buckets"][name]
+            print(f"-- {name} ({b['total']}) --")
+            for it in b["items"]:
+                print(f"{it['age_days']:>3}d  {it['from_name'] or it['from_addr']}: "
+                      f"{it['subject']}\n      {it['gmail_url']}")
+        print(f"{rep['total']} new, {rep['replied']} already replied to")
     return 0
 
 

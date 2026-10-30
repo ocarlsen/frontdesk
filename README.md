@@ -210,6 +210,46 @@ frontdesk unanswered                      # a short list
 frontdesk unanswered --json --days 14 --limit 15
 ```
 
+`frontdesk inbox-buckets --since <ISO 8601, with a UTC offset>` uses the same read-only IMAP
+machinery to answer a different question: every inbox thread with a message newer than a given
+time, sorted into exactly one of three buckets, or left out as already replied to. `--since`
+should be the **start** time of the previous run, not its end time: re-seeing a message that
+landed during the previous run is harmless, but using the end time can silently drop one that
+arrived mid-run. Unlike `unanswered`, promotions and updates still land in a bucket instead of
+being dropped, and there's no `is:unread` filter.
+
+A thread is `newsletters` when its newest message carries `List-Unsubscribe`, `List-Id`, a
+bulk/list `Precedence`, or comes from an address or domain in `newsletter_senders`; `unanswered`
+when it's from a person who isn't automated, isn't on `unanswered_ignore_senders`, and isn't mail
+Gmail itself has sorted into the Promotions, Updates, Social or Forums category (order
+confirmations and shipping notices from UPS or Amazon, for instance, usually carry none of the
+List-* headers but do land in Updates); otherwise `other`. A thread where you replied last is
+left out of every bucket and counted separately as `replied`.
+
+`person_senders` (same matching rules as the other two lists) overrides all of that -- the
+category check, the newsletter headers, the automated/ignore check -- and always buckets a match
+as `unanswered`; use it for a sender that looks automated but is really a person, like a
+recruiter mailing through Greenhouse or Lever, or someone posting through a Google Group.
+
+```json
+{"imap_account": "you@gmail.com", "imap_keychain_service": "my-gmail-imap",
+ "newsletter_senders": ["@substack.com"], "person_senders": ["@greenhouse.io"]}
+```
+
+```
+frontdesk inbox-buckets --since 2026-10-29T09:00:00-07:00
+frontdesk inbox-buckets --json --since 2026-10-29T09:00:00-07:00 --limit 15
+```
+
+`--json` prints `{"since": ..., "total": N, "replied": R, "buckets": {"unanswered": {"total": n,
+"items": [...]}, "newsletters": {...}, "other": {...}}}`, each bucket's items oldest first and
+capped at `--limit` while its `total` stays uncapped; `total` always equals `replied` plus every
+bucket's uncapped total (checked at runtime; a mismatch exits 2 naming step `count`). Items use
+the same shape as `unanswered`'s, plus `read_url` (same as `gmail_url`) on newsletter items. It
+takes a fixed number of IMAP round trips -- two searches (candidates, your own replies) plus one
+per Gmail category (promotions, updates, social, forums), each with fetches chunked by 300 -- and
+the same 60-second cap and one-line, step-named failure contract as `unanswered`.
+
 `--json` prints `{"total": N, "items": [...]}`, oldest first; `total` counts every unanswered thread
 and `items` holds at most `--limit`. Each item has `thread_id` (decimal), `gmail_url`, `from_name`,
 `from_addr`, `subject`, `last_at` (ISO 8601 with offset), `age_days` and `n_messages` (messages in
