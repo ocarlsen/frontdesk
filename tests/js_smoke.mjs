@@ -6,12 +6,17 @@ import vm from "node:vm";
 class Node {
   constructor(tag) {
     this.tagName = (tag || "").toUpperCase(); this.children = []; this.attrs = {};
-    this.dataset = {}; this.style = {}; this.listeners = {}; this.textContent = "";
-    this.classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
+    this.dataset = {}; this.listeners = {}; this.textContent = "";
+    this.style = { props: {}, setProperty(k, v) { this.props[k] = v; }, removeProperty(k) { delete this.props[k]; } };
+    const cl = new Set();
+    this.classList = { add: (...c) => c.forEach(x => cl.add(x)), remove: (...c) => c.forEach(x => cl.delete(x)),
+                       toggle: (c, on) => { if (on === undefined ? !cl.has(c) : on) cl.add(c); else cl.delete(c); },
+                       contains: c => cl.has(c) || (this.className || "").split(" ").includes(c) };
     this.hidden = false; this.value = ""; this.disabled = false;
   }
   get childNodes() { return this.children; }
   append(...c) { this.children.push(...c); }
+  prepend(...c) { this.children.unshift(...c); }
   replaceChildren(...c) { this.children = c; }
   setAttribute(k, v) { this.attrs[k] = String(v); }
   getAttribute(k) { return this.attrs[k] ?? null; }
@@ -212,6 +217,114 @@ vm.createContext(sctx);
 vm.runInContext(readFileSync(src, "utf8"), sctx);
 const prep = await vm.runInContext("postAction", sctx)("send_prepare", demoSlack.id, { body: "On it." });
 if (!prep.demo || prep.to.join() !== "#platform (thread)") throw new Error("static Slack send: " + JSON.stringify(prep));
+// ---- Ask: the box starts with the server's built-in question, editable; one Ask sends the box.
+const ADV = "SERVER-ADVISE-SENTINEL: what should I do?";
+const askPosts = [];
+ctx.fetch = async (url, opts) => {
+  if (String(url).startsWith("/api/ask?")) return { ok: true, json: async () => ({ advise: ADV, history: [], notes: {}, people: [] }) };
+  if (url === "/api/models") return { ok: true, json: async () => [{ index: 0, label: "M0" }, { index: 1, label: "M1" }] };
+  askPosts.push(JSON.parse(opts.body));
+  return { ok: true, json: async () => ({ answer: "Go.", draft_reply: "", note_suggestions: [], situation_suggestions: [] }) };
+};
+const askBody = new Node("div");
+await fn("buildAsk")(item, new Node("textarea"), askBody, new Node("summary"));
+const askBox = all(askBody).find(n => n.tagName === "TEXTAREA");
+if (askBox.value !== ADV) throw new Error("Ask box not pre-filled with the server's question: " + askBox.value);
+if (askBox.placeholder) throw new Error("the question is text, not a placeholder");
+const askTexts = texts(askBody);
+for (const gone of ["Advise me", "Ask all"]) if (askTexts.includes(gone)) throw new Error("still offers " + gone);
+for (const kept of ["Ask", "Second opinion", "Polish draft"]) if (!askTexts.includes(kept)) throw new Error("lost " + kept);
+if (!all(askBody).some(n => n.tagName === "SELECT")) throw new Error("model picker lost");
+const askButtons = all(askBody).filter(n => n.tagName === "BUTTON" && n.textContent === "Ask");
+if (askButtons.length !== 1) throw new Error("exactly one Ask button");
+askBox.value = "Should I take the 3pm slot?";
+click(askButtons[0]);
+await new Promise(r => setTimeout(r, 0));
+if (askPosts.length !== 1 || askPosts[0].kind !== "ask" || askPosts[0].question !== "Should I take the 3pm slot?" ||
+    askPosts[0].mode !== "ask") throw new Error("Ask must send the box text: " + JSON.stringify(askPosts));
+if (askBox.value !== ADV) throw new Error("box must reset to the built-in question after an answer");
+click(askButtons[0]);                       // unchanged box: sends the built-in question as text
+await new Promise(r => setTimeout(r, 0));
+if (askPosts.length !== 2 || askPosts[1].question !== ADV) throw new Error("unchanged box sends the built-in question");
+askBox.value = "   ";
+click(askButtons[0]);
+await new Promise(r => setTimeout(r, 0));
+if (askPosts.length !== 2) throw new Error("an empty box must not post");
+const second = all(askBody).find(n => n.tagName === "BUTTON" && n.textContent === "Second opinion");
+click(second);
+await new Promise(r => setTimeout(r, 0));
+if (askPosts[2].mode !== "second" || askPosts[2].model !== undefined) throw new Error("the picker applies to Ask only");
+
+// ---- Swipe: pure decision. No action under the lock distance; the axis locks on the first
+// clear move; a vertical lock never swipes; only a left move past the threshold acts.
+const sw = fn("swipeDecide");
+const eq = (a, b, m) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(m + ": " + JSON.stringify(a)); };
+eq(sw(-6, 3, null, 390), { lock: null, offset: 0, act: false }, "below the lock distance");
+eq(sw(-40, 6, null, 390), { lock: "x", offset: -40, act: false }, "short left swipe");
+eq(sw(-160, 8, null, 390), { lock: "x", offset: -160, act: true }, "past the threshold");
+eq(sw(-150, 8, "x", 390), { lock: "x", offset: -150, act: false }, "just short of 40% of 390");
+eq(sw(60, 2, null, 390), { lock: "x", offset: 0, act: false }, "right swipe does nothing");
+eq(sw(-8, 40, null, 390), { lock: "y", offset: 0, act: false }, "vertical scroll");
+eq(sw(-300, 20, "y", 390), { lock: "y", offset: 0, act: false }, "a vertical lock stays vertical");
+eq(sw(-80, 0, "x", 0), { lock: "x", offset: -80, act: true }, "floor threshold of 72 px");
+if (fn("swipeThreshold")(1000) !== 160) throw new Error("threshold cap");
+// A mouse never starts a swipe; a touch drag that locks vertical leaves the row alone.
+const swCard = fn("buildCard")({ ...item, id: "gmail:sw" }, triage);
+const swRow = swCard.children.find(n => n.className === "row");
+const fire = (n, t, e) => (n.listeners[t] || []).forEach(f => f(e));
+fire(swRow, "pointerdown", { pointerType: "mouse", clientX: 300, clientY: 10, pointerId: 1 });
+fire(swRow, "pointermove", { pointerType: "mouse", clientX: 50, clientY: 12, pointerId: 1 });
+if ("--swipe" in swCard.style.props || swCard.children.some(n => n.className === "swipe-reveal")) throw new Error("mouse swiped");
+fire(swRow, "pointerdown", { pointerType: "touch", clientX: 300, clientY: 10, pointerId: 2 });
+fire(swRow, "pointermove", { pointerType: "touch", clientX: 296, clientY: 60, pointerId: 2 });
+fire(swRow, "pointermove", { pointerType: "touch", clientX: 100, clientY: 70, pointerId: 2 });
+if ("--swipe" in swCard.style.props || swCard.children.some(n => n.className === "swipe-reveal")) throw new Error("vertical drag swiped");
+// A horizontal touch drag past the threshold reveals Archive and archives on release.
+const swPosts = [];
+ctx.fetch = async (url, opts) => { if (url === "/api/action") swPosts.push(JSON.parse(opts.body));
+                                   return { ok: true, json: async () => (url === "/api/action" ? { status: "done" } : []) }; };
+fire(swRow, "pointerdown", { pointerType: "touch", clientX: 300, clientY: 10, pointerId: 3 });
+fire(swRow, "pointermove", { pointerType: "touch", clientX: 280, clientY: 11, pointerId: 3 });
+fire(swRow, "pointermove", { pointerType: "touch", clientX: 120, clientY: 14, pointerId: 3 });
+const reveal = swCard.children.find(n => n.className === "swipe-reveal");
+if (!reveal || reveal.textContent !== "Archive" || swCard.style.props["--swipe"] !== "-180px") throw new Error("swipe reveal");
+fire(swRow, "pointerup", { pointerType: "touch", pointerId: 3 });
+await new Promise(r => setTimeout(r, 0));
+if (swPosts.length !== 1 || swPosts[0].kind !== "archive" || swPosts[0].item_id !== "gmail:sw") throw new Error("swipe archive: " + JSON.stringify(swPosts));
+if (!swCard.dataset.swiped) throw new Error("the tap that ends a swipe must not open the thread");
+
+// ---- Star: row and detail toggles; the new state shows at once, pending, and reverts when the
+// server refuses (no silent optimistic failure).
+const starPosts = [];
+let starOk = false;
+ctx.fetch = async (url, opts) => {
+  if (url === "/api/action") { starPosts.push(JSON.parse(opts.body));
+    return starOk ? { ok: true, json: async () => ({ status: "done" }) }
+                  : { ok: false, status: 412, json: async () => ({ error: "run frontdesk authorize-actions" }) }; }
+  return { ok: true, json: async () => [] };
+};
+const stItem = { ...item, id: "gmail:st", starred: false, labels: ["INBOX"] };
+const stCard = fn("buildCard")(stItem, triage);
+const rowStar = stCard.children.find(n => n.className === "star");
+if (!rowStar || rowStar.getAttribute("aria-pressed") !== "false") throw new Error("no row star");
+const stDetail = fn("buildDetail")(stItem, triage);
+const detStar = all(stDetail).find(n => n.className === "btn btn-star");
+if (!detStar || detStar.textContent !== "☆ Star") throw new Error("no detail star");
+click(rowStar);
+if (rowStar.getAttribute("aria-pressed") !== "true" || !rowStar.disabled || !rowStar.classList.contains("pending") ||
+    detStar.getAttribute("aria-pressed") !== "true") throw new Error("star must show pending at once on both toggles");
+await new Promise(r => setTimeout(r, 0));
+if (rowStar.getAttribute("aria-pressed") !== "false" || rowStar.disabled || stItem.starred) throw new Error("refused star must revert");
+if (starPosts.length !== 1 || starPosts[0].kind !== "star" || starPosts[0].item_id !== "gmail:st") throw new Error("star request");
+starOk = true;
+click(rowStar);
+await new Promise(r => setTimeout(r, 0));
+if (!stItem.starred || starPosts[1].kind !== "star") throw new Error("confirmed star");
+const slStar = fn("buildCard")({ ...demoSlack, starred: false }, triage).children.find(n => n.className === "star");
+if (!slStar.title.startsWith("Starred in FrontDesk only")) throw new Error("Slack star tooltip");
+// Static demo: starring changes this tab only and fetches nothing.
+const sstar = await vm.runInContext("postAction", sctx)("star", demoSlack.id);
+if (!sstar.demo || !sstar.starred) throw new Error("static star");
 console.log("js smoke ok");
 // History folds into turns: a second opinion joins the turn it reviews.
 const turns = vm.runInContext("groupTurns", ctx)([

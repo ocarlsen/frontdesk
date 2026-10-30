@@ -45,13 +45,33 @@ def fetch_inline_images(client: GmailClient, thread: dict) -> None:
                 pass
 
 
+STARRED_MAX = 200
+
+
+def starred_archived(client: GmailClient, store: Store) -> set[str]:
+    """Threads FrontDesk archived that are still starred in Gmail. Kept as stored (not refetched):
+    a new message brings the thread back to the inbox, and the main listing fetches it then. If
+    the starred listing fails, every archived thread is kept for this round."""
+    archived = store.archived_ids("gmail")
+    if not archived:
+        return set()
+    try:
+        starred = {f"gmail:{t}" for t in client.list_thread_ids("is:starred", STARRED_MAX)}
+    except Exception:  # noqa: BLE001 - never prune on a failed listing
+        return archived
+    return archived & starred
+
+
 def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> SyncResult:
     """One bad thread (a fetch error, an odd MIME tree) is logged and skipped so it cannot
     abort the run; auth and listing failures still raise, since nothing works without them.
 
     Afterwards, threads the query no longer lists (archived, aged out) are pruned. The keep set
     is every LISTED id, fetched or not, so a thread that merely failed to fetch is kept; and
-    pruning only runs after the listing completed, so a failed listing never empties the store."""
+    pruning only runs after the listing completed, so a failed listing never empties the store.
+
+    A thread FrontDesk archived that Gmail still has starred is kept (hidden from the list, shown
+    in the Starred view) until it is unstarred; one that is back in the inbox shows again."""
     client = GmailClient(auth.credentials(interactive=interactive))
     account = client.profile_email()
     count = 0
@@ -68,8 +88,11 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
         if item is None:
             continue
         store.upsert_item(item)
+        if "INBOX" in item.labels and store.hidden_reason(item.id) == "archived":
+            store.unhide(item.id)          # moved back to the inbox since FrontDesk archived it
         count += 1
-    removed = store.prune("gmail", account, {f"gmail:{t}" for t in thread_ids})
+    keep = {f"gmail:{t}" for t in thread_ids} | starred_archived(client, store)
+    removed = store.prune("gmail", account, keep)
     if removed:
         log(f"  removed {removed} thread(s) no longer in '{settings['gmail_query']}'")
     return SyncResult(count, removed)

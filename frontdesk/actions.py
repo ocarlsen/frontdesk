@@ -85,6 +85,51 @@ def set_archived(store: Store, item_id: str, archived: bool, gmail: GmailClient 
     return {"status": "done", "kind": kind}
 
 
+def set_starred(store: Store, item_id: str, starred: bool, gmail: GmailClient | None,
+                client_key: str) -> dict:
+    """Star or unstar a thread, the same shape as archive. Gmail: add or remove the STARRED
+    label on the thread (every message in it), with the actions token. Slack: a flag kept in
+    FrontDesk only, because Slack has no supported API for saving a message for later
+    (stars.add still answers but has had no user-visible effect since 2023). In demo mode
+    (gmail=None) only the store changes."""
+    if not _CLIENT_KEY.fullmatch(client_key or ""):
+        raise ActionError("missing or malformed idempotency key")
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    kind = "star" if starred else "unstar"
+    key = f"{kind}:{item_id}:{client_key}"
+    prior = store.action(key)
+    if prior is not None and prior["status"] == "done":
+        return {"status": "already_done", "kind": kind, "starred": starred}
+    if store.is_starred(item) == starred:
+        return {"status": "already_done", "kind": kind, "starred": starred}
+    try:
+        action_id = store.begin_action(key, item_id, kind, {})
+    except sqlite3.IntegrityError:
+        if prior is None:
+            raise ActionError("this action is already in progress") from None
+        action_id = prior["id"]
+    if item.source == "slack":
+        store.set_local_star(item_id, starred)
+        store.finish_action(action_id, "done")
+        return {"status": "done", "kind": kind, "starred": starred, "local": True}
+    try:
+        if gmail is not None:
+            _check_account(gmail, item.account)
+            if starred:
+                gmail.modify_thread(_native_id(item_id), add=["STARRED"])
+            else:
+                gmail.modify_thread(_native_id(item_id), remove=["STARRED"])
+    except (GmailError, ActionError) as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(str(e)) from e
+    labels = [lb for lb in item.labels if lb != "STARRED"] + (["STARRED"] if starred else [])
+    store.set_labels(item_id, labels)
+    store.finish_action(action_id, "done")
+    return {"status": "done", "kind": kind, "starred": starred}
+
+
 MAX_DRAFT_CHARS = 20_000
 _PLACEHOLDER = re.compile(r"\[[^\]\n]{1,80}\]")
 

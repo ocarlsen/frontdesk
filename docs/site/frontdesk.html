@@ -70,9 +70,9 @@ with the model you choose.</p>
 
 <ul class="facts">
   <li><b>Local-first</b><span>No server, no account, no analytics. Your mail stays on your machine.</span></li>
-  <li><b>Read-only by default</b><span>Archive, drafts and sending need a second, separate permission. Mail goes out only when you click Send and confirm.</span></li>
+  <li><b>Read-only by default</b><span>Archive, star, drafts and sending need a second, separate permission. Mail goes out only when you click Send and confirm.</span></li>
   <li><b>Measured</b><span>Labeled test set and a 32-attack prompt-injection suite, scored per model.</span></li>
-  <li><b>Bring your own model</b><span>Adapters for Anthropic, OpenAI and Gemini; switching is a setting, and Ask can put one question to all of them.</span></li>
+  <li><b>Bring your own model</b><span>Adapters for Anthropic, OpenAI and Gemini; switching is a setting, and Ask lets you pick the model for each question.</span></li>
 </ul>
 
 <figure>
@@ -91,8 +91,10 @@ with the model you choose.</p>
   <li><b>Triage.</b> Each thread goes to the model as quoted data it cannot break out of, and
   comes back in a fixed format that the code validates again. Every ranking records its model,
   prompt version, tokens and cost.</li>
-  <li><b>Ask.</b> Open any thread and ask what to do. FrontDesk answers with the thread, your
-  other threads with the same people, your profile and your notes, and can draft the reply.
+  <li><b>Ask.</b> Open any thread and ask what to do. The box already holds FrontDesk's own
+  question ("What do you think?"), so one click on Ask gets advice; edit it to ask anything else.
+  FrontDesk answers with the thread, your other threads with the same people, your profile and
+  your notes, and can draft the reply.
   Second opinion has a stronger model check the answer; Polish tightens your own draft.</li>
   <li><b>Remember.</b> A note on each person and a short "What's going on" list carry context
   from one thread to the next. A person can have several addresses, so their note follows them
@@ -102,7 +104,10 @@ with the model you choose.</p>
   one place: edit, confirm, delete or merge people there, or download it all.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
-  Archive or mark done with one click, with keyboard shortcuts like Gmail's.</li>
+  Archive or mark done with one click, or on a phone with a swipe to the left, with keyboard
+  shortcuts like Gmail's. Star a thread (<code>s</code>) to keep it in the Starred view: on Gmail
+  that is Gmail's own star, on Slack a mark kept in FrontDesk only, since Slack offers no way for
+  an app to save a message for later.</li>
 </ol>
 
 <figure>
@@ -203,7 +208,8 @@ suggest a reply. For HTML mail that text includes where its links point, but not
 images or attachments. When you use Ask, the provider also receives your profile, your "What's
 going on" list, your notes on the people in that thread (with their addresses and any name you
 typed), your other threads with them, and the
-conversation so far. Ask all sends the same question to each provider you have set up. Each
+conversation so far, sent to the one model that answers the question: the one you picked, or
+the review model for Second opinion and Polish. Each
 provider's own data terms apply to what it receives.</p>
 
 <h3>What it never does</h3>

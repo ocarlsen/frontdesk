@@ -15,8 +15,9 @@ const GMAIL_PREFIX = "https://mail.google.com/";
 // the time since export, so "10m ago" stays "10m ago" whenever someone opens it.
 const STATIC = document.documentElement.dataset.static === "1";
 const EXPORTED = Date.parse(document.documentElement.dataset.exported || "");
-const staticHidden = new Set();
+const staticHidden = new Map();   // item id -> "archived" | "done"
 const staticLabels = new Map();   // item id -> bucket the visitor moved it to
+const staticStars = new Map();    // item id -> starred, as the visitor left it
 
 function staticFile(itemId) {
   return itemId.replace(/[^A-Za-z0-9]/g, "-");
@@ -215,10 +216,17 @@ function buildDetail(item, triage) {
     }
     actions.append(moveTo);
   }
+  actions.append(starButton(item, "btn"));
   const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
   arch.addEventListener("click", () => archive(item, arch));
-  if (isGmail) actions.append(arch);
+  if (item.hidden) {
+    // Only the Starred view lists a hidden thread: offer to bring it back instead.
+    const back = el("button", "btn", item.hidden === "archived" ? "Move to inbox" : "Show in the list");
+    back.type = "button";
+    back.addEventListener("click", () => restore(item, back));
+    actions.append(back);
+  } else if (isGmail) actions.append(arch);
   else {
     const doneBtn = el("button", "btn btn-archive", "Done");
     doneBtn.type = "button";
@@ -271,10 +279,12 @@ function buildCard(item, triage) {
 
   const when = el("span", "when", relTime(item.updated_at));
   when.title = absTime(item.updated_at);
+  if (item.hidden) when.prepend(el("span", "tag", item.hidden === "archived" ? "Archived" : "Done"));
   row.append(dot, meta, when);
 
   let detail = null;
   row.addEventListener("click", () => {
+    if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe
     const open = row.getAttribute("aria-expanded") === "true";
     if (open) {
       detail.hidden = true;
@@ -287,7 +297,8 @@ function buildCard(item, triage) {
     if (open) openThreads.delete(item.id); else openThreads.add(item.id);
     if (!open) markReadSoon(item, li, row);
   });
-  li.append(row);
+  li.append(row, starButton(item, "star"));
+  if (!item.hidden) attachSwipe(li, row, item);
   if (openThreads.has(item.id)) {            // reopen after a re-render
     detail = buildDetail(item, triage);
     li.append(detail);
@@ -307,9 +318,13 @@ function clickKey() {
 
 async function postAction(kind, itemId, extra) {
   if (STATIC) {
-    if (kind === "archive") staticHidden.add(itemId);
+    if (kind === "archive") staticHidden.set(itemId, "archived");
     if (kind === "unarchive" || kind === "undone") staticHidden.delete(itemId);
-    if (kind === "done") staticHidden.add(itemId);
+    if (kind === "done") staticHidden.set(itemId, "done");
+    if (kind === "star" || kind === "unstar") {   // this tab only: nothing reaches Gmail or Slack
+      staticStars.set(itemId, kind === "star");
+      return { status: "done", kind, starred: kind === "star", demo: true };
+    }
     if (kind === "read") return { status: "done" };
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile" || kind === "note" || kind.startsWith("note_") ||
@@ -537,6 +552,148 @@ async function archive(item, btn) {
   }
 }
 
+async function restore(item, btn) {
+  btn.disabled = true;
+  try {
+    await postAction(item.hidden === "archived" ? "unarchive" : "undone", item.id);
+    await load();
+    toast(item.hidden === "archived" ? "Moved back to the inbox." : "Back in the list.");
+  } catch (e) {
+    btn.disabled = false;
+    toast("Failed: " + e.message);
+  }
+}
+
+// ---- Star: Gmail's own star (the STARRED label, so it shows in Gmail too); on Slack a flag in
+// FrontDesk only, since Slack has no supported API for saving a message for later. A click
+// shows the new state at once, marked pending, and keeps it only when the server confirms.
+const STAR_SLACK_NOTE = "Starred in FrontDesk only: Slack has no supported API for saving a " +
+  "message for later, so nothing changes in Slack";
+const starButtons = new Map();   // item id -> its star buttons (row and detail)
+let view = "all";                // "all" | "starred"
+
+function paintStar(b, on, pending, item) {
+  b.textContent = b.classList.contains("star") ? (on ? "\u2605" : "\u2606") : (on ? "\u2605 Starred" : "\u2606 Star");
+  b.setAttribute("aria-pressed", String(on));
+  b.setAttribute("aria-label", on ? "Unstar" : "Star");
+  b.disabled = pending;
+  b.classList.toggle("on", on);
+  b.classList.toggle("pending", pending);
+  b.title = (pending ? "Saving... " : "") + (item.source === "slack" ? STAR_SLACK_NOTE
+    : (on ? "Starred in Gmail. Click (or s) to unstar" : "Star in Gmail (s)"));
+}
+
+function starButton(item, cls) {
+  const b = el("button", cls === "star" ? "star" : "btn btn-star");
+  b.type = "button";
+  paintStar(b, !!item.starred, false, item);
+  b.addEventListener("click", () => toggleStar(item));
+  if (!starButtons.has(item.id)) starButtons.set(item.id, new Set());
+  starButtons.get(item.id).add(b);
+  return b;
+}
+
+async function toggleStar(item) {
+  const bs = starButtons.get(item.id) || new Set();
+  if ([...bs].some(b => b.classList.contains("pending"))) return;   // one change at a time
+  const want = !item.starred;
+  bs.forEach(b => paintStar(b, want, true, item));
+  try {
+    await postAction(want ? "star" : "unstar", item.id);
+    item.starred = want;
+    bs.forEach(b => paintStar(b, want, false, item));
+    await load();
+  } catch (e) {
+    bs.forEach(b => paintStar(b, !want, false, item));
+    toast("Star failed: " + e.message);
+  }
+}
+
+// ---- Swipe left to archive (Gmail) or mark done (Slack), on touch only. swipeDecide is pure
+// so the rule is testable without touch: nothing happens until the finger has moved
+// SWIPE_LOCK px; then the gesture locks to the axis it moved most along, and a vertical lock
+// leaves the page to scroll. Only a left move counts, and it acts past the threshold.
+const SWIPE_LOCK = 10;
+function swipeThreshold(width) {
+  return Math.max(72, Math.min(160, (width || 0) * 0.4));
+}
+
+function swipeDecide(dx, dy, lock, width) {
+  if (!lock) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_LOCK) return { lock: null, offset: 0, act: false };
+    lock = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+  }
+  if (lock === "y") return { lock, offset: 0, act: false };
+  const offset = Math.min(0, dx);
+  return { lock, offset, act: -offset >= swipeThreshold(width) };
+}
+
+function attachSwipe(li, row, item) {
+  let s = null;
+  const reset = () => {
+    li.classList.remove("swiping", "armed");
+    li.style.removeProperty("--swipe");
+  };
+  row.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "touch") return;   // a mouse or pen never swipes
+    s = { x: e.clientX, y: e.clientY, lock: null, act: false, id: e.pointerId,
+          w: row.getBoundingClientRect ? row.getBoundingClientRect().width : 0 };
+  });
+  row.addEventListener("pointermove", e => {
+    if (!s || e.pointerId !== s.id) return;
+    const d = swipeDecide(e.clientX - s.x, e.clientY - s.y, s.lock, s.w);
+    if (d.lock === "y") { s = null; reset(); return; }
+    if (d.lock !== "x") return;
+    if (!s.lock && row.setPointerCapture) row.setPointerCapture(e.pointerId);
+    s.lock = "x";
+    s.act = d.act;
+    if (!li.querySelector(":scope > .swipe-reveal")) {
+      li.prepend(el("span", "swipe-reveal", item.source === "slack" ? "Done" : "Archive"));
+    }
+    li.classList.add("swiping");
+    li.classList.toggle("armed", d.act);
+    li.style.setProperty("--swipe", d.offset + "px");
+  });
+  const end = cancelled => {
+    if (!s) return;
+    const g = s;
+    s = null;
+    if (g.lock === "x") {
+      li.dataset.swiped = "1";                         // swallow the click this tap would make
+      setTimeout(() => { delete li.dataset.swiped; }, 400);
+    }
+    if (g.lock === "x" && g.act && !cancelled) {
+      li.style.setProperty("--swipe", "-100%");
+      dismissCard(li).then(gone => { if (!gone) reset(); });
+    } else {
+      reset();                                         // a short swipe snaps back
+    }
+  };
+  row.addEventListener("pointerup", () => end(false));
+  row.addEventListener("pointercancel", () => end(true));
+}
+
+// Archive (Gmail) or Done (Slack) one card, from the e key or a swipe. Fades the row while the
+// server works; moves the highlight only once it is gone, to the thread below it (or above, at
+// the end). Resolves true when the card left the list.
+function dismissCard(li) {
+  const it = cardItems.get(li);
+  if (!it || it.hidden) return Promise.resolve(false);
+  const btn = li.querySelector(".actions .btn-archive") || el("button");
+  const cards = visibleCards();
+  const i = cards.indexOf(li);
+  const nextId = (cards[i + 1] || cards[i - 1] || {}).dataset?.id || null;
+  const wasCurrent = li.dataset.id === currentId;
+  li.classList.add("leaving");
+  const act = it.source === "slack" ? markDone(it, btn) : archive(it, btn);
+  return act.then(() => {
+    const still = visibleCards().find(c => c.dataset.id === it.id);
+    if (still) { still.classList.remove("leaving"); return false; }   // the action failed
+    if (wasCurrent) setCurrent(visibleCards().find(c => c.dataset.id === nextId) || null);
+    return true;
+  });
+}
+
 // ---- Memory authorship. "owner": typed or clicked by you here. "session:<name>": a tool or
 // agent session wrote it on your behalf (frontdesk note / situation add). "unrecorded": written
 // before FrontDesk recorded authors. Only "owner" counts as confirmed; Confirm or Save makes it so.
@@ -695,7 +852,7 @@ const SECOND_PREFIX = "Give me a second opinion on your colleague's last answer"
 const POLISH_PREFIX = "Review this draft reply against my goals";
 
 function groupTurns(history) {
-  // One turn = an owner question and the answers to it (Ask all gives several). A second opinion
+  // One turn = an owner question and the answers to it (an earlier Ask all gave several). A second opinion
   // joins the turn whose answer it reviews, so the two fold and show together.
   const turns = [];
   for (const h of history) {
@@ -743,12 +900,12 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   };
   const newTurn = () => { const t = el("div", "askturn"); turnEls.push(t); return t; };
   const notesBox = el("div", "asknotes");
+  // The box starts with FrontDesk's own question (assist.ADVISE, from the server) as ordinary,
+  // editable text: Ask sends whatever the box holds, and the box resets to it after an answer.
   const q = el("textarea");
   q.rows = 2;
-  q.placeholder = "Ask about this thread (or click Advise me)";
-  const advise = el("button", "btn primary", "Advise me");
-  advise.type = "button";
-  const askBtn = el("button", "btn", "Ask");
+  q.setAttribute("aria-label", "Your question about this thread");
+  const askBtn = el("button", "btn primary", "Ask");
   askBtn.type = "button";
   const second = el("button", "btn", "Second opinion");
   second.type = "button";
@@ -759,16 +916,12 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   const status = el("p", "kbdhint");
   const row = el("div", "actions");
   const pick = el("select", "modelpick");
-  pick.title = "Model for Advise and Ask";
+  pick.title = "Model for Ask (Second opinion and Polish use the review model)";
   pick.append(Object.assign(el("option", null, "Default model"), { value: "" }));
-  const all = el("button", "btn", "Ask all");
-  all.type = "button";
-  all.title = "Same question to every model you have a key for, answers side by side";
   fetch("/api/models", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(ms => {
     for (const m of ms) pick.append(Object.assign(el("option", null, m.label), { value: String(m.index) }));
-    if (ms.length < 2) all.hidden = true;
-  }).catch(() => { all.hidden = true; });
-  row.append(pick, advise, askBtn, all, second, polish);
+  }).catch(() => {});
+  row.append(pick, askBtn, second, polish);
   body.append(history, q, row, status, notesBox);
 
   let people = [];
@@ -781,6 +934,9 @@ async function buildAsk(item, replyBox, body, summaryEl) {
     return data;
   };
   const data = await refreshNotes();
+  const advise = (data && typeof data.advise === "string") ? data.advise : "";
+  q.value = advise;
+  fitText(q);
   const askedBy = (box, h) => {
     if (h.author && h.author !== "owner") box.append(el("p", "kbdhint authorlabel", askerLabel(h.author)));
   };
@@ -795,32 +951,22 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   layout();
   let lastDraft = "";
   for (const h of (data && data.history) || []) if (h.draft_reply) lastDraft = h.draft_reply;
-  const buttons = [advise, askBtn, all, second, polish];
-  const go = async (question, mode, draft, model) => {
+  const buttons = [askBtn, second, polish];
+  const go = async (question, mode, draft) => {
     buttons.forEach(b => { b.disabled = true; });
     status.textContent = mode === "ask" ? "Thinking..." : "Asking the review model (slower)...";
     try {
-      const chosen = model !== undefined ? model : (pick.value === "" ? undefined : Number(pick.value));
-      const out = await postAction("ask", item.id, { question, mode: mode || "ask",
-                                                     draft: draft || "", model: chosen,
-                                                     author: "owner" });
+      const chosen = mode === "ask" && pick.value !== "" ? Number(pick.value) : undefined;
+      const out = await postAction("ask", item.id, { question, mode, draft: draft || "",
+                                                     model: chosen, author: "owner" });
       // A second opinion joins the turn it reviews; anything else starts a new turn.
       const t = mode === "second" && turnEls.length ? turnEls[turnEls.length - 1] : newTurn();
       t.append(el("p", "askq", mode === "second" ? "Second opinion on the answer above" :
-        mode === "polish" ? "Polish draft" : (question || "Advise me") +
-        (chosen === "all" ? "  [all models]" : "")));
-      if (out.answers) {                       // Ask all: one answer per model
-        for (const a of out.answers) {
-          if (a.error) { t.append(el("p", "kbdhint", a.model + ": " + a.error)); continue; }
-          if (a.draft_reply) lastDraft = a.draft_reply;
-          renderAnswer(t, a, replyBox, refreshNotes, item.id);
-        }
-      } else {
-        if (out.draft_reply) lastDraft = out.draft_reply;
-        renderAnswer(t, out, replyBox, refreshNotes, item.id);
-      }
+        mode === "polish" ? "Polish draft" : question));
+      if (out.draft_reply) lastDraft = out.draft_reply;
+      renderAnswer(t, out, replyBox, refreshNotes, item.id);
       layout();
-      q.value = "";
+      if (mode === "ask") { q.value = advise; fitText(q); }
       status.textContent = "";
     } catch (e) {
       status.textContent = "Ask failed: " + e.message;
@@ -828,9 +974,10 @@ async function buildAsk(item, replyBox, body, summaryEl) {
       buttons.forEach(b => { b.disabled = false; });
     }
   };
-  advise.addEventListener("click", () => go("", "ask"));
-  askBtn.addEventListener("click", () => { if (q.value.trim()) go(q.value, "ask"); });
-  all.addEventListener("click", () => go(q.value, "ask", "", "all"));
+  askBtn.addEventListener("click", () => {
+    if (!q.value.trim()) { status.textContent = "Type a question first."; return; }
+    go(q.value, "ask");
+  });
   second.addEventListener("click", () => go("", "second"));
   polish.addEventListener("click", () => {
     const d = replyBox.value.trim() || lastDraft;
@@ -879,11 +1026,41 @@ function expandAllButton(ul) {
   return b;
 }
 
+function starredToggle(n) {
+  const c = el("li");
+  const b = el("button", "linkbtn starview", view === "starred" ? "Show all threads" :
+    "\u2605 " + n + " Starred");
+  b.type = "button";
+  b.setAttribute("aria-pressed", String(view === "starred"));
+  b.addEventListener("click", () => { view = view === "starred" ? "all" : "starred"; render(window.__items || []); });
+  c.append(b);
+  return c;
+}
+
 function render(rows) {
   const main = document.getElementById("main");
   const counts = document.getElementById("counts");
   main.replaceChildren();
   counts.replaceChildren();
+  starButtons.clear();
+  const starred = rows.filter(r => r.item.starred);
+
+  if (view === "starred") {
+    // One list, in ranked order; archived or done Gmail threads stay while Gmail keeps the star.
+    counts.append(starredToggle(starred.length));
+    const sec = el("section");
+    sec.setAttribute("aria-label", "Starred");
+    const head = el("div", "sechead");
+    head.append(el("h2", null, "Starred (" + starred.length + ")"));
+    sec.append(head);
+    if (!starred.length) sec.append(el("p", "status", "Nothing starred. Press s on a thread, or tap its star."));
+    const ul = el("ul", "list");
+    for (const r of starred) ul.append(buildCard(r.item, r.triage));
+    sec.append(ul);
+    main.append(sec);
+    return;
+  }
+  rows = rows.filter(r => !r.item.hidden);
 
   const groups = Object.fromEntries(SECTIONS.map(s => [s.key, []]));
   for (const r of rows) {
@@ -892,9 +1069,10 @@ function render(rows) {
   }
 
   if (!rows.length) {
-    const p = el("p", "status", "Nothing synced yet. Run: ");
-    p.append(el("code", null, "frontdesk sync"));
+    const p = el("p", "status", starred.length ? "Inbox clear." : "Nothing synced yet. Run: ");
+    if (!starred.length) p.append(el("code", null, "frontdesk sync"));
     main.append(p);
+    if (starred.length) counts.append(starredToggle(starred.length));
     return;
   }
 
@@ -927,6 +1105,7 @@ function render(rows) {
     }
     main.append(sec);
   }
+  counts.append(starredToggle(starred.length));
 }
 
 async function load() {
@@ -937,7 +1116,9 @@ async function load() {
     let rows = await res.json();
     if (STATIC) {
       const delta = Number.isNaN(EXPORTED) ? 0 : Date.now() - EXPORTED;
-      rows = rows.filter(r => !staticHidden.has(r.item.id)).map(r => {
+      rows = rows.map(r => {
+        r.item.hidden = staticHidden.get(r.item.id) || r.item.hidden || "";
+        if (staticStars.has(r.item.id)) r.item.starred = staticStars.get(r.item.id);
         r.item.updated_at = shiftIso(r.item.updated_at, delta);
         for (const m of r.item.messages) m.sent_at = shiftIso(m.sent_at, delta);
         if (r.triage) r.triage.triaged_at = shiftIso(r.triage.triaged_at, delta);
@@ -947,7 +1128,7 @@ async function load() {
           r.triage.bucket = moved;
         }
         return r;
-      });
+      }).filter(r => !r.item.hidden || r.item.starred);   // same rule as the server's list
     }
     window.__items = rows;
     render(rows);
@@ -1343,6 +1524,7 @@ const SHORTCUTS = [
   ["o or Enter", "Open or close the thread"],
   ["u", "Close the thread"],
   ["e", "Archive (Gmail) or Done (Slack)"],
+  ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
   ["r", "Reply (jump to the reply box)"],
   ["m", "Memory: everything FrontDesk remembers"],
   ["?", "Show or hide this list"],
@@ -1350,8 +1532,14 @@ const SHORTCUTS = [
 ];
 let currentId = null;
 
+function allCards() {
+  return [...document.querySelectorAll("main .list > li.card")];
+}
+
 function visibleCards() {
-  return [...document.querySelectorAll("main .list > li.card")].filter(li => li.offsetParent !== null);
+  // A collapsed section's rows can still have layout in current browsers (closed <details>
+  // content is hidden, not removed), so check the section itself, not just offsetParent.
+  return allCards().filter(li => li.offsetParent !== null && !li.closest("details:not([open])"));
 }
 
 function setCurrent(li) {
@@ -1369,8 +1557,21 @@ function currentCard() {
 
 function move(step) {
   const cards = visibleCards();
-  if (!cards.length) return;
   const i = cards.findIndex(li => li.dataset.id === currentId);
+  // j past the last visible row opens the next collapsed section (Ignore) and selects its first
+  // row, so the keyboard never lands on a hidden thread.
+  if (step > 0 && (i === cards.length - 1 || !cards.length)) {
+    const all = allCards();
+    const from = i < 0 ? -1 : all.indexOf(cards[i]);
+    const hidden = all.slice(from + 1).find(li => li.closest("details:not([open])"));
+    if (hidden) {
+      const det = hidden.closest("details");
+      det.open = true;
+      setCurrent(hidden);
+      return;
+    }
+  }
+  if (!cards.length) return;
   const next = i < 0 ? (step > 0 ? 0 : cards.length - 1)
     : Math.max(0, Math.min(cards.length - 1, i + step));
   setCurrent(cards[next]);
@@ -1423,27 +1624,15 @@ function onKey(e) {
       if (li && isOpen(li)) li.querySelector(":scope > .row").click();
       break;
     case "e":
-      if (li && cardItems.get(li)) {
-        // Fade the row while the server works; move the highlight only once it is gone, to the
-        // thread that was below it (or above it, at the end of the list).
-        const it = cardItems.get(li);
-        const btn = li.querySelector(".actions .btn-archive") || el("button");
-        const cards = visibleCards();
-        const i = cards.indexOf(li);
-        const nextId = (cards[i + 1] || cards[i - 1] || {}).dataset?.id || null;
-        li.classList.add("leaving");
-        const act = it.source === "slack" ? markDone(it, btn) : archive(it, btn);
-        act.then(() => {
-          const still = visibleCards().find(c => c.dataset.id === it.id);
-          if (still) { still.classList.remove("leaving"); return; }   // the action failed
-          setCurrent(visibleCards().find(c => c.dataset.id === nextId) || null);
-        });
-      }
+      if (li) dismissCard(li);
+      break;
+    case "s":
+      if (li && cardItems.get(li)) toggleStar(cardItems.get(li));
       break;
     case "r":
       if (li) {
         if (!isOpen(li)) li.querySelector(":scope > .row").click();
-        const ta = li.querySelector("textarea");
+        const ta = li.querySelector(".reply textarea");
         if (ta) { ta.focus(); ta.scrollIntoView({ block: "center" }); }
       }
       break;

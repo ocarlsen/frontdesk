@@ -126,6 +126,13 @@ CREATE TABLE IF NOT EXISTS labels (
     at TEXT NOT NULL,
     PRIMARY KEY (item_id, item_updated_at)
 );
+CREATE TABLE IF NOT EXISTS stars (
+    -- "Starred in FrontDesk" for Slack threads only: Slack has no supported API for saving a
+    -- message for later (stars.add has no user-visible effect since 2023). Gmail stars are
+    -- Gmail's own STARRED label, read back on every sync.
+    item_id TEXT PRIMARY KEY,
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     idem_key TEXT UNIQUE NOT NULL,
@@ -332,7 +339,7 @@ class Store:
             for item_id in stale:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
                                    ("message_html", "item_id"), ("hidden", "item_id"),
-                                   ("items", "id")):
+                                   ("stars", "item_id"), ("items", "id")):
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
 
@@ -780,18 +787,47 @@ class Store:
         with self.tx() as db:
             db.execute("DELETE FROM hidden WHERE item_id=?", (item_id,))
 
+    def hidden_reason(self, item_id: str) -> str:
+        """'archived' or 'done' while that hides the item now, else ''."""
+        r = self.db.execute(
+            "SELECT h.reason FROM hidden h JOIN items i ON i.id = h.item_id WHERE h.item_id=? "
+            "AND (h.reason='archived' OR h.item_updated_at = i.updated_at)",
+            (item_id,)).fetchone()
+        return r["reason"] if r else ""
+
+    # ---- stars: Gmail's STARRED label for Gmail threads, a local flag for Slack threads
+    def is_starred(self, item: Item) -> bool:
+        if item.source == "gmail":
+            return "STARRED" in item.labels
+        return self.db.execute("SELECT 1 FROM stars WHERE item_id=?",
+                               (item.id,)).fetchone() is not None
+
+    def set_local_star(self, item_id: str, starred: bool) -> None:
+        with self.tx() as db:
+            if starred:
+                db.execute("INSERT OR IGNORE INTO stars VALUES (?,?)", (item_id, now()))
+            else:
+                db.execute("DELETE FROM stars WHERE item_id=?", (item_id,))
+
+    def archived_ids(self, source: str) -> set[str]:
+        """Items of this source that FrontDesk archived and still holds."""
+        return {r["item_id"] for r in self.db.execute(
+            "SELECT h.item_id FROM hidden h JOIN items i ON i.id = h.item_id "
+            "WHERE h.reason='archived' AND i.source=?", (source,))}
+
     def failure_count(self) -> int:
         return self.db.execute("SELECT COUNT(*) FROM triage_failures").fetchone()[0]
 
-    def ranked(self) -> list[tuple[Item, Triage | None]]:
+    def ranked(self, hidden: bool = False) -> list[tuple[Item, Triage | None]]:
         """Every item with its triage, ranked: needs_you, then fyi, then ignore, then untriaged;
-        within a bucket by urgency then recency."""
+        within a bucket by urgency then recency. hidden=True ranks the items that archive or
+        done hide right now instead (the Starred view still shows starred ones)."""
         rows = self.db.execute(
             "SELECT i.data, t.*, l.owner_bucket FROM items i "
             "LEFT JOIN triage t ON t.item_id = i.id "
             "LEFT JOIN labels l ON l.item_id = i.id AND l.item_updated_at = i.updated_at "
-            "WHERE NOT EXISTS (SELECT 1 FROM hidden h WHERE h.item_id = i.id AND "
-            "  (h.reason = 'archived' OR h.item_updated_at = i.updated_at)) "
+            "WHERE " + ("" if hidden else "NOT ") + "EXISTS (SELECT 1 FROM hidden h WHERE "
+            "  h.item_id = i.id AND (h.reason = 'archived' OR h.item_updated_at = i.updated_at)) "
             "ORDER BY CASE COALESCE(l.owner_bucket, t.bucket) WHEN 'needs_you' THEN 0 "
             "WHEN 'fyi' THEN 1 WHEN 'ignore' THEN 2 ELSE 3 END, t.urgency DESC, "
             "i.updated_at DESC"

@@ -62,12 +62,19 @@ TEXT = "text/plain; charset=utf-8"
 
 def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     """HTML bodies stay out of the list payload (fetched per message from /msg); each
-    message carries has_html instead. A proposed email reply gets the owner's sign-off."""
+    message carries has_html instead. A proposed email reply gets the owner's sign-off.
+    Each item carries `starred`, and `hidden` ('archived' or 'done', else ''): a hidden item is
+    listed only when starred, for the Starred view, after every visible one."""
     from ..assist import with_signoff
     with_html = store.html_indexes()
     out = []
-    for item, tri in store.ranked():
+    rows = [(i, t, "") for i, t in store.ranked()]
+    rows += [(i, t, store.hidden_reason(i.id)) for i, t in store.ranked(hidden=True)
+             if store.is_starred(i)]
+    for item, tri, hidden in rows:
         d = item.to_dict()
+        d["starred"] = store.is_starred(item)
+        d["hidden"] = hidden
         for i, m in enumerate(d["messages"]):
             m.pop("html", None)
             if not m.get("sender_key"):   # Gmail has none; its key is the address in sender
@@ -92,7 +99,8 @@ def signed_history(history: list[dict], source: str) -> list[dict]:
 
 
 def ask_payload(store: Store, item: Item) -> dict:
-    """The Ask panel's data: history, and one notes box per PERSON in the thread (`people` lists
+    """The Ask panel's data: the built-in question the Ask box starts with (`advise`), history,
+    and one notes box per PERSON in the thread (`people` lists
     one address per person, `notes` is keyed by it, `aliases` holds their other addresses and
     `names` the name the owner typed, `display` how to show a key that is not readable: a Slack
     user's display name, from the thread first). The owner is never among them."""
@@ -112,7 +120,9 @@ def ask_payload(store: Store, item: Item) -> dict:
     shown = {**store.slack_names(), **{k.lower(): v for k, v in item.names.items()}}
     display = {a: label for a in [*people, *(x for v in aliases.values() for x in v)]
                if (label := address_label(a, shown))}
-    return {"history": signed_history(store.ask_history(item.id), item.source),
+    from ..assist import ADVISE
+    return {"advise": ADVISE,
+            "history": signed_history(store.ask_history(item.id), item.source),
             "notes": store.notes_for(people), "people": people, "aliases": aliases,
             "names": names, "display": display}
 
@@ -319,7 +329,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
-                      "undone", "read", "ask") \
+                      "undone", "read", "ask", "star", "unstar") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -404,6 +414,22 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         store = Store(db_path)
         try:
             return HTTPStatus.OK, actions.set_done(store, str(item_id), kind == "done")
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
+    if kind in ("star", "unstar"):
+        # Gmail: the STARRED label, through the actions token. Slack: local only, no token.
+        store = Store(db_path)
+        try:
+            item = store.get_item(item_id)
+            gmail = None
+            if item is not None and item.source == "gmail" and not settings.get("demo"):
+                try:
+                    gmail = GmailClient(action_credentials())
+                except AuthError as e:
+                    return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+            return HTTPStatus.OK, actions.set_starred(store, item_id, kind == "star", gmail, key)
         except actions.ActionError as e:
             return HTTPStatus.CONFLICT, {"error": str(e)}
         finally:
