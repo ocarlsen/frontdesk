@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from ..gmail.sync import SyncResult
 from ..store import Store
-from .client import SlackClient
+from .client import SlackClient, SlackError
 from .normalize import display_name, dm_to_item, is_system, mentions, thread_to_item
 
 
@@ -85,6 +85,12 @@ def sync(store: Store, settings: dict, token: str, log=print,
     client = client or SlackClient(token)
     me = client.auth_test()
     owner = me["user_id"]
+    team = me.get("team_id", "")
+    if not owner or not team:
+        # Keys are slack:<team>:<user>; without both, people could not be keyed or the owner
+        # excluded. Refuse the run rather than store guesses.
+        raise SlackError("auth.test", "missing_user_or_team_id")
+    # item.account stays the workspace HOST: sending checks the token's host against it.
     host = urlparse(me["url"]).hostname or me.get("team", "")
     days = float(settings.get("slack_days", 7))
     cap = int(settings.get("slack_max_items", 60))
@@ -107,13 +113,13 @@ def sync(store: Store, settings: dict, token: str, log=print,
         keep.add(c.item_id)   # listed: kept even if the build below fails
         try:
             if c.item_id.endswith(":dm"):
-                item = dm_to_item(c.conv, c.messages, owner, host, name_of)
+                item = dm_to_item(c.conv, c.messages, owner, host, name_of, team)
                 if item is not None and _dm_unread(client, c.conv["id"], c.messages, owner):
                     item.labels.append("UNREAD")
             else:
                 raw = (client.replies(c.conv["id"], c.messages[0]["ts"])
                        if c.fetch_replies else c.messages)
-                item = thread_to_item(c.conv, raw, owner, host, name_of)
+                item = thread_to_item(c.conv, raw, owner, host, name_of, team)
         except Exception as e:  # noqa: BLE001 - isolate per item, report the type only
             log(f"  skipped {c.item_id}: {type(e).__name__}")
             continue
@@ -130,4 +136,7 @@ def sync(store: Store, settings: dict, token: str, log=print,
     removed = store.prune("slack", host, keep)
     if removed:
         log(f"  removed {removed} Slack item(s) no longer active in the last {days:g} days")
+    linked = store.link_slack_names()
+    if linked["linked"]:
+        log(f"  linked {len(linked['linked'])} Slack name(s) in your notes to Slack users")
     return SyncResult(count, removed)

@@ -12,6 +12,10 @@ class Message:
     body: str              # cleaned plain text, quoted history stripped where possible
     is_mine: bool = False  # sent by the account owner
     html: str = ""         # the HTML part, for DISPLAY only; never sent to a model
+    # The sender's stable participant key where the source has one (Slack: "slack:<team>:<user>",
+    # lowercase), so the model can tie a note line to a message author. Gmail leaves it empty:
+    # its key is the address inside `sender`.
+    sender_key: str = ""
 
 
 @dataclass
@@ -26,6 +30,13 @@ class Item:
     updated_at: str        # ISO 8601 UTC of the newest message
     labels: list[str] = field(default_factory=list)
     url: str = ""          # deep link to open it in the source app
+    # {participant key: display name} where keys are not readable (Slack). Display names are
+    # chosen by the other party: for the PAGE only, never the trusted notes block of a prompt.
+    names: dict[str, str] = field(default_factory=dict)
+    # The owner's own participant key where the source has one (Slack, from auth.test at sync),
+    # so the owner is excluded even from a thread they never posted in. Empty for Gmail, whose
+    # owner is `account`.
+    owner_key: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -35,6 +46,20 @@ class Item:
         d = dict(d)
         d["messages"] = [Message(**m) for m in d["messages"]]
         return cls(**d)
+
+
+def model_dict(item: Item) -> dict:
+    """The item as a model sees it (inside an untrusted block): no message HTML, no display-name
+    map (each message already carries its sender as shown), no owner key (is_mine says it), and
+    sender_key only where the source has one, so a Gmail thread reads exactly as before."""
+    d = item.to_dict()
+    d.pop("names", None)
+    d.pop("owner_key", None)
+    for m in d["messages"]:
+        m.pop("html", None)
+        if not m.get("sender_key"):
+            m.pop("sender_key", None)
+    return d
 
 
 BUCKETS = ("needs_you", "fyi", "ignore")

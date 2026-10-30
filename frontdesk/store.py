@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS people (
     updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS addresses (
-    -- A Gmail address or (until Slack keys move to user IDs) a Slack display name, lowercase.
+    -- Lowercase: a Gmail address, a Slack user key 'slack:<team_id>:<user_id>', or (kept as an
+    -- alias for one release) a Slack display name from before user keys; see link_slack_names.
     addr TEXT PRIMARY KEY,
     person_id INTEGER NOT NULL REFERENCES people(id)
 );
@@ -195,21 +196,34 @@ def now() -> str:
 
 def owner_keys(item: Item) -> set[str]:
     """The owner's own keys on one item, lowercase: the mailbox (Gmail) or workspace host (Slack),
-    plus the sender of every message the owner sent. On Slack that sender is the owner's display
-    name, the only owner identity a Slack item carries until Slack keys move to user IDs, so a
-    thread the owner never posted in does not list the owner at all (participants are senders)."""
+    plus the owner's participant keys. Gmail: the address of every message the owner sent. Slack:
+    item.owner_key, the owner's user key from auth.test at sync, so the owner is excluded even
+    from a thread they never posted in, and the owner's display name on that item (so an old
+    note keyed on the owner's Slack name stays refused). A Slack item stored before user keys
+    has no owner_key; for it, the senders of the owner's messages count, as they used to."""
     keys = {item.account.strip().lower()}
-    for m in item.messages:
-        if not m.is_mine:
-            continue
-        if item.source == "gmail":
-            addr = parseaddr(m.sender)[1].strip().lower()
-            if "@" in addr:
-                keys.add(addr)
-        else:
-            keys.add(m.sender.strip().lower())
+    if item.source == "gmail":
+        for m in item.messages:
+            if m.is_mine:
+                addr = parseaddr(m.sender)[1].strip().lower()
+                if "@" in addr:
+                    keys.add(addr)
+    elif item.owner_key:
+        keys.add(item.owner_key.strip().lower())
+        keys.add(item.names.get(item.owner_key, "").strip().lower())
+    else:
+        keys |= {m.sender.strip().lower() for m in item.messages if m.is_mine}
     keys.discard("")
     return keys
+
+
+def is_slack_key(addr: str) -> bool:
+    return addr.startswith("slack:")
+
+
+def is_legacy_slack_name(addr: str) -> bool:
+    """An address from before Slack user keys: a Slack display name (no '@', no 'slack:')."""
+    return bool(addr) and "@" not in addr and not is_slack_key(addr)
 
 
 class Store:
@@ -523,6 +537,66 @@ class Store:
         """Everyone remembered, most recently changed first."""
         return [self._person_dict(r) for r in self.db.execute(
             "SELECT * FROM people ORDER BY updated_at DESC, id DESC")]
+
+    def slack_names(self) -> dict[str, str]:
+        """{Slack key: the display name its newest stored item shows}: other-party-controlled
+        text, for the page only (Memory, the notes boxes). Never sent to a model."""
+        out: dict[str, tuple[str, str]] = {}
+        for r in self.db.execute("SELECT updated_at, data FROM items WHERE source='slack'"):
+            for k, name in (json.loads(r["data"]).get("names") or {}).items():
+                k = k.strip().lower()
+                if name and r["updated_at"] >= out.get(k, ("", ""))[0]:
+                    out[k] = (r["updated_at"], name)
+        return {k: n for k, (_, n) in out.items()}
+
+    def link_slack_names(self) -> dict:
+        """Old Slack notes were keyed by display name. For each such address (is_legacy_slack_name)
+        whose name belongs to exactly ONE Slack user across every stored Slack item, that user's
+        key is added to the same person; the old name stays as an alias for one release, so
+        nothing that still holds it breaks. Left alone: names seen for two or more users
+        (ambiguous), names not seen at all, a name that is the owner's, and a key that already
+        belongs to someone else (joining two people is a merge, which only the owner does).
+
+        Idempotent per address rather than run-once behind a marker, since a name first seen in a
+        later sync should still link: an address already linked is a no-op. Runs under BEGIN
+        IMMEDIATE, so two processes linking at once serialize and the second finds the work done;
+        INSERT OR IGNORE backs that up. Returns {"linked": {name: key}, "ambiguous": [name]}."""
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            users: dict[str, set[str]] = {}
+            mine: set[str] = set()
+            for r in self.db.execute("SELECT data FROM items WHERE source='slack'").fetchall():
+                item = Item.from_dict(json.loads(r["data"]))
+                mine |= owner_keys(item)
+                for k, name in item.names.items():
+                    k = k.strip().lower()
+                    if is_slack_key(k) and ":bot:" not in k and name.strip():
+                        users.setdefault(name.strip().lower(), set()).add(k)
+            linked, ambiguous = {}, []
+            legacy = [r for r in self.db.execute("SELECT addr, person_id FROM addresses "
+                                                 "ORDER BY rowid").fetchall()
+                      if is_legacy_slack_name(r["addr"])]
+            for r in legacy:
+                keys = users.get(r["addr"], set())
+                if len(keys) > 1:
+                    ambiguous.append(r["addr"])
+                if len(keys) != 1:
+                    continue
+                key = next(iter(keys))
+                if key in mine or r["addr"] in mine:
+                    continue
+                held = self.db.execute("SELECT person_id FROM addresses WHERE addr=?",
+                                       (key,)).fetchone()
+                if held is not None:
+                    continue          # already linked (re-run), or someone else's: leave it
+                self.db.execute("INSERT OR IGNORE INTO addresses VALUES (?,?)",
+                                (key, r["person_id"]))
+                linked[r["addr"]] = key
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+        return {"linked": linked, "ambiguous": ambiguous}
 
     def mail_names(self) -> dict[str, str]:
         """{address: the display name its newest Gmail message used}: sender-controlled text, for

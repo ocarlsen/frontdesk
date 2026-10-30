@@ -94,14 +94,19 @@ other line "not confirmed", and the model is told to say so when it relies on on
 writing "you said". The page shows who wrote each item, and **Confirm** (or editing and saving)
 makes it yours.
 
-A **person** owns any number of addresses (Gmail addresses; on Slack, for now, display names)
-and one note, so Ask finds the note through whichever address a thread uses. A person has a name
-only when you type one: the display name in a From header is written by the sender, so the Memory
-page shows it greyed as "from mail, unconfirmed" and it never enters the prompt. Ask's notes block
+A **person** owns any number of addresses (Gmail addresses; on Slack, the user's stable ID, so a
+renamed colleague keeps their note and two people with one name stay apart) and one note, so Ask
+finds the note through whichever address a thread uses. A person has a name only when you type
+one: the display name in a From header is written by the sender, so the Memory page shows it
+greyed as "from mail, unconfirmed" and it never enters the prompt. Ask's notes block
 lists a person as their addresses, the name only if you typed it, then the same author and date
 label, e.g. `fab@example.com, f@example.org (written by the owner, 2026-10-28): Pre-seed, no pay.`
-Your own address is never a person: on Gmail that is the mailbox, on Slack whoever sent your own
-messages.
+Slack display names, like From names, are the other person's text: the page shows them, the
+notes block lists Slack people by ID only. Notes saved before Slack IDs were keyed by display
+name; each sync links such a name to the one Slack user it belongs to, and the Memory page marks
+any it cannot link (a name two users share, or one not seen since) as "Slack name, not linked to
+a user". Your own address is never a person: on Gmail that is the mailbox, on Slack your own user
+ID, learnt at each sync.
 
 **Memory** (header button, or `m`; `Esc` closes) lists everything kept: your profile, What's going
 on, then people, newest first, each with addresses, name, note, author and date. Edit there; only

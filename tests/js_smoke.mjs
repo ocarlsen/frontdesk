@@ -150,6 +150,47 @@ click(byText(sug, "Save note for fab@example.com: Wants a demo."));
 await new Promise(r => setTimeout(r, 0));
 if (posted.length !== 1 || posted[0].body.kind !== "note_suggestion" || posted[0].body.item_id !== "gmail:t1")
   throw new Error("suggestion request");
+// Slack people are keyed by user id; the page shows display names, never a raw key.
+const SK = "slack:t0:u0ann";
+const noKey = root => { const bad = texts(root).filter(t => typeof t === "string" && t.includes("slack:"));
+                        if (bad.length) throw new Error("raw Slack key shown: " + bad[0]); };
+const sn = new Node("div");
+fn("renderNotes")(sn, [SK], { [SK]: { text: "Leads infra.", author: "owner", updated_at: "2026-10-28T16:00:00Z" } },
+  () => {}, { [SK]: ["ann lee"] }, {}, { [SK]: "Ann Lee", "ann lee": "ann lee" });
+if (!texts(sn).includes("Ann Lee") || !texts(sn).includes("Also ann lee")) throw new Error("slack notes names");
+if (all(sn).find(n => n.tagName === "TEXTAREA").placeholder !== "What should FrontDesk remember about Ann Lee?")
+  throw new Error("slack notes placeholder");
+noKey(sn);
+const smem = new Node("div");
+const slackPeople = [
+  { id: 7, name: "", note: "Linked.", author: "owner", created_at: "x", updated_at: "2026-10-28T16:00:00Z",
+    addresses: [SK, "ann lee"], mail_names: [],
+    address_labels: { [SK]: { text: "Ann Lee", kind: "slack" }, "ann lee": { text: "ann lee", kind: "slack_name" } } },
+  { id: 8, name: "Sam K", note: "Unlinked.", author: "owner", created_at: "x", updated_at: "2026-10-27T16:00:00Z",
+    addresses: ["sam"], mail_names: [], address_labels: { sam: { text: "sam", kind: "slack_unlinked" } } },
+  { id: 9, name: "Bo", note: "Two places.", author: "owner", created_at: "x", updated_at: "2026-10-26T16:00:00Z",
+    addresses: ["bo@example.com", "slack:t0:u0bo"], mail_names: [],
+    address_labels: { "slack:t0:u0bo": { text: "Bo Diaz", kind: "slack" } } }];
+fn("renderMemory")(smem, { demo: false, profile: "", signoff: "", situation: [], people: slackPeople, migration: null }, () => {});
+const smt = texts(smem);
+for (const want of ["Ann Lee (Slack)", "also ann lee (old Slack name)", "sam (Slack name, not linked to a user)",
+                    "bo@example.com", ", Bo Diaz (Slack)"]) {
+  if (!smt.includes(want)) throw new Error("slack memory lacks " + want);
+}
+if (all(smem).find(n => n.textContent === "Ann Lee (Slack)").title !== SK) throw new Error("key in the title");
+if (all(smem).find(n => n.textContent === ", Bo Diaz (Slack)").title !== "slack:t0:u0bo") throw new Error("span title");
+noKey(smem);
+// Edit shows every address and the editor (the address line must exist in the edit view).
+const annBox = all(smem).find(n => n.className === "situationitem person" && texts(n).includes("Linked."));
+click(byText(annBox, "Edit"));
+if (!all(annBox).some(n => n.tagName === "TEXTAREA") || !texts(annBox).includes(", ann lee (old Slack name)"))
+  throw new Error("edit view");
+noKey(annBox);
+const slab = new Node("div");
+fn("renderAnswer")(slab, { answer: "x", draft_reply: "", situation_suggestions: [],
+  note_suggestions: [{ who: SK, text: "Ships Friday.", label: "Ann Lee" }] }, new Node("textarea"), () => {}, "slack:C1:1.0");
+if (!texts(slab).includes("Save note for Ann Lee: Ships Friday.")) throw new Error("suggestion label");
+noKey(slab);
 console.log("js smoke ok");
 // History folds into turns: a second opinion joins the turn it reviews.
 const turns = vm.runInContext("groupTurns", ctx)([

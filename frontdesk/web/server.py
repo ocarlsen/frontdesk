@@ -70,6 +70,8 @@ def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
         d = item.to_dict()
         for i, m in enumerate(d["messages"]):
             m.pop("html", None)
+            if not m.get("sender_key"):   # Gmail has none; its key is the address in sender
+                m.pop("sender_key", None)
             m["has_html"] = i in with_html.get(item.id, set())
         t = asdict(tri) if tri else None
         if t and item.source == "gmail":
@@ -92,7 +94,8 @@ def signed_history(history: list[dict], source: str) -> list[dict]:
 def ask_payload(store: Store, item: Item) -> dict:
     """The Ask panel's data: history, and one notes box per PERSON in the thread (`people` lists
     one address per person, `notes` is keyed by it, `aliases` holds their other addresses and
-    `names` the name the owner typed). The owner is never among them."""
+    `names` the name the owner typed, `display` how to show a key that is not readable: a Slack
+    user's display name, from the thread first). The owner is never among them."""
     from ..assist import others
     oth = others(item)
     rep: dict[str, str] = {}
@@ -106,9 +109,24 @@ def ask_payload(store: Store, item: Item) -> dict:
         if p["name"]:
             names[first] = p["name"]
     people = [a for a in oth if rep.get(a.lower(), a.lower()) == a.lower()]
+    shown = {**store.slack_names(), **{k.lower(): v for k, v in item.names.items()}}
+    display = {a: label for a in [*people, *(x for v in aliases.values() for x in v)]
+               if (label := address_label(a, shown))}
     return {"history": signed_history(store.ask_history(item.id), item.source),
             "notes": store.notes_for(people), "people": people, "aliases": aliases,
-            "names": names}
+            "names": names, "display": display}
+
+
+def address_label(addr: str, slack_names: dict[str, str]) -> str:
+    """How the page shows an address that is not readable as is ('' for one that is, like an
+    email address): a Slack user key as their display name, a bot key likewise, an old Slack
+    display-name alias as itself. Display names are the other party's text: page only."""
+    from ..store import is_legacy_slack_name, is_slack_key
+    if is_slack_key(addr):
+        return slack_names.get(addr) or ("Slack bot" if ":bot:" in addr else "Slack user")
+    if is_legacy_slack_name(addr):
+        return addr
+    return ""
 
 
 def message_html(store: Store, item_id: str, index: int) -> str | None:
@@ -240,12 +258,30 @@ def memory_payload(store: Store) -> dict:
     greyed as unconfirmed; they are sender-controlled and never reach a model."""
     cfg = config.settings()
     names = store.mail_names()
-    people = [{**p, "mail_names": sorted({names[a] for a in p["addresses"] if a in names})}
+    slack = store.slack_names()
+    people = [{**p, "mail_names": sorted({names[a] for a in p["addresses"] if a in names}),
+               "address_labels": _address_labels(p["addresses"], slack)}
               for p in store.people_all()]
     mig = store.meta("people_migrated")
     return {"demo": False, "profile": cfg.get("owner_profile", ""),
             "signoff": cfg.get("reply_signoff", ""), "situation": store.situation(),
             "people": people, "migration": json.loads(mig) if mig else None}
+
+
+def _address_labels(addrs: list[str], slack: dict[str, str]) -> dict[str, dict]:
+    """{address: {"text", "kind"}} for the Memory page's address line, for the addresses that
+    are not readable as is. kind 'slack' (a user key: "Name (Slack)", the key goes in a title
+    attribute), 'slack_name' (an old display-name alias that is linked: the person also has a
+    user key) or 'slack_unlinked' (no user key yet: "Slack name, not linked to a user")."""
+    from ..store import is_legacy_slack_name, is_slack_key
+    linked = any(is_slack_key(a) for a in addrs)
+    out = {}
+    for a in addrs:
+        if is_slack_key(a):
+            out[a] = {"text": address_label(a, slack), "kind": "slack"}
+        elif is_legacy_slack_name(a):
+            out[a] = {"text": a, "kind": "slack_name" if linked else "slack_unlinked"}
+    return out
 
 
 def memory_export(store: Store) -> dict:

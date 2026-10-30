@@ -18,10 +18,10 @@ import json
 from datetime import UTC, datetime
 from email.utils import parseaddr
 
-from .items import Item
+from .items import Item, model_dict
 from .pricing import cost_usd
 from .providers import Provider, ProviderError
-from .store import OWNER, Store, check_author, owner_keys
+from .store import OWNER, Store, check_author, is_legacy_slack_name, owner_keys
 
 ADVISE = ("What do you think? Read what this person is really asking for, how it fits my goals "
           "and my history with them, and tell me what I should do next. Be candid. If a reply "
@@ -71,7 +71,8 @@ own sign-off.
 
 note_suggestions: facts worth remembering about a person in this thread that are not already in
 <owner_notes> (a commitment, a pending item, a preference, a status). At most 3, each one short
-sentence, keyed by that person's address or name as it appears in the thread. Usually empty.
+sentence, keyed by that person's address as it appears in the thread (on Slack, the message's
+sender_key, which is also how <owner_notes> lists them). Usually empty.
 
 situation_suggestions: only durable changes in the owner's own situation that this conversation
 shows and <owner_situation> does not already list: a decision they made, a new open matter, or
@@ -149,16 +150,17 @@ def with_signoff(text: str, signoff: str) -> str:
 def others(item: Item) -> list[str]:
     """The thread's participants minus the owner: notes are about other people, never the owner
     (a note keyed on the owner's own address would otherwise ride along on every Ask). The owner
-    is the mailbox on Gmail; on Slack, whoever sent the owner's own messages (store.owner_keys)."""
+    is the mailbox on Gmail; on Slack, the owner's user key from sync (store.owner_keys)."""
     mine = owner_keys(item)
     return [p for p in item.participants if p.lower() not in mine]
 
 
 def resolve_participant(item: Item, who: str) -> str | None:
     """The participant key (lowercase) a model's note suggestion names, or None. `who` may be
-    the key itself, an address in "Name <addr>" form, or (Gmail) the display name of exactly one
-    other sender. Only the resolved key is stored, never the display name, so model output can
-    only add a note to someone already in this thread, never create a person from nothing."""
+    the key itself, an address in "Name <addr>" form, or the display name of exactly one other
+    sender (Gmail: the From name; Slack: item.names). Only the resolved key is stored, never the
+    display name, so model output can only add a note to someone already in this thread, never
+    create a person from nothing."""
     if not isinstance(who, str) or not who.strip():
         return None
     keys = {p.lower() for p in others(item)}
@@ -174,14 +176,24 @@ def resolve_participant(item: Item, who: str) -> str | None:
                  if n.strip().lower() == w and a.strip().lower() in keys}
         if len(found) == 1:
             return found.pop()
+    elif item.source == "slack":
+        found = {k for k in keys if item.names.get(k, "").strip().lower() == w}
+        if len(found) == 1:
+            return found.pop()
     return None
 
 
 def note_line(person: dict, exclude: set[str] = frozenset()) -> str:
     """One person in <owner_notes>: their addresses, the name only when the owner typed one
     (people.name has no other writer; display names from mail never get here), then who wrote
-    the note and when. 'fab@x.com, f@x.com (written by the owner, 2026-10-28): text'."""
-    who = ", ".join(_owner_text(a) for a in person["addresses"] if a not in exclude)
+    the note and when. 'fab@x.com, f@x.com (written by the owner, 2026-10-28): text'. Slack
+    people appear by user key (the sender_key of their messages in the thread); an old Slack
+    display-name alias is left out, since the other party chose that text and this block is
+    trusted."""
+    who = ", ".join(_owner_text(a) for a in person["addresses"]
+                    if a not in exclude and not is_legacy_slack_name(a))
+    if not who:
+        who = "(a Slack name not yet linked to a user)"
     if person["name"]:
         who += f" (named {_owner_text(person['name'])} by the owner)"
     return (f"{who} {provenance(person['author'], person['updated_at'])}: "
@@ -196,9 +208,7 @@ def note_lines(store: Store, item: Item) -> list[str]:
 
 
 def build_prompt(store: Store, item: Item, question: str, profile: str, *, author: str) -> str:
-    thread = item.to_dict()
-    for m in thread["messages"]:
-        m.pop("html", None)
+    thread = model_dict(item)
     related = []
     for other, summary in store.related(item):
         last = other.messages[-1] if other.messages else None
@@ -271,6 +281,10 @@ def ask(store: Store, provider: Provider, item_id: str, question: str, profile: 
     prompt = build_prompt(store, item, question, profile, author=author)
     res = provider.complete_json(SYSTEM, prompt, SCHEMA, max_tokens=8000)
     out = validate(res.data)
+    for n in out["note_suggestions"]:   # the page shows a Slack key as a name, never raw
+        key = resolve_participant(item, n["who"])
+        if key and item.names.get(key):
+            n["label"] = item.names[key]
     if item.source == "gmail":   # a Slack reply carries no sign-off
         out["draft_reply"] = with_signoff(out["draft_reply"], signoff)
     u = res.usage

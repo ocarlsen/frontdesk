@@ -14,7 +14,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
-from .items import BUCKETS, Item, Triage
+from .items import BUCKETS, Item, Triage, model_dict
 from .pricing import cost_usd
 from .providers import Provider, ProviderError, ProviderRefusal
 from .store import Store, now
@@ -91,9 +91,7 @@ def prompt_version(profile: str = "") -> str:
 
 
 def render_user(item: Item, today: str) -> str:
-    d = item.to_dict()
-    for m in d["messages"]:
-        m.pop("html", None)  # display-only; the model reads the text body
+    d = model_dict(item)   # no HTML (display-only; the model reads the text body)
     payload = json.dumps(d, ensure_ascii=False, indent=1).replace("<", "\\u003c")
     return (f"Today is {today}. The inbox owner is {item.account}.\n\n"
             f"<untrusted_thread>\n{payload}\n</untrusted_thread>")

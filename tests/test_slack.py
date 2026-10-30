@@ -19,6 +19,11 @@ HOST = "example-team.slack.com"
 OWNER = "U0OWNER"
 NAMES = {OWNER: "Pat Owner", "U0ANN": "Ann Lee", "U0BO": "Bo Diaz", "U0CY": "Cy Park"}
 TOKEN = "xoxp-test-secret-123"
+TEAM = "T0"
+
+
+def key(uid: str) -> str:
+    return f"slack:t0:{uid.lower()}"
 
 
 def name_of(uid: str) -> str:
@@ -53,23 +58,23 @@ def test_bot_detection_and_is_mine():
     app = {"ts": "1700000000.000200", "bot_id": "B2", "user": "U0BO",
            "bot_profile": {"name": "Calendar"}, "text": "meeting soon"}
     mine = {"ts": "1700000000.000300", "user": OWNER, "text": "ok"}
-    assert to_message(bot, OWNER, name_of).sender == "Deploybot (bot)"
-    assert to_message(app, OWNER, name_of).sender == "Calendar (bot)"
-    m = to_message(mine, OWNER, name_of)
+    assert to_message(bot, OWNER, name_of, TEAM).sender == "Deploybot (bot)"
+    assert to_message(app, OWNER, name_of, TEAM).sender == "Calendar (bot)"
+    m = to_message(mine, OWNER, name_of, TEAM)
     assert (m.sender, m.is_mine, m.html) == ("Pat Owner", True, "")
     assert m.sent_at == "2023-11-14T22:13:20Z"
-    assert not to_message(bot, OWNER, name_of).is_mine
+    assert not to_message(bot, OWNER, name_of, TEAM).is_mine
 
 
 def test_system_subtypes_skipped():
     for sub in ("channel_join", "channel_leave", "channel_topic", "pinned_item"):
         assert to_message({"ts": "1.0", "user": "U0ANN", "subtype": sub, "text": "x"},
-                          OWNER, name_of) is None
+                          OWNER, name_of, TEAM) is None
 
 
 def test_file_only_message_has_a_body():
     m = to_message({"ts": "1.0", "user": "U0ANN", "subtype": "file_share", "text": "",
-                    "files": [{"name": "plan.pdf"}]}, OWNER, name_of)
+                    "files": [{"name": "plan.pdf"}]}, OWNER, name_of, TEAM)
     assert m.body == "[file: plan.pdf]"
 
 
@@ -82,13 +87,17 @@ def test_dm_grouped_oldest_first():
         {"ts": "1700000200.000000", "user": "U0ANN", "subtype": "channel_join"},
         {"ts": "1700000100.000000", "user": "U0ANN", "text": "lunch?"},
     ]
-    item = dm_to_item(conv, raw, OWNER, HOST, name_of)
+    item = dm_to_item(conv, raw, OWNER, HOST, name_of, TEAM)
     assert item.id == "slack:D0ANN:dm"
     assert (item.source, item.account) == ("slack", HOST)
     assert item.subject == "Slack DM with Ann Lee"
     assert [m.body for m in item.messages] == ["lunch?", "sure"]
     assert [m.is_mine for m in item.messages] == [False, True]
-    assert item.participants == ["Ann Lee", "Pat Owner"]
+    assert item.participants == [key("U0ANN"), key(OWNER)]
+    assert [m.sender for m in item.messages] == ["Ann Lee", "Pat Owner"]   # names stay for display
+    assert [m.sender_key for m in item.messages] == [key("U0ANN"), key(OWNER)]
+    assert item.names == {key("U0ANN"): "Ann Lee", key(OWNER): "Pat Owner"}
+    assert item.owner_key == key(OWNER)
     assert item.updated_at == "2023-11-14T22:18:20Z"
     assert item.labels == ["slack", "dm"]
     assert item.url == f"https://{HOST}/archives/D0ANN/p1700000300000000"
@@ -97,17 +106,17 @@ def test_dm_grouped_oldest_first():
 def test_group_dm_subject():
     conv = {"id": "G0GRP", "is_mpim": True, "name": "mpdm-ann--bo--pat-1"}
     raw = [{"ts": "2.0", "user": "U0BO", "text": "b"}, {"ts": "1.0", "user": "U0ANN", "text": "a"}]
-    item = dm_to_item(conv, raw, OWNER, HOST, name_of)
+    item = dm_to_item(conv, raw, OWNER, HOST, name_of, TEAM)
     assert item.subject == "Slack group DM: Ann Lee, Bo Diaz"
     assert item.labels == ["slack", "group_dm"]
-    only_me = dm_to_item(conv, [{"ts": "1.0", "user": OWNER, "text": "hi"}], OWNER, HOST, name_of)
+    only_me = dm_to_item(conv, [{"ts": "1.0", "user": OWNER, "text": "hi"}], OWNER, HOST, name_of, TEAM)
     assert only_me.subject == "Slack group DM: ann, bo, pat"
 
 
 def test_dm_with_only_system_events_is_none():
     conv = {"id": "D0ANN", "is_im": True, "user": "U0ANN"}
     assert dm_to_item(conv, [{"ts": "1.0", "subtype": "channel_join"}], OWNER, HOST,
-                      name_of) is None
+                      name_of, TEAM) is None
 
 
 # ---- channel threads ----------------------------------------------------------------------
@@ -120,7 +129,7 @@ def test_thread_item_and_urls():
             "text": f"<@{OWNER}> can you review?\nsecond line", "reply_count": 1}
     reply = {"ts": "1700000500.000200", "thread_ts": "1700000000.000100", "user": OWNER,
              "text": "on it"}
-    item = thread_to_item(CHAN, [root, reply, root], OWNER, HOST, name_of)  # root repeated
+    item = thread_to_item(CHAN, [root, reply, root], OWNER, HOST, name_of, TEAM)  # root repeated
     assert item.id == "slack:C0ENG:1700000000.000100"
     assert item.subject == "#eng: @Pat Owner can you review?"
     assert len(item.messages) == 2
@@ -128,7 +137,7 @@ def test_thread_item_and_urls():
     assert item.url == (f"https://{HOST}/archives/C0ENG/p1700000000000100"
                         "?thread_ts=1700000000.000100&cid=C0ENG")
     single = thread_to_item(CHAN, [{"ts": "1700000000.000100", "user": "U0ANN",
-                                    "text": "x" * 200}], OWNER, HOST, name_of)
+                                    "text": "x" * 200}], OWNER, HOST, name_of, TEAM)
     assert single.url == f"https://{HOST}/archives/C0ENG/p1700000000000100"
     assert single.subject == "#eng: " + "x" * 80
 
