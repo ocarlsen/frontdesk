@@ -12,11 +12,13 @@ from .base import Completion, Provider, ProviderError, ProviderRefusal, Usage
 __all__ = ["Completion", "Provider", "ProviderError", "ProviderRefusal", "Usage", "get_provider"]
 
 
-def keychain_secret(service: str) -> str:
+def keychain_secret(service: str, account: str | None = None) -> str:
+    """The password of login-Keychain item `service` (and `account`, when given)."""
     if not shutil.which("security"):
         raise ProviderError(f"no API key: set the provider's key environment variable "
                             f"(macOS users can instead use Keychain item '{service}')")
-    r = subprocess.run(["security", "find-generic-password", "-s", service, "-w"],
+    who = ["-a", account] if account else []
+    r = subprocess.run(["security", "find-generic-password", "-s", service, *who, "-w"],
                        capture_output=True, text=True)
     if r.returncode == 36:  # errSecInteractionNotAllowed: the item exists, the keychain is locked
         raise ProviderError(
@@ -25,7 +27,7 @@ def keychain_secret(service: str) -> str:
     if r.returncode != 0 or not r.stdout.strip():
         raise ProviderError(
             f"no Keychain item '{service}'. Store it from a regular Terminal with: "
-            f"security add-generic-password -U -s {service} -a $USER -w")
+            f"security add-generic-password -U -s {service} -a {account or '$USER'} -w")
     return r.stdout.strip()
 
 
