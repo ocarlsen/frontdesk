@@ -232,8 +232,8 @@ only reserved `example.*` domains.
 
 ## Roadmap
 
-1. **More sources and models:** Slack (your own internal app), a second model adapter with a
-   parity test.
+Planned work lives in the [issue tracker](https://github.com/ocarlsen/frontdesk/issues), labelled
+`enhancement`. Next up: [Sign in with Google from the page](https://github.com/ocarlsen/frontdesk/issues/14).
 
 ## Provenance
 
