@@ -248,11 +248,22 @@ function buildDetail(item, triage) {
     threadGroup.append(doneBtn);
   }
   const url = safeOpenUrl(item.url);
-  if (url) {
-    const a = el("a", "openlink", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
+  // The demo always shows the link (its Slack threads have no real workspace URL).
+  if (url || STATIC) {
+    const where = item.source === "slack" ? "Slack" : "Gmail";
+    const a = el("a", "openlink", "Open in " + where);
+    if (STATIC) {
+      // The demo's threads are synthetic, so the real link would land on an error page. Keep the
+      // link looking and acting like one, and say what it does in the live app.
+      const note = "Demo: in the live app this opens the thread in " + where + ".";
+      a.href = "#";
+      a.title = note;
+      a.addEventListener("click", ev => { ev.preventDefault(); toast(note); });
+    } else {
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
     threadGroup.append(a);
   }
   for (const g of [replyGroup, threadGroup]) if (g.childNodes.length) actions.append(g);
