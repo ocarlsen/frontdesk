@@ -22,3 +22,36 @@ jobs:
         run: ruff check frontdesk tests
       - name: Test
         run: pytest -q
+
+  e2e:
+    # Real-browser tests (tests/e2e): Chromium as a desktop window and as an iPhone 15, on the
+    # synthetic demo only. A separate job, so the Python job above is unchanged and not slowed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -e '.[dev]'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser tests
+        working-directory: tests/e2e
+        run: npm test
+      - name: Keep traces of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: tests/e2e/test-results/
+          retention-days: 7

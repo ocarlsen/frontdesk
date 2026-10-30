@@ -1,0 +1,11 @@
+{
+  "name": "frontdesk-e2e",
+  "private": true,
+  "description": "Real-browser end-to-end tests for the FrontDesk page (synthetic demo only).",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
