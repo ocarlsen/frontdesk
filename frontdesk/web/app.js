@@ -235,9 +235,10 @@ function buildDetail(item, triage) {
     actions.append(a);
   }
   if (actions.childNodes.length) reply.append(actions);
-  if (triage) d.append(whyPanel(triage));
   d.append(askPanel(item, ta));
   d.append(reply);
+  // Provenance last: it is for inspecting a ranking, not for acting on the thread.
+  if (triage) d.append(whyPanel(triage));
   return d;
 }
 
