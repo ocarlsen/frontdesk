@@ -58,7 +58,9 @@ section > details > summary { cursor: pointer; list-style-position: inside; }
   gap: 4px 12px; align-items: start; padding: 12px 14px; border: 0; background: none;
   color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 10px;
 }
-.row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* One selection indicator: a focused row is always the current row (app.js keeps them in step),
+   so the current-row bar shows focus and the browser's ring would only double it. */
+.row:focus-visible { outline: none; }
 .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--u1); }
 .dot.u5 { background: var(--u5); } .dot.u4 { background: var(--u4); }
 .dot.u3 { background: var(--u3); } .dot.u2 { background: var(--u2); }
@@ -150,7 +152,7 @@ details > .linkbtn { display: block; margin: 0 0 6px auto; }
   background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text); }
 .demo-banner a { color: var(--accent); }
 
-li.card.current { box-shadow: inset 3px 0 0 var(--accent); }
+li.card.current { box-shadow: inset 4px 0 0 var(--accent); }
 .help { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
   grid-template-columns: minmax(0, 1fr); background: rgba(0,0,0,.35); padding: 16px; }
 .help[hidden] { display: none; }
@@ -193,14 +195,12 @@ li.card:not(.unread) .sender { font-weight: 500; }
 .askprev .answer { opacity: .92; }
 .askprev .sendbody { max-height: 24vh; overflow-y: auto; }
 .askturn + .askturn { border-top: 1px solid var(--line); padding-top: 4px; }
-.asknotes { margin-top: 12px; }
 /* Same field style as the Reply box: card fill on the tinted panel. */
 .askbody textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px;
   border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
 .askq { font-weight: 600; margin: 10px 0 4px; }
 .answer { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; margin: 0 0 12px; }
 .answertext { white-space: pre-wrap; margin: 0 0 8px; }
-.notes > summary { cursor: pointer; font-size: .88em; color: var(--muted); }
 .notewho { margin: 8px 0 2px; font-size: .88em; font-weight: 600; }
 
 .modelpick { font: inherit; font-size: .9em; padding: 4px 6px; border-radius: 6px;
@@ -277,3 +277,28 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
 /* Move to: the section drop-down in the reply actions; a phone-sized target under 560px. */
 .moveto { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 560px) { .movepick { min-height: 44px; } }
+
+/* People strip: one chip per person in the thread, between the subject and the summary; a chip
+   opens that person's note right under the strip. */
+.peoplestrip { margin: 2px 0 8px; }
+.peoplechips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag.personchip { margin: 0; padding: 3px 10px; font: inherit; font-size: .85em; color: var(--text);
+  cursor: pointer; border-radius: 999px; }
+.tag.personchip.hasnote { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.tag.personchip[aria-expanded="true"] { background: var(--accent); border-color: var(--accent);
+  color: var(--card); }
+.tag.personchip.more { color: var(--muted); }
+.tag.personchip:disabled { cursor: default; opacity: .75; }
+.tag.personchip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.peoplelink { color: var(--muted); }
+.personeditor { background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px 12px 10px; margin-top: 8px; }
+.personeditor textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+@media (max-width: 560px) {
+  .tag.personchip { min-height: 44px; padding: 8px 12px; }
+  .peoplelink { min-height: 44px; }
+}
+
+/* The People strip's own label, so the chips read as a section. */
+.peoplelabel { font-size: .8em; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-right: 4px; align-self: center; }

@@ -1,7 +1,8 @@
 """`frontdesk export-demo OUT`: the demo inbox as plain static files for any static host (GitHub
 Pages at frontdesk.ocarlsen.com). No server and no secrets: the page, its script and styles, the
-ranked list as JSON, and each message's HTML as its own file, all produced by the REAL pipeline
-(normalize, replayed triage, ranked_payload, message_html) over the synthetic fixtures.
+ranked list as JSON, each thread's people (for the People strip), and each message's HTML as its
+own file, all produced by the REAL pipeline (normalize, replayed triage, ranked_payload,
+people_payload, message_html) over the synthetic fixtures.
 
 A static host cannot send response headers, so the Content-Security-Policy travels as a <meta>
 tag in each page (frame-ancestors is header-only and is dropped; the iframe sandbox still
@@ -39,7 +40,7 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
     exported = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     if out.exists():
         shutil.rmtree(out)
-    (out / "api").mkdir(parents=True)
+    (out / "api" / "people").mkdir(parents=True)
     (out / "msg").mkdir()
     with tempfile.TemporaryDirectory(prefix="frontdesk-export-") as tmp:
         store = Store(Path(tmp) / "demo.db")
@@ -53,6 +54,10 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
         (out / "api" / "memory.json").write_text(json.dumps(server.DEMO_MEMORY))
         meta = _meta_csp(server.MSG_CSP)
         for r in rows:
+            # The People strip's data (the people half of GET /api/ask): read-only in the demo.
+            item = store.get_item(r["item"]["id"])
+            (out / "api" / "people" / f"{static_file(item.id)}.json").write_text(
+                json.dumps({**server.people_payload(store, item), "demo": True}))
             for i, m in enumerate(r["item"]["messages"]):
                 if m["has_html"]:
                     doc = server.message_html(store, r["item"]["id"], i)

@@ -132,10 +132,11 @@ ID, learnt at each sync.
 on, then people, newest first, each with addresses, name, note, author and date. Edit there; only
 you can **Confirm**, **Delete** or **Merge into...** another person (merge asks first and cannot be
 undone; the merged note is yours only if both notes were). **Download my memory** saves it all as
-JSON. Sessions can add a note or append to one, never delete, merge, confirm, name, or replace a
-note you wrote; saving empty text is refused rather than deleting. Ask's "Save note for ..."
-suggestions save only when the person they name is in that thread, so model output never creates a
-person. The demo shows Memory empty and read-only.
+JSON. In an open thread, the **People** strip under the subject has a chip per person ("· note"
+or "· add note") that opens their note in place. Sessions can add a note or append to one, never
+delete, merge, confirm, name, or replace a note you wrote; saving empty text is refused rather
+than deleting. Ask's "Save note for ..." suggestions save only when the person they name is in
+that thread, so model output never creates a person. The demo shows Memory empty and read-only.
 
 Older databases are migrated once on open (under a write lock, so two FrontDesk processes cannot
 copy twice): each per-address note becomes a person with that address, keeping its text, author

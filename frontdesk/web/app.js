@@ -120,16 +120,21 @@ function safeOpenUrl(u) {
 function buildDetail(item, triage) {
   const d = el("div", "detail");
   const msgs = Array.isArray(item.messages) ? item.messages : [];
+  // The thread's people first, right under the sender line they belong to, then the subject.
+  // Fetched once per opened thread; Ask reads the same source.
+  const people = peopleSource(item);
+  d.append(peopleStrip(people, !!(triage && triage.bucket === "ignore")));
+  people.load();
   d.append(el("h2", "thread-subject", item.subject || "(no subject)"));
   // Summary first: the point of FrontDesk is not having to read the thread. The full thread is
   // one click away and built on first open (its iframes size themselves only when visible).
   const summary = triage && triage.summary ? triage.summary : "";
   if (summary) d.append(el("p", "summary", summary));
   const full = el("details", "fullthread");
-  const people = new Set(msgs.map(m => parseSender(m.sender).name));
+  const senders = new Set(msgs.map(m => parseSender(m.sender).name));
   full.append(el("summary", null, (summary ? "Show full thread" : "Thread") + " (" + msgs.length +
-    (msgs.length === 1 ? " message" : " messages") + ", " + people.size +
-    (people.size === 1 ? " person)" : " people)")));
+    (msgs.length === 1 ? " message" : " messages") + ", " + senders.size +
+    (senders.size === 1 ? " person)" : " people)")));
   const thread = el("div", "thread");
   full.append(thread);
   let built = false;
@@ -246,7 +251,7 @@ function buildDetail(item, triage) {
     actions.append(a);
   }
   if (actions.childNodes.length) reply.append(actions);
-  d.append(askPanel(item, ta));
+  d.append(askPanel(item, ta, people));
   d.append(reply);
   // Provenance last: it is for inspecting a ranking, not for acting on the thread.
   if (triage) d.append(whyPanel(triage));
@@ -286,6 +291,7 @@ function buildCard(item, triage) {
   row.append(dot, meta, when);
 
   let detail = null;
+  row.addEventListener("focus", () => { if (currentId !== item.id) setCurrent(li); });
   row.addEventListener("click", () => {
     if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe
     setCurrent(li);   // a clicked row is the current one, so j/k continue from it
@@ -733,70 +739,188 @@ function askerLabel(author) {
   return "Author not recorded";
 }
 
-function renderNotes(notesBox, people, notes, refresh, aliases, names, display) {
-  // One box per person in the thread. people: one address per person; notes: {address: {text,
-  // author, updated_at}}; aliases: {address: [their other addresses]}; names: {address: the
-  // name you typed}; display: {key: how to show it} for keys that are not readable (a Slack
-  // user's display name), so a raw key never shows. Saving from here records you as the author.
-  aliases = aliases || {};
-  names = names || {};
-  display = display || {};
+// ---- The thread's people: one fetch per opened thread (the people half of GET /api/ask; the
+// static demo exports it per thread), shared by the People strip and Ask, so the two never
+// disagree. people: one address per person; notes: {address: {text, author, updated_at}};
+// aliases: {address: [their other addresses]}; names: {address: the name you typed}; display:
+// {key: how to show it} for keys that are not readable (a Slack user's display name), so a raw
+// key never shows.
+function peopleSource(item) {
+  const subs = [];
+  let first = null;
+  const src = {
+    data: null,
+    async refresh() {
+      const url = STATIC ? "api/people/" + staticFile(item.id) + ".json"
+        : "/api/ask?item=" + encodeURIComponent(item.id);
+      let data = null;
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (res.ok) data = await res.json();
+      } catch (e) { data = null; }
+      if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+      src.data = data;
+      subs.forEach(f => f(data));
+      return data;
+    },
+    load() {   // one fetch per opened thread; a failed one is retried by the next caller
+      if (!first) first = src.refresh().then(d => { if (!d) first = null; return d; });
+      return first;
+    },
+    subscribe(f) { subs.push(f); if (src.data) f(src.data); },
+  };
+  return src;
+}
+
+function personLabel(p, data) {
+  // What the chip says: an email address as itself (with the name you typed, if any, before it),
+  // a Slack key as its display name. Owen prefers the address visible to a name with the address
+  // on hover, and it keeps a look-alike sender's domain in plain sight.
+  const key = p.toLowerCase();
+  const typed = (data.names || {})[key];
+  const slack = (data.display || {})[key];
+  if (slack) return typed || slack;
+  return typed ? typed + " <" + p + ">" : p;
+}
+
+function noteEditor(p, data, refresh, draft) {
+  // One person's note: who, their other addresses, the text, the author label, Save and (for a
+  // note you did not write) Confirm. Saving from here records you as the author.
+  const aliases = data.aliases || {};
+  const names = data.names || {};
+  const display = data.display || {};
+  const notes = data.notes || {};
   const shown = a => display[a.toLowerCase()] || a;
-  notesBox.replaceChildren();
-  const nd = el("details", "notes");
-  nd.append(el("summary", null, "Your notes on these people (" + Object.keys(notes).length + ")"));
+  const box = el("div", "personeditor");
+  const key = p.toLowerCase();
+  box.append(el("p", "notewho", names[key] ? names[key] + " (" + shown(p) + ")" : shown(p)));
+  const more = aliases[key] || [];
+  if (more.length) box.append(el("p", "kbdhint authorlabel", "Also " + more.map(shown).join(", ")));
   const ok = Object.values(notes).every(n => n && typeof n === "object" && typeof n.text === "string");
   if (!ok) {   // never offer a Save that could write a placeholder over a real note
-    nd.append(el("p", "hint", "This page is out of date with the server. Reload FrontDesk to see " +
+    box.append(el("p", "hint", "This page is out of date with the server. Reload FrontDesk to see " +
       "and edit your notes."));
-    notesBox.append(nd);
-    return;
+    return box;
   }
-  for (const p of people) {
-    const key = p.toLowerCase();
-    const n = notes[key];
-    const t = el("textarea");
-    t.rows = 2;
-    t.value = n ? n.text : "";
-    t.placeholder = "What should FrontDesk remember about " + shown(p) + "?";
-    const sv = el("button", "btn small", "Save");
-    sv.type = "button";
-    sv.addEventListener("click", async () => {
-      if (!t.value.trim()) {   // saving empty text never deletes; Delete lives on the Memory page
-        toast("A note needs text. To remove one, use Delete on the Memory page (key m).");
-        return;
-      }
-      try {
-        await postAction("note", "", { who: p, text: t.value, author: "owner" });
-        toast("Note saved.");
-        refresh();
-      } catch (e) { toast("Save failed: " + e.message); }
-    });
-    nd.append(el("p", "notewho", names[key] ? names[key] + " (" + shown(p) + ")" : shown(p)));
-    const more = aliases[key] || [];
-    if (more.length) nd.append(el("p", "kbdhint authorlabel", "Also " + more.map(shown).join(", ")));
-    nd.append(t);
-    if (n) nd.append(el("p", "kbdhint authorlabel", authorLabel(n.author, n.updated_at)));
-    const row = el("div", "actions");
-    row.append(sv);
-    if (n && n.author !== "owner") {
-      const ok = el("button", "btn small", "Confirm");
-      ok.type = "button";
-      ok.title = "Mark this note as yours, as written";
-      ok.addEventListener("click", async () => {
-        try { await postAction("note_confirm", "", { who: p, author: "owner" }); refresh(); }
-        catch (e) { toast("Confirm failed: " + e.message); }
-      });
-      row.append(ok);
+  const n = notes[key];
+  const t = el("textarea");
+  t.rows = 2;
+  t.value = draft.has(key) ? draft.get(key) : (n ? n.text : "");
+  t.placeholder = "What should FrontDesk remember about " + shown(p) + "?";
+  t.setAttribute("aria-label", "Note on " + personLabel(p, data));
+  t.addEventListener("input", () => draft.set(key, t.value));
+  const sv = el("button", "btn small", "Save");
+  sv.type = "button";
+  sv.addEventListener("click", async () => {
+    if (!t.value.trim()) {   // saving empty text never deletes; Delete lives on the Memory page
+      toast("A note needs text. To remove one, use Delete on the Memory page (key m).");
+      return;
     }
-    nd.append(row);
+    try {
+      await postAction("note", "", { who: p, text: t.value, author: "owner" });
+      draft.delete(key);
+      toast("Note saved.");
+      refresh();
+    } catch (e) { toast("Save failed: " + e.message); }
+  });
+  box.append(t);
+  if (n) box.append(el("p", "kbdhint authorlabel", authorLabel(n.author, n.updated_at)));
+  const row = el("div", "actions");
+  row.append(sv);
+  if (n && n.author !== "owner") {
+    const cf = el("button", "btn small", "Confirm");
+    cf.type = "button";
+    cf.title = "Mark this note as yours, as written";
+    cf.addEventListener("click", async () => {
+      try { await postAction("note_confirm", "", { who: p, author: "owner" }); refresh(); }
+      catch (e) { toast("Confirm failed: " + e.message); }
+    });
+    row.append(cf);
   }
-  notesBox.append(nd);
+  box.append(row);
+  return box;
+}
+
+const STRIP_MAX = 6;   // more people than this: show STRIP_MAX - 1 chips and "+N more"
+
+function peopleStrip(src, ignored) {
+  // Above the subject, under the sender line: a chip per person in the thread ("Name · note" or
+  // "Name · add note"); a chip opens that person's note right under the strip, one at a time.
+  // An Ignore thread starts as a single "People" link. The static demo is read-only.
+  const wrap = el("div", "peoplestrip");
+  wrap.hidden = true;
+  const chips = el("div", "peoplechips");
+  const editor = el("div", "personslot");
+  wrap.append(chips, editor);
+  const draft = new Map();   // unsaved text per person, kept when the editor closes
+  let data = null;
+  let openKey = null;
+  let showAll = false;
+  let expanded = !ignored;
+  const chipEls = new Map();   // person key -> chip, for returning focus
+  const render = () => {
+    const people = (data && Array.isArray(data.people)) ? data.people : [];
+    wrap.hidden = !people.length;
+    chips.replaceChildren();
+    editor.replaceChildren();
+    chipEls.clear();
+    if (!people.length) return;
+    if (!expanded) {
+      const link = el("button", "linkbtn peoplelink", "People");
+      link.type = "button";
+      link.setAttribute("aria-expanded", "false");
+      link.addEventListener("click", () => { expanded = true; render(); });
+      chips.append(link);
+      return;
+    }
+    chips.append(el("span", "peoplelabel", "People"));   // reads as its own small section
+    const readOnly = STATIC || data.demo === true;
+    const notes = data.notes || {};
+    const shown = showAll || people.length <= STRIP_MAX ? people : people.slice(0, STRIP_MAX - 1);
+    for (const p of shown) {
+      const key = p.toLowerCase();
+      const has = !!notes[key];
+      const chip = el("button", has ? "tag personchip hasnote" : "tag personchip",
+        personLabel(p, data) + (has ? " · note" : " · add note"));
+      chip.type = "button";
+      chip.dataset.who = key;
+      chip.setAttribute("aria-expanded", String(openKey === key));
+      if (readOnly) {
+        chip.disabled = true;
+        chip.title = "Demo: notes on people need your own copy of FrontDesk";
+      } else {
+        chip.addEventListener("click", () => { openKey = openKey === key ? null : key; render(); });
+      }
+      chips.append(chip);
+      chipEls.set(key, chip);
+    }
+    if (shown.length < people.length) {
+      const more = el("button", "tag personchip more", "+" + (people.length - shown.length) + " more");
+      more.type = "button";
+      more.addEventListener("click", () => { showAll = true; render(); });
+      chips.append(more);
+    }
+    const p = openKey && people.find(x => x.toLowerCase() === openKey);
+    if (p && !readOnly) editor.append(noteEditor(p, data, () => src.refresh(), draft));
+    else openKey = null;
+  };
+  // Escape (onKey) closes the open editor, focus returning to its chip.
+  wrap.closeEditor = () => {
+    if (!openKey) return false;
+    const key = openKey;
+    openKey = null;
+    render();
+    const chip = chipEls.get(key);
+    if (chip) chip.focus();
+    return true;
+  };
+  src.subscribe(d => { data = d; render(); });
+  return wrap;
 }
 
 // ---- Ask: reason about this thread with the context (history with these people, your notes).
 // Answers are model text from untrusted mail: shown as plain text; a draft only fills the box.
-function askPanel(item, replyBox) {
+function askPanel(item, replyBox, people) {
   const det = el("details", "ask");
   const sum = el("summary", null, "Ask FrontDesk about this thread");
   det.append(sum);
@@ -804,7 +928,7 @@ function askPanel(item, replyBox) {
   det.append(body);
   let loaded = false;
   det.addEventListener("toggle", () => {
-    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body, sum); }
+    if (det.open && !loaded) { loaded = true; buildAsk(item, replyBox, body, sum, people); }
   });
   return det;
 }
@@ -890,7 +1014,7 @@ function questionText(h) {
   return t;
 }
 
-async function buildAsk(item, replyBox, body, summaryEl) {
+async function buildAsk(item, replyBox, body, summaryEl, people) {
   if (STATIC) {
     body.append(el("p", "kbdhint", "Demo: Ask needs a live model. In your own copy it reads this " +
       "thread, your other threads with the same people and your notes, then advises."));
@@ -913,7 +1037,6 @@ async function buildAsk(item, replyBox, body, summaryEl) {
       " (" + turnEls.length + (turnEls.length === 1 ? " exchange)" : " exchanges)") : "");
   };
   const newTurn = () => { const t = el("div", "askturn"); turnEls.push(t); return t; };
-  const notesBox = el("div", "asknotes");
   // The box starts with FrontDesk's own question (assist.ADVISE, from the server) as ordinary,
   // editable text: Ask sends whatever the box holds, and the box resets to it after an answer.
   const q = el("textarea");
@@ -942,18 +1065,13 @@ async function buildAsk(item, replyBox, body, summaryEl) {
     for (const m of ms) pick.append(Object.assign(el("option", null, m.label), { value: String(m.index) }));
   }).catch(() => {});
   row.append(pick, askBtn, second, polish, starter);
-  body.append(history, q, row, status, notesBox);
+  body.append(history, q, row, status);
 
-  let people = [];
-  const refreshNotes = async () => {
-    const res = await fetch("/api/ask?item=" + encodeURIComponent(item.id), { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    people = data.people || [];
-    renderNotes(notesBox, people, data.notes || {}, refreshNotes, data.aliases, data.names, data.display);
-    return data;
-  };
-  const data = await refreshNotes();
+  // Notes live in the People strip; a saved suggestion refreshes the shared source, so its chip
+  // flips to "· note".
+  const src = people || peopleSource(item);
+  const refreshNotes = () => src.refresh();
+  const data = await src.load();
   const advise = (data && typeof data.advise === "string") ? data.advise : "";
   const followUp = () => {
     q.value = "";
@@ -1638,6 +1756,7 @@ function onKey(e) {
                        t.tagName === "SELECT" || t.isContentEditable);
   if (e.key === "Escape") {
     if (typing) t.blur();
+    for (const s of document.querySelectorAll(".peoplestrip")) if (s.closeEditor) s.closeEditor();
     toggleHelp(false);
     document.getElementById("profilepanel").hidden = true;
     return;

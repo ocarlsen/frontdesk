@@ -62,16 +62,7 @@ const box = new Node("div");
 fn("renderAnswer")(box, { answer: "Hold off.", draft_reply: "", note_suggestions: [],
   situation_suggestions: ["Decided to wait."] }, new Node("textarea"), () => {});
 if (!texts(box).includes("Add to What's going on: Decided to wait.")) throw new Error("no situation button");
-const notes = new Node("div");
-fn("renderNotes")(notes, ["fab@example.com", "bo@example.com", "cy@example.com"], {
-  "fab@example.com": { text: "a", author: "owner", updated_at: "2026-10-28T16:00:00Z" },
-  "bo@example.com": { text: "b", author: "session:frontdesk", updated_at: "2026-10-28T16:00:00Z" },
-}, () => {});
-const nt = texts(notes);
-if (!nt.some(t => t.startsWith("Written by you on "))) throw new Error("no owner label");
-if (!nt.some(t => t.startsWith("Written by session frontdesk on ") && t.endsWith(", not confirmed")))
-  throw new Error("no session label");
-if (nt.filter(t => t === "Confirm").length !== 1) throw new Error("Confirm only on the session note");
+const all = n => [n, ...n.children.flatMap(all)];
 const sit = new Node("div");
 const items = [{ id: 1, text: "Mine", author: "owner", created_at: "x", updated_at: "2026-10-28T16:00:00Z" },
                { id: 2, text: "Theirs", author: "unrecorded", created_at: "x", updated_at: "" }];
@@ -84,12 +75,6 @@ fn("renderSituation")(demo, items, true, () => {});
 if (texts(demo).includes("Add") || texts(demo).includes("Delete")) throw new Error("demo must be read-only");
 if (fn("askerLabel")("session:helper") !== "Asked by session helper on your behalf, not typed by you")
   throw new Error("asker label");
-// Old-shape notes (a page and server out of step) get no editor, so no Save can overwrite them.
-const stale = new Node("div");
-fn("renderNotes")(stale, ["fab@example.com"], { "fab@example.com": "plain string" }, () => {});
-const all = n => [n, ...n.children.flatMap(all)];
-if (all(stale).some(n => n.tagName === "TEXTAREA") || !texts(stale).some(t => t.startsWith("This page is out of date")))
-  throw new Error("stale notes must not be editable");
 // Memory page: people with several addresses, owner-only controls, Merge asks to confirm.
 const posted = [];
 ctx.fetch = async (url, opts) => { posted.push({ url, body: opts && opts.body ? JSON.parse(opts.body) : null });
@@ -139,14 +124,7 @@ for (const no of ["Download my memory (JSON)", "Edit", "Delete", "Merge into..."
   if (dt.includes(no)) throw new Error("demo memory must be read-only: " + no);
 }
 if (!dt.some(t => t.startsWith("Demo: nothing is remembered here"))) throw new Error("demo empty text");
-// Saving an empty note never posts (empty text no longer deletes).
 posted.length = 0;
-const en = new Node("div");
-fn("renderNotes")(en, ["fab@example.com"], {}, () => {}, { "fab@example.com": ["f@example.org"] }, {});
-if (!texts(en).includes("Also f@example.org")) throw new Error("aliases");
-click(byText(en, "Save"));
-await new Promise(r => setTimeout(r, 0));
-if (posted.length) throw new Error("an empty note was posted");
 // A note suggestion goes to the thread-bound action with the thread's id.
 const sug = new Node("div");
 fn("renderAnswer")(sug, { answer: "x", draft_reply: "", situation_suggestions: [],
@@ -159,13 +137,6 @@ if (posted.length !== 1 || posted[0].body.kind !== "note_suggestion" || posted[0
 const SK = "slack:t0:u0ann";
 const noKey = root => { const bad = texts(root).filter(t => typeof t === "string" && t.includes("slack:"));
                         if (bad.length) throw new Error("raw Slack key shown: " + bad[0]); };
-const sn = new Node("div");
-fn("renderNotes")(sn, [SK], { [SK]: { text: "Leads infra.", author: "owner", updated_at: "2026-10-28T16:00:00Z" } },
-  () => {}, { [SK]: ["ann lee"] }, {}, { [SK]: "Ann Lee", "ann lee": "ann lee" });
-if (!texts(sn).includes("Ann Lee") || !texts(sn).includes("Also ann lee")) throw new Error("slack notes names");
-if (all(sn).find(n => n.tagName === "TEXTAREA").placeholder !== "What should FrontDesk remember about Ann Lee?")
-  throw new Error("slack notes placeholder");
-noKey(sn);
 const smem = new Node("div");
 const slackPeople = [
   { id: 7, name: "", note: "Linked.", author: "owner", created_at: "x", updated_at: "2026-10-28T16:00:00Z",
@@ -330,6 +301,122 @@ if (!slStar.title.startsWith("Starred in FrontDesk only")) throw new Error("Slac
 // Static demo: starring changes this tab only and fetches nothing.
 const sstar = await vm.runInContext("postAction", sctx)("star", demoSlack.id);
 if (!sstar.demo || !sstar.starred) throw new Error("static star");
+// ---- People strip: a chip per person between the subject and the summary; a chip opens that
+// person's note right under it, one at a time. Same data as Ask (GET /api/ask).
+const tick = () => new Promise(r => setTimeout(r, 0));
+const stripPosts = [];
+let stripData = null;
+ctx.fetch = async (url, opts) => {
+  if (String(url).startsWith("/api/ask?")) return { ok: true, json: async () => stripData() };
+  if (url === "/api/action") { stripPosts.push(JSON.parse(opts.body)); return { ok: true, json: async () => ({ status: "done" }) }; }
+  return { ok: true, json: async () => [] };
+};
+const stripOf = root => all(root).find(n => n.className === "peoplestrip");
+const chipTexts = root => all(stripOf(root)).filter(n => (n.className || "").includes("personchip")).map(n => n.textContent);
+const editors = root => all(root).filter(n => n.className === "personeditor");
+const openStrip = async (data, tri = triage, it = item) => {
+  stripData = () => data;
+  const d = fn("buildDetail")(it, tri);
+  await tick(); await tick();
+  return d;
+};
+const NOW = "2026-10-28T16:00:00Z";
+let d = await openStrip({ people: ["fab@example.com", "bo@example.com", "cy@example.com"], notes: {
+  "fab@example.com": { text: "a", author: "owner", updated_at: NOW },
+  "bo@example.com": { text: "b", author: "session:frontdesk", updated_at: NOW } }, aliases: {}, names: {}, display: {} });
+const kids = d.children.map(n => n.className);
+if (kids.indexOf("peoplestrip") !== 0 || kids.indexOf("thread-subject") !== 1) throw new Error("strip must sit above the subject, under the sender line: " + kids);
+eq(chipTexts(d), ["fab@example.com · note", "bo@example.com · note", "cy@example.com · add note"], "chip text");
+if (texts(stripOf(d)).some(t => /\(\d+\)|\d+ (people|notes)/.test(String(t)))) throw new Error("the strip shows no count");
+if (editors(d).length) throw new Error("no editor until a chip is clicked");
+const chip = (root, start) => all(stripOf(root)).find(n => (n.className || "").includes("personchip") && n.textContent.startsWith(start));
+click(chip(d, "bo@"));
+if (editors(d).length !== 1) throw new Error("a chip opens its editor");
+let et = texts(editors(d)[0]);
+if (!et.some(t => String(t).startsWith("Written by session frontdesk on ") && t.endsWith(", not confirmed")) ||
+    !et.includes("Confirm")) throw new Error("session note: label and Confirm");
+if (chip(d, "bo@").getAttribute("aria-expanded") !== "true") throw new Error("open chip is pressed");
+click(chip(d, "fab@"));
+if (editors(d).length !== 1) throw new Error("one editor at a time");
+et = texts(editors(d)[0]);
+if (!et.some(t => String(t).startsWith("Written by you on ")) || et.includes("Confirm")) throw new Error("owner note: no Confirm");
+if (all(editors(d)[0]).find(n => n.tagName === "TEXTAREA").value !== "a") throw new Error("editor holds the note");
+click(chip(d, "fab@"));
+if (editors(d).length) throw new Error("clicking the open chip closes it");
+click(chip(d, "cy@"));
+if (!stripOf(d).closeEditor() || editors(d).length) throw new Error("Escape (closeEditor) closes the editor");
+// Saving empty text never posts; aliases show; the Ask panel no longer carries notes.
+d = await openStrip({ people: ["fab@example.com"], notes: {}, aliases: { "fab@example.com": ["f@example.org"] }, names: {} });
+click(chip(d, "fab@"));
+if (!texts(editors(d)[0]).includes("Also f@example.org")) throw new Error("aliases");
+click(byText(editors(d)[0], "Save"));
+await tick();
+if (stripPosts.length) throw new Error("an empty note was posted");
+// An owner-typed name wins on the chip; the editor shows it with the address.
+d = await openStrip({ people: ["fab@example.com"], notes: {}, aliases: {}, names: { "fab@example.com": "Fabrice" } });
+eq(chipTexts(d), ["Fabrice <fab@example.com> · add note"], "typed name on the chip");
+click(chip(d, "Fabrice"));
+if (!texts(editors(d)[0]).includes("Fabrice (fab@example.com)")) throw new Error("typed name in the editor");
+// Old-shape notes (a page and server out of step) get no editor, so no Save can overwrite them.
+d = await openStrip({ people: ["fab@example.com"], notes: { "fab@example.com": "plain string" } });
+click(chip(d, "fab@"));
+if (all(editors(d)[0]).some(n => n.tagName === "TEXTAREA") || !texts(d).some(t => String(t).startsWith("This page is out of date")))
+  throw new Error("stale notes must not be editable");
+// Slack people show display names, never a raw key.
+d = await openStrip({ people: [SK], notes: { [SK]: { text: "Leads infra.", author: "owner", updated_at: NOW } },
+  aliases: { [SK]: ["ann lee"] }, names: {}, display: { [SK]: "Ann Lee", "ann lee": "ann lee" } });
+eq(chipTexts(d), ["Ann Lee · note"], "slack chip");
+click(chip(d, "Ann Lee"));
+if (!texts(editors(d)[0]).includes("Ann Lee") || !texts(editors(d)[0]).includes("Also ann lee")) throw new Error("slack notes names");
+if (all(editors(d)[0]).find(n => n.tagName === "TEXTAREA").placeholder !== "What should FrontDesk remember about Ann Lee?")
+  throw new Error("slack notes placeholder");
+noKey(stripOf(d));
+// More than 6 people: 5 chips and "+N more", which shows the rest.
+const many = Array.from({ length: 8 }, (_, i) => "p" + i + "@example.com");
+d = await openStrip({ people: many, notes: {} });
+eq(chipTexts(d), [...many.slice(0, 5).map(p => p + " · add note"), "+3 more"], "+N more");
+click(chip(d, "+3 more"));
+eq(chipTexts(d), many.map(p => p + " · add note"), "expanded strip");
+d = await openStrip({ people: many.slice(0, 6), notes: {} });
+if (chipTexts(d).length !== 6) throw new Error("six people fit without +N more");
+// Ignore: one muted "People" link that expands the strip.
+d = await openStrip({ people: ["fab@example.com"], notes: {} }, { ...triage, bucket: "ignore" });
+const plink = all(stripOf(d)).find(n => n.textContent === "People");
+if (!plink || chipTexts(d).length) throw new Error("an Ignore thread starts collapsed");
+click(plink);
+eq(chipTexts(d), ["fab@example.com · add note"], "Ignore strip expands");
+// No one else in the thread: no strip.
+d = await openStrip({ people: [], notes: {} });
+if (!stripOf(d).hidden) throw new Error("empty strip must be hidden");
+// Ask: no notes section; a saved "Save note for" suggestion flips the chip to "· note".
+let saved = false;
+stripData = () => ({ advise: ADV, people: ["ann@example.com"], aliases: {}, names: {}, display: {},
+  notes: saved ? { "ann@example.com": { text: "Likes lunch.", author: "owner", updated_at: NOW } } : {},
+  history: [{ role: "owner", text: "What now?", author: "owner" },
+            { role: "assistant", text: "Say yes.", note_suggestions: [{ who: "ann@example.com", text: "Likes lunch." }] }] });
+ctx.fetch = async (url, opts) => {
+  if (String(url).startsWith("/api/ask?")) return { ok: true, json: async () => stripData() };
+  if (url === "/api/action") { stripPosts.push(JSON.parse(opts.body)); saved = true; return { ok: true, json: async () => ({ status: "done" }) }; }
+  return { ok: true, json: async () => [] };
+};
+const asks = [];
+const realFetch = ctx.fetch;
+ctx.fetch = async (url, opts) => { if (String(url).startsWith("/api/ask?")) asks.push(url); return realFetch(url, opts); };
+d = fn("buildDetail")(item, triage);
+await tick(); await tick();
+eq(chipTexts(d), ["ann@example.com · add note"], "before the suggestion");
+const askDet = all(d).find(n => n.className === "ask");
+askDet.open = true;
+fire(askDet, "toggle");
+await tick(); await tick(); await tick();
+if (asks.length !== 1) throw new Error("Ask must reuse the thread's fetch, not fetch again: " + asks.length);
+const askT = texts(askDet);
+if (askT.some(t => String(t).startsWith("Your notes on these people")) || all(askDet).some(n => n.className === "personeditor" || n.className === "notes"))
+  throw new Error("Ask panel still has a notes section");
+click(byText(askDet, "Save note for ann@example.com: Likes lunch."));
+await tick(); await tick(); await tick();
+if (stripPosts.at(-1).kind !== "note_suggestion") throw new Error("suggestion posted");
+eq(chipTexts(d), ["ann@example.com · note"], "a saved suggestion flips the chip");
 console.log("js smoke ok");
 // History folds into turns: a second opinion joins the turn it reviews.
 const turns = vm.runInContext("groupTurns", ctx)([
