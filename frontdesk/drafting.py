@@ -21,7 +21,7 @@ from email.message import EmailMessage
 from email.utils import getaddresses, parseaddr
 
 from .gmail.client import GmailClient
-from .gmail.normalize import html_to_text
+from .gmail.normalize import clean_body, html_to_text
 
 URL = re.compile(r"https?://[^\s<>\"']+[^\s<>\"'.,;:!?)\]]")
 REDIRECT = re.compile(r"https?://(?:www\.)?google\.[a-z.]+/url\?", re.I)
@@ -106,6 +106,21 @@ def reply_context(thread: dict, me: str, reply_all: bool = False) -> dict:
             "references": _hdr(last, "References"), "thread_id": thread["id"]}
 
 
+def thread_draft(thread: dict) -> dict | None:
+    """The newest unsent draft in a Gmail thread (threads.get returns drafts as messages labelled
+    DRAFT), as {message_id, body}; None when the thread has none. Gmail is the source of truth:
+    FrontDesk keeps no copy, so an edit made in Gmail is what the reply box shows next time."""
+    drafts = [m for m in thread.get("messages", []) if "DRAFT" in (m.get("labelIds") or [])]
+    if not drafts:
+        return None
+    m = max(drafts, key=lambda m: int(m.get("internalDate", 0)))
+    return {"message_id": m["id"], "body": clean_body(m.get("payload", {}))}
+
+
+def draft_url(account: str, message_id: str) -> str:
+    return f"https://mail.google.com/mail/?authuser={account}#drafts?compose={message_id}"
+
+
 def create(gmail: GmailClient, msg: EmailMessage, thread_id: str | None = None) -> Draft:
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     body: dict = {"message": {"raw": raw}}
@@ -114,15 +129,14 @@ def create(gmail: GmailClient, msg: EmailMessage, thread_id: str | None = None) 
     d = gmail.create_draft(body)
     me = gmail.profile_email()
     mid = d["message"]["id"]
-    return Draft(d["id"], mid, d["message"].get("threadId", ""),
-                 f"https://mail.google.com/mail/?authuser={me}#drafts?compose={mid}")
+    return Draft(d["id"], mid, d["message"].get("threadId", ""), draft_url(me, mid))
 
 
 def build_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool = False,
-                reply_all: bool = False) -> tuple[EmailMessage, dict]:
+                reply_all: bool = False, thread: dict | None = None) -> tuple[EmailMessage, dict]:
     """The reply message and the context it was derived from (recipients, subject, thread)."""
     me = gmail.profile_email()
-    ctx = reply_context(gmail.get_thread(thread_id), me, reply_all)
+    ctx = reply_context(thread or gmail.get_thread(thread_id), me, reply_all)
     msg = build_mime(me, ctx["to"], ctx["subject"], body, is_html=is_html, cc=ctx["cc"],
                      in_reply_to=ctx["in_reply_to"], references=ctx["references"])
     return msg, ctx
@@ -132,6 +146,26 @@ def draft_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool 
                 reply_all: bool = False) -> Draft:
     msg, ctx = build_reply(gmail, thread_id, body, is_html=is_html, reply_all=reply_all)
     return create(gmail, msg, ctx["thread_id"])
+
+
+def save_reply(gmail: GmailClient, thread_id: str, body: str) -> Draft:
+    """Like draft_reply, but when the thread already has a draft (saved earlier, or started in
+    Gmail) it replaces that draft's text instead of adding a second draft."""
+    thread = gmail.get_thread(thread_id)
+    existing = thread_draft(thread)
+    msg, ctx = build_reply(gmail, thread_id, body, thread=thread)
+    if existing is None:
+        return create(gmail, msg, ctx["thread_id"])
+    draft_id = next((d["id"] for d in gmail.list_drafts()
+                     if (d.get("message") or {}).get("id") == existing["message_id"]), None)
+    if draft_id is None:   # sent or discarded since the thread was read
+        return create(gmail, msg, ctx["thread_id"])
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    d = gmail.update_draft(draft_id, {"id": draft_id,
+                                      "message": {"raw": raw, "threadId": ctx["thread_id"]}})
+    mid = d["message"]["id"]
+    return Draft(d["id"], mid, d["message"].get("threadId", ""),
+                 draft_url(gmail.profile_email(), mid))
 
 
 def draft_new(gmail: GmailClient, to: list[str], subject: str, body: str, *,

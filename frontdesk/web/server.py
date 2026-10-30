@@ -311,6 +311,39 @@ def memory_export(store: Store) -> dict:
             "migration": m["migration"]}
 
 
+def gmail_draft(db_path: Path, settings: dict, item_id: str,
+                client_factory=None) -> tuple[int, dict]:
+    """The thread's unsent Gmail draft, read from Gmail on each open (GET /api/gmail-draft).
+    FrontDesk keeps no copy, so an edit made in Gmail shows here and a sent or discarded draft
+    disappears. Read-only token; never opens a consent flow."""
+    import requests
+
+    from .. import drafting
+    from ..gmail.auth import AuthError, credentials
+    from ..gmail.client import GmailClient, GmailError
+    if settings.get("demo") or not item_id.startswith("gmail:"):
+        return HTTPStatus.OK, {"draft": None}
+    store = Store(db_path)
+    try:
+        item = store.get_item(item_id)
+    finally:
+        store.db.close()
+    if item is None:
+        return HTTPStatus.NOT_FOUND, {"error": "unknown thread"}
+    try:
+        gmail = (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
+        d = drafting.thread_draft(gmail.get_thread(item_id.partition(":")[2]))
+    except AuthError as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+    except (GmailError, requests.RequestException):
+        # Not str(e): a Gmail error can quote the response body.
+        return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
+    if d is None:
+        return HTTPStatus.OK, {"draft": None}
+    return HTTPStatus.OK, {"draft": {"body": d["body"],
+                                     "url": drafting.draft_url(item.account, d["message_id"])}}
+
+
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
@@ -648,6 +681,10 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 else:
                     self._send(HTTPStatus.OK, json.dumps(out).encode(),
                                "application/json; charset=utf-8")
+            elif path == "/api/gmail-draft":
+                code, out = gmail_draft(db_path, settings or {},
+                                        parse_qs(query).get("item", [""])[0])
+                self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/models":
                 body = [{"index": i, "label": m["label"], "provider": m["provider"]}
                         for i, m in enumerate(available_models(config.settings()))]

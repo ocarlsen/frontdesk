@@ -101,3 +101,55 @@ def test_new_draft_needs_a_recipient():
     import pytest
     with pytest.raises(drafting.DraftError):
         drafting.build_mime(ME, [], "s", "b")
+
+
+def _draft_msg(mid, ms, text):
+    data = base64.urlsafe_b64encode(text.encode()).decode()
+    return {"id": mid, "internalDate": str(ms), "labelIds": ["DRAFT"],
+            "payload": {"mimeType": "text/plain", "headers": [{"name": "From", "value": ME}],
+                        "body": {"data": data}}}
+
+
+def test_thread_draft_is_the_newest_draft_message():
+    t = thread()
+    assert drafting.thread_draft(t) is None
+    t["messages"] += [_draft_msg("dm1", 4000, "First go."), _draft_msg("dm2", 5000, "Edited in Gmail.")]
+    assert drafting.thread_draft(t) == {"message_id": "dm2", "body": "Edited in Gmail."}
+
+
+class DraftThreadGmail(FakeGmail):
+    """A thread that already holds a draft (saved earlier, or started in Gmail)."""
+    def __init__(self, listed=True):
+        super().__init__()
+        self.listed, self.updated = listed, None
+
+    def get_thread(self, tid):
+        t = thread()
+        t["messages"].append(_draft_msg("dm9", 9000, "Old text."))
+        return t
+
+    def list_drafts(self):
+        return [{"id": "other", "message": {"id": "x", "threadId": "T2"}}] + \
+            ([{"id": "d9", "message": {"id": "dm9", "threadId": "T1"}}] if self.listed else [])
+
+    def update_draft(self, draft_id, body):
+        self.updated = (draft_id, body)
+        return {"id": draft_id, "message": {"id": "dm10", "threadId": "T1"}}
+
+
+def test_save_reply_replaces_the_threads_draft_instead_of_adding_one():
+    g = DraftThreadGmail()
+    d = drafting.save_reply(g, "T1", "New text.")
+    assert g.posted is None, "a second draft was created"
+    draft_id, body = g.updated
+    assert draft_id == "d9" and body["id"] == "d9" and body["message"]["threadId"] == "T1"
+    raw = base64.urlsafe_b64decode(body["message"]["raw"])
+    assert b"New text." in raw and b"In-Reply-To: <m1@x>" in raw
+    assert d.draft_id == "d9" and d.message_id == "dm10" and "compose=dm10" in d.url
+
+
+def test_save_reply_creates_when_there_is_no_draft_or_it_just_went_away():
+    g = FakeGmail()
+    assert drafting.save_reply(g, "T1", "Hi.").draft_id == "d1" and g.posted
+    g = DraftThreadGmail(listed=False)   # sent or discarded between the two reads
+    assert drafting.save_reply(g, "T1", "Hi.").draft_id == "d1" and g.updated is None

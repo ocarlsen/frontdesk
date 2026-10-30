@@ -96,6 +96,25 @@ class GmailClient:
     def get_draft(self, draft_id: str, fmt: str = "full") -> dict:
         return self._get(f"drafts/{draft_id}", {"format": fmt})
 
+    def list_drafts(self, max_drafts: int = 500) -> list[dict]:
+        """Every draft as {id, message: {id, threadId}}, to map a DRAFT message to its draft."""
+        out: list[dict] = []
+        page_token = None
+        while len(out) < max_drafts:
+            params = {"maxResults": min(500, max_drafts - len(out))}
+            if page_token:
+                params["pageToken"] = page_token
+            data = self._get("drafts", params)
+            out.extend(data.get("drafts", []))
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+        return out[:max_drafts]
+
+    def update_draft(self, draft_id: str, body: dict) -> dict:
+        """Replaces the draft's message. Safe to retry: a second identical PUT changes nothing."""
+        return self._request("PUT", f"drafts/{draft_id}", body=body)
+
     def delete_draft(self, draft_id: str) -> None:
         self._request("DELETE", f"drafts/{draft_id}")
 

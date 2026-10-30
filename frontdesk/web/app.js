@@ -188,12 +188,13 @@ function buildDetail(item, triage) {
     send.disabled = save.disabled;
     hint.textContent = open.length ? "Fill in " + open.join(", ") + " before saving." : "";
   };
-  ta.addEventListener("input", () => {
+  const edited = () => {
     // Editing after a save or a cancelled send means there is something new to save or send.
     save.textContent = "Save as Gmail draft";
     send.textContent = "Send...";
     refresh();
-  });
+  };
+  ta.addEventListener("input", edited);
   refresh();
   save.addEventListener("click", () => saveDraft(item, ta, save));
   const copy = el("button", "btn", "Copy");
@@ -208,9 +209,11 @@ function buildDetail(item, triage) {
     }
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
-  reply.append(head, label, ta, hint);
+  const draftNote = el("p", "hint draftnote");
+  reply.append(head, label, ta, hint, draftNote);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
+  if (isGmail && !STATIC) loadGmailDraft(item, { ta, label, save, proposed, draftNote, edited });
   if (isGmail) replyGroup.append(save);
   replyGroup.append(send, copy);
   if (triage) {
@@ -478,6 +481,30 @@ async function finishSend(item, actionId, c, btn) {
     await new Promise(r => setTimeout(r, 2000));
   }
   toast("Still sending; check Gmail's Sent folder.");
+}
+
+// The thread's unsent Gmail draft, read from Gmail when the thread opens (FrontDesk keeps no
+// copy, so an edit made in Gmail is what shows here). It replaces the proposal only if the box
+// is untouched: nothing the owner has typed is ever overwritten.
+async function loadGmailDraft(item, ui) {
+  let out = null, error = "";
+  try {
+    const res = await fetch("/api/gmail-draft?item=" + encodeURIComponent(item.id), { cache: "no-store" });
+    out = await res.json();
+    if (!res.ok) error = (out && out.error) || ("HTTP " + res.status);
+  } catch (e) { error = e.message; }
+  if (error) {
+    ui.draftNote.textContent = "Couldn't check Gmail for a saved draft: " + error;
+    return;
+  }
+  const d = out && out.draft;
+  if (!d || typeof d.body !== "string" || !d.body.trim() || ui.ta.value !== ui.proposed) return;
+  ui.ta.value = d.body;
+  ui.label.textContent = "Your Gmail draft: edit, then save or send";
+  ui.edited();
+  fitText(ui.ta);
+  ui.save.textContent = "Saved";
+  ui.save.disabled = true;
 }
 
 async function saveDraft(item, ta, btn) {
