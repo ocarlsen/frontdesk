@@ -205,15 +205,18 @@ function buildDetail(item, triage) {
   if (isGmail) actions.append(save);
   actions.append(send, copy);
   if (triage) {
-    const moveTo = el("span", "moveto");
-    moveTo.append(el("span", "kbdhint", "Move to"));
-    for (const [b, name] of [["needs_you", "Needs you"], ["fyi", "FYI"], ["ignore", "Ignore"]]) {
-      if (b === triage.bucket) continue;
-      const mb = el("button", "btn small", name);
-      mb.type = "button";
-      mb.addEventListener("click", () => relabel(item, b, name, mb));
-      moveTo.append(mb);
+    // One native drop-down showing the current section (Gmail's "Move to"); v focuses it.
+    const moveTo = el("label", "moveto");
+    const pick = el("select", "modelpick movepick");
+    pick.setAttribute("aria-label", "Move to");
+    for (const [b, name] of BUCKET_NAMES) {
+      pick.append(Object.assign(el("option", null, name), { value: b, selected: b === triage.bucket }));
     }
+    pick.addEventListener("change", () => {
+      const to = pick.value;
+      relabel(item, to, bucketName(to), pick, triage.bucket);
+    });
+    moveTo.append(el("span", "kbdhint", "Move to"), pick);
     actions.append(moveTo);
   }
   actions.append(starButton(item, "btn"));
@@ -486,14 +489,24 @@ async function saveDraft(item, ta, btn) {
   }
 }
 
-async function relabel(item, bucket, name, btn) {
-  btn.disabled = true;
+const BUCKET_NAMES = [["needs_you", "Needs you"], ["fyi", "FYI"], ["ignore", "Ignore"]];
+function bucketName(b) { return (BUCKET_NAMES.find(([k]) => k === b) || [b, b])[1]; }
+
+// Moves a thread to another section and records the owner's call. `from` enables Undo, which
+// moves it back (a slip in a drop-down is likelier than a mis-click on a labelled button).
+async function relabel(item, bucket, name, ctl, from) {
+  ctl.disabled = true;
   try {
     await postAction("relabel", item.id, { bucket });
     await load();
-    toast("Moved to " + name + ". FrontDesk keeps your call as a private label.");
+    const undo = from && from !== bucket ? async () => {
+      try { await postAction("relabel", item.id, { bucket: from }); await load(); toast("Moved back to " + bucketName(from) + "."); }
+      catch (e) { toast("Undo failed: " + e.message); }
+    } : null;
+    toast("Moved to " + name + ". FrontDesk keeps your call as a private label.", undo ? "Undo" : null, undo);
   } catch (e) {
-    btn.disabled = false;
+    ctl.disabled = false;
+    if (from && ctl.tagName === "SELECT") ctl.value = from;
     toast("Move failed: " + e.message);
   }
 }
@@ -907,6 +920,12 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   q.setAttribute("aria-label", "Your question about this thread");
   const askBtn = el("button", "btn primary", "Ask");
   askBtn.type = "button";
+  // Before any exchange the box holds the starter question as editable text. After an answer it
+  // empties for a follow-up (repeating the question read as if nothing had been sent), and this
+  // link puts the starter question back.
+  const starter = el("button", "linkbtn", "Use the starter question");
+  starter.type = "button";
+  starter.hidden = true;
   const second = el("button", "btn", "Second opinion");
   second.type = "button";
   second.title = "Have the review model check the last answer";
@@ -921,7 +940,7 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   fetch("/api/models", { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(ms => {
     for (const m of ms) pick.append(Object.assign(el("option", null, m.label), { value: String(m.index) }));
   }).catch(() => {});
-  row.append(pick, askBtn, second, polish);
+  row.append(pick, askBtn, second, polish, starter);
   body.append(history, q, row, status, notesBox);
 
   let people = [];
@@ -935,8 +954,14 @@ async function buildAsk(item, replyBox, body, summaryEl) {
   };
   const data = await refreshNotes();
   const advise = (data && typeof data.advise === "string") ? data.advise : "";
-  q.value = advise;
-  fitText(q);
+  const followUp = () => {
+    q.value = "";
+    q.placeholder = "Ask a follow-up";
+    starter.hidden = !advise;
+    fitText(q);
+  };
+  starter.addEventListener("click", () => { q.value = advise; q.focus(); fitText(q); });
+  if ((data && data.history || []).length) followUp(); else { q.value = advise; fitText(q); }
   const askedBy = (box, h) => {
     if (h.author && h.author !== "owner") box.append(el("p", "kbdhint authorlabel", askerLabel(h.author)));
   };
@@ -966,7 +991,7 @@ async function buildAsk(item, replyBox, body, summaryEl) {
       if (out.draft_reply) lastDraft = out.draft_reply;
       renderAnswer(t, out, replyBox, refreshNotes, item.id);
       layout();
-      if (mode === "ask") { q.value = advise; fitText(q); }
+      if (mode === "ask") followUp();
       status.textContent = "";
     } catch (e) {
       status.textContent = "Ask failed: " + e.message;
@@ -1526,6 +1551,7 @@ const SHORTCUTS = [
   ["e", "Archive (Gmail) or Done (Slack)"],
   ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
   ["r", "Reply (jump to the reply box)"],
+  ["v", "Move to another section"],
   ["m", "Memory: everything FrontDesk remembers"],
   ["?", "Show or hide this list"],
   ["Esc", "Leave the reply box / close this list"],
@@ -1628,6 +1654,16 @@ function onKey(e) {
       break;
     case "s":
       if (li && cardItems.get(li)) toggleStar(cardItems.get(li));
+      break;
+    case "v":
+      if (li) {
+        if (!isOpen(li)) li.querySelector(":scope > .row").click();
+        const mp = li.querySelector("select.movepick");
+        if (mp) {
+          mp.focus();
+          try { if (mp.showPicker) mp.showPicker(); } catch (err) { /* focus is enough; Space opens it */ }
+        }
+      }
       break;
     case "r":
       if (li) {
