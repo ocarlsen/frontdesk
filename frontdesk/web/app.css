@@ -130,7 +130,7 @@ section > details > summary { cursor: pointer; list-style-position: inside; }
 .linkbtn:hover { text-decoration: underline; }
 details > .linkbtn { display: block; margin: 0 0 6px auto; }
 
-.why { margin: 10px 0 0; font-size: .85em; color: var(--muted); }
+.why { margin: 14px 0 0; font-size: .85em; color: var(--muted); }
 .why summary { cursor: pointer; }
 .why dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 8px 0 0; }
 .why dt { color: var(--muted); }
