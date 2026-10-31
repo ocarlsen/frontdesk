@@ -54,6 +54,8 @@
 .fd #privacy h2 { margin-top: 0; }
 .fd .updated { color: var(--muted); font-size: 0.88rem; margin: -4px 0 20px; }
 .fd #privacy h3 { font: 600 1rem/1.4 "Inter", system-ui, sans-serif; margin: 22px 0 6px; }
+.fd .tour video { display: block; width: 100%; height: auto; border-radius: 10px;
+  border: 1px solid var(--rule); background: var(--card); }
 @media (max-width: 480px) { .fd .facts { grid-template-columns: 1fr; } }
 </style>
 
@@ -74,6 +76,21 @@ with the model you choose.</p>
   <li><b>Measured</b><span>Labeled test set and a 32-attack prompt-injection suite, scored per model.</span></li>
   <li><b>Bring your own model</b><span>Adapters for Anthropic, OpenAI and Gemini; switching is a setting, and Ask lets you pick the model for each question.</span></li>
 </ul>
+
+<figure class="tour">
+  <video controls muted playsinline preload="metadata" width="1440" height="1012"
+         poster="frontdesk-tour.jpg"
+         aria-label="A guided walkthrough of FrontDesk on the synthetic demo inbox, about two minutes">
+    <source src="frontdesk-tour.mp4" type="video/mp4">
+    <img src="frontdesk-tour.gif" width="800" height="562"
+         alt="The first part of the FrontDesk walkthrough: the ranked inbox and its keyboard shortcuts.">
+  </video>
+  <figcaption>A guided walkthrough of about two minutes on the synthetic demo inbox, in six
+  parts: triage (with Move to and Undo), the keyboard, Ask with an unconfirmed note, Memory (your
+  profile, what's going on, and who wrote each note), guardrails
+  (two planted instructions that do not work, Send's confirm screen and 30-second undo), and swipe
+  and star on a phone. No sound.</figcaption>
+</figure>
 
 <figure>
   <img src="frontdesk-list.jpg" width="820" height="609" loading="lazy"
@@ -101,7 +118,9 @@ with the model you choose.</p>
   whichever one they write from. Each open thread shows its people under the subject, one tap
   to read or edit their note, and Ask suggests additions you save with a click. Every
   memory records who wrote it and when, and anything you did not write yourself is marked
-  unconfirmed, to you and to the model. The Memory page shows everything FrontDesk remembers in
+  unconfirmed, to you and to the model. Someone becomes a person in Memory only when a note is
+  saved on them, by you or a session you run; reading mail and Slack never adds anyone. The
+  Memory page shows everything FrontDesk remembers in
   one place: edit, confirm, delete or merge people there, or download it all.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
