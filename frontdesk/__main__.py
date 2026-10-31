@@ -56,6 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     st.add_argument("--json", action="store_true", help="the summary as JSON")
     sb = sub.add_parser("scoreboard", help="compare eval runs and apply the pick rule")
     sb.add_argument("--dir", default="evals")
+    sb.add_argument("--site", help="also rewrite this page's results table, e.g. "
+                                   "docs/site/frontdesk.html")
     ex = sub.add_parser("export-demo", help="write the demo inbox as static files for hosting")
     ex.add_argument("out", help="output directory (replaced)")
     ex.add_argument("--cname", help="custom domain for GitHub Pages, e.g. frontdesk.example.com")
@@ -100,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "eval-attribution" and args.dry_run:
         return eval_attribution_main(args, None)
     if args.cmd == "scoreboard":
-        return scoreboard_main(args.dir)
+        return scoreboard_main(args.dir, args.site)
     if args.cmd == "unanswered":
         return unanswered_main(args)
     if args.cmd == "inbox-buckets":
@@ -356,24 +358,25 @@ def eval_attribution_main(args, s: dict | None) -> int:
     return 0
 
 
-def scoreboard_main(root: str) -> int:
-    """Compares the latest run per model under the CURRENT prompt version (needs no key)."""
-    import json
+def scoreboard_main(root: str, site: str | None = None) -> int:
+    """Compares the latest run per model under the CURRENT prompt version (needs no key). With
+    `site`, also rewrites that page's results table (between the scoreboard markers)."""
     from pathlib import Path
 
     from . import evaluate, triage
     out = Path(root) / "results"
-    latest: dict[str, dict] = {}
-    for p in sorted(out.glob("*.json")):
-        rep = json.loads(p.read_text())
-        if rep.get("prompt_version") == triage.PROMPT_VERSION:
-            latest[rep["model"]] = rep          # sorted by name = by date, so last wins
-    if not latest:
+    reports = evaluate.latest_reports(root)
+    if not reports:
         print(f"no runs for prompt {triage.PROMPT_VERSION} in {out}")
         return 1
-    md = evaluate.scoreboard(list(latest.values()))
+    md = evaluate.scoreboard(reports)
     (out / "SCOREBOARD.md").write_text(md)
     print(md)
+    if site:
+        page = Path(site)
+        page.write_text(evaluate.replace_site_block(page.read_text(),
+                                                    evaluate.scoreboard_html(reports)))
+        print(f"updated the results table in {site}")
     return 0
 
 
