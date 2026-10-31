@@ -85,6 +85,42 @@ def set_archived(store: Store, item_id: str, archived: bool, gmail: GmailClient 
     return {"status": "done", "kind": kind}
 
 
+def move_to_inbox(store: Store, item_id: str, gmail: GmailClient | None, client_key: str) -> dict:
+    """Put a Gmail thread that is not in the inbox (one kept from a search) back in Gmail's
+    inbox. It stays kept, so sync keeps it current even when it is older than the sync window;
+    archiving or marking it done later ends that, as for any kept thread."""
+    if not _CLIENT_KEY.fullmatch(client_key or ""):
+        raise ActionError("missing or malformed idempotency key")
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    if item.source != "gmail":
+        raise ActionError("only a Gmail thread has an inbox to move to")
+    if "INBOX" in item.labels:
+        return {"status": "already_done", "kind": "inbox"}
+    key = f"inbox:{item_id}:{client_key}"
+    prior = store.action(key)
+    if prior is not None and prior["status"] == "done":
+        return {"status": "already_done", "kind": "inbox"}
+    try:
+        action_id = store.begin_action(key, item_id, "inbox", {})
+    except sqlite3.IntegrityError:
+        if prior is None:
+            raise ActionError("this action is already in progress") from None
+        action_id = prior["id"]
+    try:
+        if gmail is not None:
+            _check_account(gmail, item.account)
+            gmail.modify_thread(_native_id(item_id), add=["INBOX"])
+    except (GmailError, ActionError) as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(str(e)) from e
+    store.set_labels(item_id, [*item.labels, "INBOX"])
+    store.unhide(item_id)
+    store.finish_action(action_id, "done")
+    return {"status": "done", "kind": "inbox"}
+
+
 def set_starred(store: Store, item_id: str, starred: bool, gmail: GmailClient | None,
                 client_key: str) -> dict:
     """Star or unstar a thread, the same shape as archive. Gmail: add or remove the STARRED
