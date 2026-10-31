@@ -19,6 +19,7 @@ const EXPORTED = Date.parse(document.documentElement.dataset.exported || "");
 const staticHidden = new Map();   // item id -> "archived" | "done"
 const staticLabels = new Map();   // item id -> bucket the visitor moved it to
 const staticStars = new Map();    // item id -> starred, as the visitor left it
+const staticUnread = new Map();   // item id -> unread, as the visitor left it
 
 function staticFile(itemId) {
   return itemId.replace(/[^A-Za-z0-9]/g, "-");
@@ -334,7 +335,8 @@ function buildCard(item, triage) {
   let detail = null;
   row.addEventListener("focus", () => { if (currentId !== item.id) setCurrent(li); });
   row.addEventListener("click", () => {
-    if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe
+    if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe or long press
+    if (selected.size && TOUCH.matches) { toggleSelect(li, false); return; }   // selecting: a tap picks
     setCurrent(li);   // a clicked row is the current one, so j/k continue from it
     const open = row.getAttribute("aria-expanded") === "true";
     if (open) {
@@ -360,7 +362,16 @@ function buildCard(item, triage) {
     arcBtn.addEventListener("click", ev => { ev.stopPropagation(); setCurrent(li); dismissCard(li); });
     tools.append(arcBtn);
   }
-  li.append(row, tools, starButton(item, "star"));
+  // Select (x, or Shift-click for a range): Gmail's checkbox, in the dot's place.
+  const pick = el("input", "rowcheck");
+  pick.type = "checkbox";
+  pick.title = "Select (x)";
+  pick.setAttribute("aria-label", "Select " + (item.subject || "(no subject)"));
+  pick.checked = selected.has(item.id);
+  if (pick.checked) li.classList.add("selected");
+  pick.addEventListener("click", ev => { ev.stopPropagation(); toggleSelect(li, ev.shiftKey); });
+  li.append(row, pick, tools, starButton(item, "star"));
+  li.addEventListener("mouseenter", () => centerTools(li));
   if (!item.hidden) attachSwipe(li, row, item);
   if (openThreads.has(item.id)) {            // reopen after a re-render
     detail = buildDetail(item, triage);
@@ -388,7 +399,7 @@ async function postAction(kind, itemId, extra) {
       staticStars.set(itemId, kind === "star");
       return { status: "done", kind, starred: kind === "star", demo: true };
     }
-    if (kind === "read" || kind === "unread") return { status: "done" };
+    if (kind === "read" || kind === "unread") { staticUnread.set(itemId, kind === "unread"); return { status: "done" }; }
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile" || kind === "note" || kind.startsWith("note_") ||
         kind.startsWith("person_") || kind.startsWith("situation_")) throw new Error("demo mode");
@@ -642,6 +653,7 @@ async function setRead(item, read, li) {
   const before = [...(item.labels || [])];
   item.labels = read ? before.filter(l => l !== "UNREAD") : [...before, "UNREAD"];
   paintRead(item);
+  if (item.source !== "slack") toast((read ? "Marking read" : "Marking unread") + " in Gmail\u2026");
   try {
     const out = await postAction(read ? "read" : "unread", item.id, read ? { explicit: true } : undefined);
     if (out.status === "skipped" && read && item.source === "slack") {
@@ -692,6 +704,7 @@ async function markDone(item, btn) {
 
 async function archive(item, btn) {
   btn.disabled = true;
+  toast("Archiving\u2026");
   try {
     await postAction("archive", item.id);
     await load();
@@ -801,10 +814,18 @@ function attachSwipe(li, row, item) {
     if (e.pointerType !== "touch") return;   // a mouse or pen never swipes
     s = { x: e.clientX, y: e.clientY, lock: null, act: false, id: e.pointerId,
           w: row.getBoundingClientRect ? row.getBoundingClientRect().width : 0 };
+    // A long press (half a second without moving) selects the row, as in Gmail's app.
+    const held = s;
+    held.timer = setTimeout(() => {
+      if (s !== held || held.lock) return;
+      li.dataset.swiped = "1";               // the tap that ends this press must not open it
+      toggleSelect(li, false);
+    }, LONG_PRESS_MS);
   });
   row.addEventListener("pointermove", e => {
     if (!s || e.pointerId !== s.id) return;
     const d = swipeDecide(e.clientX - s.x, e.clientY - s.y, s.lock, s.w);
+    if (d.lock) clearTimeout(s.timer);
     if (d.lock === "y") { s = null; reset(); return; }
     if (d.lock !== "x") return;
     if (!s.lock && row.setPointerCapture) row.setPointerCapture(e.pointerId);
@@ -840,6 +861,184 @@ function attachSwipe(li, row, item) {
 // server works; moves the highlight only once it is gone, to the thread below it (or above, at
 // the end). Resolves true when the card left the list.
 let gPending = false;
+let starChord = false;
+
+// ---- Bulk selection. The set holds item ids, so a re-render keeps it; the bar outside <main>
+// acts on all of it, and the keys that act on one thread act on the selection while there is one.
+const selected = new Set();
+let lastPicked = null;
+const LONG_PRESS_MS = 500;
+const TOUCH = typeof matchMedia === "function" ? matchMedia("(hover: none)") : { matches: false };
+
+function itemRow(id) { return (window.__items || []).find(r => r.item.id === id) || null; }
+function selectable(li) { return !!(li && !li.classList.contains("result") && cardItems.get(li)); }
+
+function paintSelection() {
+  for (const li of allCards()) {
+    const on = selected.has(li.dataset.id);
+    li.classList.toggle("selected", on);
+    const box = li.querySelector(":scope > .rowcheck");
+    if (box) box.checked = on;
+  }
+  if (document.body && document.body.classList) document.body.classList.toggle("selecting", selected.size > 0);
+  renderSelBar();
+}
+
+function toggleSelect(li, range) {
+  if (!selectable(li)) return;
+  const id = li.dataset.id;
+  if (range && lastPicked && lastPicked !== id) {
+    const cards = visibleCards().filter(selectable);
+    const a = cards.findIndex(c => c.dataset.id === lastPicked);
+    const b = cards.indexOf(li);
+    if (a >= 0 && b >= 0) {
+      for (const c of cards.slice(Math.min(a, b), Math.max(a, b) + 1)) selected.add(c.dataset.id);
+    } else selected.add(id);
+  } else if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  lastPicked = id;
+  paintSelection();
+}
+
+function selectWhere(pred) {
+  selected.clear();
+  for (const li of visibleCards()) if (selectable(li) && pred(cardItems.get(li))) selected.add(li.dataset.id);
+  paintSelection();
+}
+
+function clearSelection() {
+  if (!selected.size) return false;
+  selected.clear();
+  paintSelection();
+  return true;
+}
+
+function selectedItems() {
+  return [...selected].map(itemRow).filter(Boolean).map(r => r.item);
+}
+
+// One request per thread through the same actions a single thread uses (same checks, same Gmail
+// and Slack calls), then one reload and one toast, whose Undo reverses only what succeeded.
+// keep: the threads stay in view (read, unread, star), so the selection stays, as in Gmail;
+// archive and move take them out of view and clear it.
+async function runBulk(items, doOne, undoOne, said, keep = false, doing = "Working") {
+  const bar = document.getElementById("selbar");
+  if (bar) bar.setAttribute("aria-busy", "true");
+  const done = [];
+  for (const [i, it] of items.entries()) {
+    // Each thread is a Gmail or Slack call; say so, so a batch never looks stuck.
+    toast(doing + " " + (i + 1) + " of " + items.length + "\u2026");
+    try { await doOne(it); done.push(it); } catch (e) { /* counted below */ }
+  }
+  if (!keep) clearSelection();
+  if (bar) bar.removeAttribute("aria-busy");
+  await load();
+  const failed = items.length - done.length;
+  const text = said(done.length) + (failed ? " " + failed + " failed." : "");
+  if (!undoOne || !done.length) { toast(text); return; }
+  toast(text, "Undo", async () => {
+    for (const it of done) { try { await undoOne(it); } catch (e) { /* best effort */ } }
+    await load();
+    toast("Undone.");
+  });
+}
+
+const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+
+function bulkArchive() {
+  const items = selectedItems().filter(it => !it.hidden);
+  if (!items.length) return;
+  runBulk(items, it => postAction(it.source === "slack" ? "done" : "archive", it.id),
+          it => postAction(it.source === "slack" ? "undone" : "unarchive", it.id),
+          n => (items.some(it => it.source === "slack") ? "Archived or marked done: " : "Archived: ") +
+               plural(n, "thread", "threads") + ".", false, "Archiving");
+}
+
+function bulkRead(read) {
+  const items = selectedItems().filter(it => isUnread(it) === read);
+  if (!items.length) { toast("Already " + (read ? "read." : "unread.")); return; }
+  runBulk(items, it => postAction(read ? "read" : "unread", it.id, read ? { explicit: true } : undefined),
+          it => postAction(read ? "unread" : "read", it.id, read ? undefined : { explicit: true }),
+          n => "Marked " + (read ? "read: " : "unread: ") + plural(n, "thread", "threads") + ".", true,
+          read ? "Marking read" : "Marking unread");
+}
+
+function bulkStar() {
+  const items = selectedItems();
+  if (!items.length) return;
+  const want = items.some(it => !it.starred);
+  const change = items.filter(it => !!it.starred !== want);
+  runBulk(change, it => postAction(want ? "star" : "unstar", it.id),
+          it => postAction(want ? "unstar" : "star", it.id),
+          n => (want ? "Starred: " : "Unstarred: ") + plural(n, "thread", "threads") + ".", true,
+          want ? "Starring" : "Unstarring");
+}
+
+function bulkMove(bucket) {
+  const rows = [...selected].map(itemRow).filter(r => r && r.triage && r.triage.bucket !== bucket);
+  if (!rows.length) { clearSelection(); return; }
+  const from = new Map(rows.map(r => [r.item.id, r.triage.bucket]));
+  runBulk(rows.map(r => r.item), it => postAction("relabel", it.id, { bucket }),
+          it => postAction("relabel", it.id, { bucket: from.get(it.id) }),
+          n => "Moved to " + bucketName(bucket) + ": " + plural(n, "thread", "threads") + ".", false,
+          "Moving");
+}
+
+function renderSelBar() {
+  const bar = document.getElementById("selbar");
+  if (!bar || !bar.replaceChildren) return;
+  bar.hidden = selected.size === 0;
+  if (bar.hidden) { bar.replaceChildren(); return; }
+  const cards = visibleCards().filter(selectable);
+  const all = el("input", "selall");
+  all.type = "checkbox";
+  all.checked = cards.length > 0 && cards.every(c => selected.has(c.dataset.id));
+  all.setAttribute("aria-label", all.checked ? "Select none (* then n)" : "Select all (* then a)");
+  all.title = all.getAttribute("aria-label");
+  all.addEventListener("click", () => { if (all.checked) selectWhere(() => true); else clearSelection(); });
+  const which = el("select", "selwhich");
+  which.setAttribute("aria-label", "Select");
+  for (const [v, t] of [["", "Select\u2026"], ["a", "All (* a)"], ["n", "None (* n)"],
+                        ["r", "Read (* r)"], ["u", "Unread (* u)"]]) {
+    which.append(Object.assign(el("option", null, t), { value: v }));
+  }
+  which.addEventListener("change", () => { starPick(which.value); which.value = ""; });
+  const count = el("span", "selcount");
+  count.append(el("b", null, String(selected.size)), el("span", "selword", " selected"));
+  count.setAttribute("aria-live", "polite");
+  // Each button carries an icon and a label; a phone shows only the icons (the label stays as the
+  // accessible name), so the bar fits one line at the bottom of the screen.
+  const btn = (text, title, fn, symbol) => {
+    const b = symbol ? iconButton("btn selbtn", symbol, title) : el("button", "btn selbtn");
+    b.type = "button";
+    b.title = title;
+    b.setAttribute("aria-label", title.replace(/ \(.*\)$/, ""));   // "Mark read", without the key
+    b.append(el("span", "sellabel", text));
+    b.addEventListener("click", fn);
+    return b;
+  };
+  const move = el("select", "movepick selmove");
+  move.setAttribute("aria-label", "Move to (v)");
+  move.title = "Move to (v)";
+  move.append(Object.assign(el("option", null, "Move to\u2026"), { value: "" }));
+  for (const [b, name] of BUCKET_NAMES) move.append(Object.assign(el("option", null, name), { value: b }));
+  move.addEventListener("change", () => { if (move.value) bulkMove(move.value); });
+  bar.replaceChildren(all, which, count,
+    btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
+    btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
+    btn("Archive", "Archive, or Done for Slack (e)", bulkArchive, "i-archive"),
+    btn("Star", "Star or unstar (s)", bulkStar, "i-star"),
+    move,
+    btn("Clear", "Clear the selection (Esc)", clearSelection, "i-clear"));
+  bar.lastChild.classList.add("selclear");
+}
+
+function starPick(k) {
+  if (k === "a") selectWhere(() => true);
+  else if (k === "n") clearSelection();
+  else if (k === "r") selectWhere(it => !isUnread(it));
+  else if (k === "u") selectWhere(it => isUnread(it));
+}
 
 // [ and ]: archive (or mark done) the current thread, then open its neighbour above or below,
 // as Gmail does from an open conversation.
@@ -1737,6 +1936,10 @@ async function load() {
       rows = rows.map(r => {
         r.item.hidden = staticHidden.get(r.item.id) || r.item.hidden || "";
         if (staticStars.has(r.item.id)) r.item.starred = staticStars.get(r.item.id);
+        if (staticUnread.has(r.item.id)) {
+          const rest = (r.item.labels || []).filter(l => l !== "UNREAD");
+          r.item.labels = staticUnread.get(r.item.id) ? [...rest, "UNREAD"] : rest;
+        }
         r.item.updated_at = shiftIso(r.item.updated_at, delta);
         for (const m of r.item.messages) m.sent_at = shiftIso(m.sent_at, delta);
         if (r.triage) r.triage.triaged_at = shiftIso(r.triage.triaged_at, delta);
@@ -1749,7 +1952,9 @@ async function load() {
       }).filter(r => !r.item.hidden || r.item.starred);   // same rule as the server's list
     }
     window.__items = rows;
+    for (const id of [...selected]) if (!rows.some(r => r.item.id === id && !r.item.hidden)) selected.delete(id);
     render(rows);
+    paintSelection();
     const again = visibleCards().find(li => li.dataset.id === currentId);
     if (again) again.classList.add("current");
   } catch (e) {
@@ -2147,6 +2352,9 @@ const SHORTCUTS = [
   ["[ / ]", "Archive, then open the thread above / below"],
   ["Shift+I / Shift+U", "Mark read / unread"],
   ["z", "Undo the last archive, move, read change or send"],
+  ["x", "Select the thread (Shift-click a checkbox for a range)"],
+  ["* then a / n / r / u", "Select all / none / read / unread"],
+  ["Esc", "Clear the selection, leave the reply box, or close this list"],
   ["a", "Reply all (Gmail)"],
   ["g then i / g then s", "Go to the inbox / the Starred view"],
   ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
@@ -2154,7 +2362,6 @@ const SHORTCUTS = [
   ["v", "Move to another section"],
   ["m", "Memory: everything FrontDesk remembers"],
   ["?", "Show or hide this list"],
-  ["Esc", "Leave the reply box / close this list"],
 ];
 let currentId = null;
 
@@ -2168,11 +2375,25 @@ function visibleCards() {
   return allCards().filter(li => li.offsetParent !== null && !li.closest("details:not([open])"));
 }
 
+// The hover tools sit under the row's time, centred on it. The time is inside the row button
+// and the tools cannot be (a button holds no buttons), so they are placed by measurement when
+// they appear: on hover and when the row becomes current.
+function centerTools(li) {
+  const tools = li && li.querySelector(":scope > .rowtools");
+  const when = li && li.querySelector(":scope > .row .when");
+  if (!tools || !when || !tools.style) return;
+  const w = when.getBoundingClientRect(), c = li.getBoundingClientRect();
+  const width = tools.offsetWidth || 54;
+  if (!w.width) return;
+  tools.style.right = Math.round(c.right - (w.left + w.width / 2) - width / 2) + "px";
+}
+
 function setCurrent(li) {
   for (const c of document.querySelectorAll("li.card.current")) c.classList.remove("current");
   if (!li) { currentId = null; return; }
   li.classList.add("current");
   currentId = li.dataset.id;
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => centerTools(li));
   li.scrollIntoView({ block: "nearest" });
   // Keep one selection on screen: if a row button holds focus (after a click), move focus to the
   // new current row so its focus ring does not stay behind on the old one.
@@ -2233,9 +2454,12 @@ function buildHelp() {
 function onKey(e) {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
-  const typing = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" ||
-                       t.tagName === "SELECT" || t.isContentEditable);
+  // A checkbox holds focus after a click but takes no text: keys still act (Shift+I on a
+  // selection made by clicking checkboxes).
+  const typing = t && (t.tagName === "TEXTAREA" || t.isContentEditable || t.tagName === "SELECT" ||
+                       (t.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(t.type)));
   if (e.key === "Escape") {
+    if (!typing && clearSelection()) return;
     if (t && t.id === "search") { clearSearch(); return; }
     if (!typing && query && document.getElementById("help").hidden &&
         document.getElementById("profilepanel").hidden) { clearSearch(); return; }
@@ -2261,6 +2485,25 @@ function onKey(e) {
     }
   }
   if (e.key === "g") { gPending = true; setTimeout(() => { gPending = false; }, 1500); e.preventDefault(); return; }
+  // Gmail's selection chord: *, then a (all), n (none), r (read) or u (unread).
+  if (starChord) {
+    starChord = false;
+    if ("anru".includes(e.key)) { starPick(e.key); e.preventDefault(); return; }
+  }
+  if (e.key === "*") { starChord = true; setTimeout(() => { starChord = false; }, 1500); e.preventDefault(); return; }
+  if (e.key === "x") { if (li) toggleSelect(li, false); e.preventDefault(); return; }
+  // With a selection, the keys that act on one thread act on all of it.
+  if (selected.size) {
+    const act = { e: bulkArchive, y: bulkArchive, I: () => bulkRead(true), U: () => bulkRead(false),
+                  s: bulkStar }[e.key];
+    if (act) { act(); e.preventDefault(); return; }
+    if (e.key === "v") {
+      const m = document.querySelector("#selbar .selmove");
+      if (m) { m.focus(); try { if (m.showPicker) m.showPicker(); } catch (err) { /* focus is enough */ } }
+      e.preventDefault();
+      return;
+    }
+  }
   switch (e.key) {
     case "/": {
       const box = document.getElementById("search");

@@ -54,6 +54,11 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   and unread (Gmail too; on Slack, unread is kept in FrontDesk), `z` undoes, `g i`/`g s` go to the
   inbox or Starred. Each action that changes mail also has a control: row icons on hover, the
   thread's buttons, and the toast's Undo.
+- **Bulk:** select with the row checkbox, `x`, Shift-click for a range, or `*` then `a`/`n`/`r`/`u`
+  (all, none, read, unread); on a phone, long-press a row, then tap more. A bar then marks the
+  selection read or unread, archives it (Done for Slack), stars it or moves it, one action per
+  thread through the same checked path as a single one, with one Undo for the batch. `e`, `y`,
+  `Shift+I`, `Shift+U`, `s` and `v` act on the selection; Esc clears it.
 - **Stats:** `frontdesk stats [--days N] [--json]` shows what FrontDesk did and what it cost:
   threads ranked and cost per thread by model, Ask answers, drafts saved and replies sent (with the
   share sent as FrontDesk proposed, as Ask drafted, edited, or written from scratch), searches and
