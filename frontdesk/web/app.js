@@ -663,7 +663,11 @@ async function moveToInbox(item, btn) {
 function bulkInbox() {
   const items = selectedItems().filter(it => !inInbox(it) && !it.hidden);
   if (!items.length) { toast("Already in the inbox."); return; }
-  runBulk(items, it => postAction("inbox", it.id), it => postAction("archive", it.id),
+  // A search result moved to the inbox is also kept, so it shows here too: sync only fetches
+  // the last week of the inbox, and a kept thread is fetched whatever its age. Keeping ranks it
+  // (one model call); Undo archives it, which also lets it go.
+  runBulk(items, async it => { await bulkAct(it, "inbox"); if (it.result) await postAction("keep", it.id); },
+          it => it.result ? postAction("archive", it.id) : bulkAct(it, "archive"),
           n => "Moved to the inbox: " + plural(n, "thread", "threads") + ".", true, "Moving to the inbox");
 }
 
@@ -909,7 +913,21 @@ const LONG_PRESS_MS = 500;
 const TOUCH = typeof matchMedia === "function" ? matchMedia("(hover: none)") : { matches: false };
 
 function itemRow(id) { return (window.__items || []).find(r => r.item.id === id) || null; }
-function selectable(li) { return !!(li && !li.classList.contains("result") && cardItems.get(li)); }
+// A Gmail search result on screen (not stored, not ranked), by id; Slack matches are never one.
+function searchResult(id) {
+  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
+  return g && g.results ? g.results.find(r => r.id === id) || null : null;
+}
+// A result as the bulk actions see a thread: its labels, and result: true so its actions go
+// straight to Gmail by thread id instead of through the store.
+function resultItem(r) {
+  const labels = [...(r.in_inbox ? ["INBOX"] : []), ...(r.unread ? ["UNREAD"] : [])];
+  return { id: r.id, source: "gmail", subject: r.subject, labels, starred: !!r.starred, result: true };
+}
+function selectable(li) {
+  if (!li) return false;
+  return li.classList.contains("result") ? !!searchResult(li.dataset.id) : !!cardItems.get(li);
+}
 
 function paintSelection() {
   for (const li of allCards()) {
@@ -940,7 +958,11 @@ function toggleSelect(li, range) {
 
 function selectWhere(pred) {
   selected.clear();
-  for (const li of visibleCards()) if (selectable(li) && pred(cardItems.get(li))) selected.add(li.dataset.id);
+  for (const li of visibleCards()) {
+    if (!selectable(li)) continue;
+    const it = cardItems.get(li) || resultItem(searchResult(li.dataset.id));
+    if (pred(it)) selected.add(li.dataset.id);
+  }
   paintSelection();
 }
 
@@ -952,7 +974,29 @@ function clearSelection() {
 }
 
 function selectedItems() {
-  return [...selected].map(itemRow).filter(Boolean).map(r => r.item);
+  return [...selected].map(id => {
+    const row = itemRow(id);
+    if (row) return row.item;
+    const r = searchResult(id);
+    return r ? resultItem(r) : null;
+  }).filter(Boolean);
+}
+
+// The labels each action changes on a result, mirrored onto the row so it re-renders right.
+const RESULT_FLAGS = { inbox: ["in_inbox", true], archive: ["in_inbox", false],
+                       read: ["unread", false], unread: ["unread", true],
+                       star: ["starred", true], unstar: ["starred", false] };
+
+// One action on a thread from the bulk bar: a stored thread through its usual action, a search
+// result as one label change in Gmail (kind "result"), with nothing stored.
+async function bulkAct(it, kind, extra) {
+  if (!it.result) return postAction(kind, it.id, extra);
+  const op = kind === "unarchive" ? "inbox" : kind;
+  const out = await postAction("result", it.id, { op });
+  const r = searchResult(it.id);
+  const [field, value] = RESULT_FLAGS[op];
+  if (r) r[field] = value;
+  return out;
 }
 
 // One request per thread through the same actions a single thread uses (same checks, same Gmail
@@ -975,19 +1019,23 @@ async function runBulk(items, doOne, undoOne, said, keep = false, doing = "Worki
   const text = said(done.length) + (failed ? " " + failed + " failed." : "");
   if (!undoOne || !done.length) { toast(text); return; }
   toast(text, "Undo", async () => {
-    for (const it of done) { try { await undoOne(it); } catch (e) { /* best effort */ } }
+    let failed = 0;
+    for (const [i, it] of done.entries()) {
+      toast("Undoing " + (i + 1) + " of " + done.length + "\u2026");   // same reason as above
+      try { await undoOne(it); } catch (e) { failed += 1; }
+    }
     await load();
-    toast("Undone.");
+    toast(failed ? "Undone, but " + failed + " failed." : "Undone.");
   });
 }
 
 const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 
 function bulkArchive() {
-  const items = selectedItems().filter(it => !it.hidden);
-  if (!items.length) return;
-  runBulk(items, it => postAction(it.source === "slack" ? "done" : "archive", it.id),
-          it => postAction(it.source === "slack" ? "undone" : "unarchive", it.id),
+  const items = selectedItems().filter(it => !it.hidden && !(it.result && !inInbox(it)));
+  if (!items.length) { toast("Already archived."); return; }
+  runBulk(items, it => bulkAct(it, it.source === "slack" ? "done" : "archive"),
+          it => bulkAct(it, it.source === "slack" ? "undone" : "unarchive"),
           n => (items.some(it => it.source === "slack") ? "Archived or marked done: " : "Archived: ") +
                plural(n, "thread", "threads") + ".", false, "Archiving");
 }
@@ -995,8 +1043,8 @@ function bulkArchive() {
 function bulkRead(read) {
   const items = selectedItems().filter(it => isUnread(it) === read);
   if (!items.length) { toast("Already " + (read ? "read." : "unread.")); return; }
-  runBulk(items, it => postAction(read ? "read" : "unread", it.id, read ? { explicit: true } : undefined),
-          it => postAction(read ? "unread" : "read", it.id, read ? undefined : { explicit: true }),
+  runBulk(items, it => bulkAct(it, read ? "read" : "unread", read ? { explicit: true } : undefined),
+          it => bulkAct(it, read ? "unread" : "read", read ? undefined : { explicit: true }),
           n => "Marked " + (read ? "read: " : "unread: ") + plural(n, "thread", "threads") + ".", true,
           read ? "Marking read" : "Marking unread");
 }
@@ -1006,8 +1054,8 @@ function bulkStar() {
   if (!items.length) return;
   const want = items.some(it => !it.starred);
   const change = items.filter(it => !!it.starred !== want);
-  runBulk(change, it => postAction(want ? "star" : "unstar", it.id),
-          it => postAction(want ? "unstar" : "star", it.id),
+  runBulk(change, it => bulkAct(it, want ? "star" : "unstar"),
+          it => bulkAct(it, want ? "unstar" : "star"),
           n => (want ? "Starred: " : "Unstarred: ") + plural(n, "thread", "threads") + ".", true,
           want ? "Starring" : "Unstarring");
 }
@@ -1061,14 +1109,16 @@ function renderSelBar() {
   move.append(Object.assign(el("option", null, "Move to\u2026"), { value: "" }));
   for (const [b, name] of BUCKET_NAMES) move.append(Object.assign(el("option", null, name), { value: b }));
   move.addEventListener("change", () => { if (move.value) bulkMove(move.value); });
+  const items = selectedItems();
+  const stored = items.some(it => !it.result);
   bar.replaceChildren(all, which, count,
     btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
     btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
     btn("Archive", "Archive, or Done for Slack (e)", bulkArchive, "i-archive"),
-    ...(selectedItems().some(it => !inInbox(it) && !it.hidden)
+    ...(items.some(it => !inInbox(it) && !it.hidden)
       ? [btn("Inbox", "Move to inbox", bulkInbox, "i-inbox")] : []),
     btn("Star", "Star or unstar (s)", bulkStar, "i-star"),
-    move,
+    ...(stored ? [move] : []),
     btn("Clear", "Clear the selection (Esc)", clearSelection, "i-clear"));
   bar.lastChild.classList.add("selclear");
 }
@@ -1692,7 +1742,15 @@ function buildResultCard(r) {
     row.setAttribute("aria-expanded", String(!open));
     li.classList.toggle("open", !open);
   });
-  li.append(row);
+  // Select (x, or Shift-click for a range), as on a stored thread; the bar then acts in Gmail.
+  const pick = el("input", "rowcheck");
+  pick.type = "checkbox";
+  pick.title = "Select (x)";
+  pick.setAttribute("aria-label", "Select " + (r.subject || "(no subject)"));
+  pick.checked = selected.has(r.id);
+  if (pick.checked) li.classList.add("selected");
+  pick.addEventListener("click", ev => { ev.stopPropagation(); toggleSelect(li, ev.shiftKey); });
+  li.append(row, pick);
   return li;
 }
 
@@ -1992,7 +2050,9 @@ async function load() {
       }).filter(r => !r.item.hidden || r.item.starred);   // same rule as the server's list
     }
     window.__items = rows;
-    for (const id of [...selected]) if (!rows.some(r => r.item.id === id && !r.item.hidden)) selected.delete(id);
+    for (const id of [...selected]) {
+      if (!rows.some(r => r.item.id === id && !r.item.hidden) && !searchResult(id)) selected.delete(id);
+    }
     render(rows);
     paintSelection();
     const again = visibleCards().find(li => li.dataset.id === currentId);
@@ -2482,7 +2542,7 @@ function toggleHelp(force) {
 
 function buildHelp() {
   const h = document.getElementById("help");
-  const box = el("div", "helpbox");
+  const box = el("div", "helpbox keysbox");
   box.append(el("h2", null, "Keyboard shortcuts"));
   const dl = el("dl");
   for (const [k, v] of SHORTCUTS) dl.append(el("dt", null, k), el("dd", null, v));
@@ -2512,7 +2572,7 @@ function onKey(e) {
   if (typing) return;
   const li = currentCard();
   // A search result is not a stored thread: only moving and opening apply to it.
-  if (li && li.classList.contains("result") && "esvruyIUa[]".includes(e.key)) return;
+  if (li && li.classList.contains("result") && !selected.size && "esvruyIUa[]".includes(e.key)) return;
   if (query && (e.key === "h" || e.key === "l")) { switchSearchTab(e.key === "l" ? 1 : -1); e.preventDefault(); return; }
   // Gmail's two-key "go to": g, then i (inbox) or s (starred) within a second and a half.
   if (gPending) {

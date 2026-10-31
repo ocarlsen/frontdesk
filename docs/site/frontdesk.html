@@ -150,7 +150,10 @@ choose.</p>
   messages (Slack's own search, opening in Slack). Open one to read it in place; Keep in FrontDesk
   brings it in, ranked, under From search, with Ask, reply and every other action, until you
   archive it or mark it done. Move to inbox (on the thread, or for a whole selection) puts an
-  archived one back in Gmail's inbox. Esc brings the inbox back.</li>
+  archived one back in Gmail's inbox. Gmail results can be selected like threads, and the bar
+  then archives them, marks them read or unread or stars them right in Gmail without storing
+  them. Moving them to the inbox also brings them into FrontDesk, ranked, however old they are.
+  Esc brings the inbox back.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
   A draft you saved, or started in Gmail, opens in the reply box, read from Gmail each time, and
@@ -242,10 +245,10 @@ server.</p>
 (by default, your inbox from the last seven days). When you search from the search
 box, it sends that search to Google (and, if you connected Slack, to Slack) and reads the senders, subjects and dates of up to 20 matching
 threads to list them; it does not store them, and no model sees them. Opening a result reads
-that whole thread to show it, still without storing it. Only when you choose Keep in FrontDesk is
-the thread stored like the ones it syncs, sent to your model once to be ranked, and read again on
+that whole thread to show it, still without storing it. Only when you choose Keep in FrontDesk, or
+move a result to your inbox, is the thread stored like the ones it syncs, sent to your model once to be ranked, and read again on
 each sync until you archive it or mark it done. If you grant the separate actions permission,
-it can also archive a thread, move it back to your inbox, create drafts, and send a reply. It
+it can also archive a thread, move it back to your inbox, mark it read or unread, star it, create drafts, and send a reply. It
 sends only when you click Send, see the exact message and its recipients, and confirm; the reply
 then waits 30 seconds, during which you can undo it. It never sends on its own, and the model
 never chooses recipients.</p>

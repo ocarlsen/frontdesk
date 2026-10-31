@@ -2,7 +2,11 @@
 everything downstream (store, triage, UI) sees only these shapes, never a source's raw API JSON."""
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
+
+# A Gmail thread's item id ("gmail:" + the thread id); group 1 is the thread id.
+GMAIL_THREAD = re.compile(r"gmail:([0-9a-f]{6,32})")
 
 
 @dataclass

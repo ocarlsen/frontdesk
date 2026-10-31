@@ -175,7 +175,10 @@ li.card.current { box-shadow: inset 4px 0 0 var(--accent); }
   grid-template-columns: minmax(0, 1fr); background: rgba(0,0,0,.35); padding: 16px; }
 .help[hidden] { display: none; }
 .helpbox { background: var(--card); color: var(--text); border-radius: 10px; padding: 18px 22px;
-  max-width: 420px; width: 100%; min-width: 0; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  max-width: 420px; width: 100%; min-width: 0; box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  box-sizing: border-box; max-height: calc(100vh - 32px); overflow-y: auto; }
+/* The shortcut list outgrew a short window: wider, so most lines fit on one, and it scrolls. */
+.helpbox.keysbox { max-width: 640px; }
 .helpbox h2 { margin: 0 0 10px; font-size: 1rem; }
 .helpbox dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
 .helpbox dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }

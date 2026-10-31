@@ -26,9 +26,19 @@ test.describe("bulk selection", () => {
     await expect(card(page, GMAIL_ID_2)).toHaveCount(0);
     await expect(page.locator("#toast")).toContainText("2 threads");
     await expect(bar).toBeHidden();
+    // Undo runs one call per thread too, so it says so while it works (record every toast).
+    await page.evaluate(() => {
+      const w = window as any;
+      const real = w.toast;
+      w.__toasts = [];
+      w.toast = (...a: unknown[]) => { w.__toasts.push(String(a[0])); return real(...a); };
+    });
     await page.keyboard.press("z");
     await expect(card(page, GMAIL_ID)).toHaveCount(1);
     await expect(card(page, GMAIL_ID_2)).toHaveCount(1);
+    await expect(page.locator("#toast")).toContainText("Undone.");
+    const said: string[] = await page.evaluate(() => (window as any).__toasts);
+    expect(said.slice(0, 2), said.join(" | ")).toEqual(["Undoing 1 of 2\u2026", "Undoing 2 of 2\u2026"]);
   });
 
   test("checkbox and Shift-click select a range; the bar marks them unread and read", async ({ page }) => {
@@ -104,5 +114,50 @@ test.describe("bulk selection", () => {
     await page.locator("#selbar .selmove").selectOption("fyi");
     await expect(card(page, GMAIL_ID).locator("xpath=ancestor::section")).toHaveAttribute("aria-label", "FYI");
     await expect(page.locator("#toast")).toContainText("Moved to FYI");
+  });
+
+  // Every batch action says what it is doing, thread by thread, and so does its Undo, so a batch
+  // never looks stuck either way.
+  test("every batch action and its Undo show progress toasts", async ({ page }) => {
+    await page.evaluate(() => {
+      const w = window as any;
+      const real = w.toast;
+      w.__toasts = [];
+      w.toast = (...a: unknown[]) => { w.__toasts.push(String(a[0])); return real(...a); };
+    });
+    const said = async () => {
+      const t: string[] = await page.evaluate(() => (window as any).__toasts.splice(0));
+      return t;
+    };
+    await page.keyboard.press("x");
+    await page.keyboard.press("j");
+    await page.keyboard.press("x");
+    await page.keyboard.press("Shift+U");                       // both unread, whatever they were
+    await expect(page.locator("#toast")).toContainText(/unread/);
+    await said();
+    const steps: [string, () => Promise<void>, RegExp][] = [
+      ["Marking read", () => page.keyboard.press("Shift+I"), /Marked read: 2 threads/],
+      ["Starring", () => page.keyboard.press("s"), /Starred: 2 threads/],
+      ["Moving", async () => { await page.locator("#selbar .selmove").selectOption("fyi"); }, /Moved to FYI: 2 threads/],
+      ["Archiving", () => page.keyboard.press("e"), /Archived: 2 threads/],
+    ];
+    for (const [doing, act, done] of steps) {
+      if (!(await page.locator("#selbar").isVisible())) {      // move and archive clear it
+        await card(page, GMAIL_ID).hover();
+        await card(page, GMAIL_ID).locator(".rowcheck").click();
+        await card(page, GMAIL_ID_2).hover();
+        await card(page, GMAIL_ID_2).locator(".rowcheck").click();
+      }
+      await act();
+      await expect(page.locator("#toast")).toContainText(done);
+      const t = await said();
+      expect(t.filter(x => x.startsWith(doing + " ")), t.join(" | ")).toEqual(
+        [doing + " 1 of 2\u2026", doing + " 2 of 2\u2026"]);
+      await page.keyboard.press("z");
+      await expect(page.locator("#toast")).toContainText("Undone.");
+      const u = await said();
+      expect(u.filter(x => x.startsWith("Undoing")), u.join(" | ")).toEqual(
+        ["Undoing 1 of 2\u2026", "Undoing 2 of 2\u2026"]);
+    }
   });
 });
