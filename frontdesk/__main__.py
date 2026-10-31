@@ -51,6 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     ea.add_argument("--dir", default="evals", help="dataset root (default: ./evals)")
     ea.add_argument("--dry-run", action="store_true",
                     help="build every prompt and estimate cost; no model calls, no key needed")
+    st = sub.add_parser("stats", help="what FrontDesk did and what it cost (counts only, no mail)")
+    st.add_argument("--days", type=int, help="only the last N days (default: everything logged)")
+    st.add_argument("--json", action="store_true", help="the summary as JSON")
     sb = sub.add_parser("scoreboard", help="compare eval runs and apply the pick rule")
     sb.add_argument("--dir", default="evals")
     ex = sub.add_parser("export-demo", help="write the demo inbox as static files for hosting")
@@ -114,6 +117,9 @@ def main(argv: list[str] | None = None) -> int:
     s = config.settings()
     store = Store()
 
+    if args.cmd == "stats":
+        from .stats import main as stats_main
+        return stats_main(store, args.days, args.json)
     if args.cmd in ("draft", "audit-draft"):
         return draft_main(args)
     if args.cmd in ("note", "situation"):
