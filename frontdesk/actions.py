@@ -24,6 +24,7 @@ import requests
 
 from . import drafting
 from .gmail.client import GmailClient, GmailError
+from .items import GMAIL_THREAD
 from .store import Store
 
 
@@ -83,6 +84,30 @@ def set_archived(store: Store, item_id: str, archived: bool, gmail: GmailClient 
         store.unhide(item_id)
     store.finish_action(action_id, "done")
     return {"status": "done", "kind": kind}
+
+
+# What each action on an unstored search result does to its Gmail labels; Undo is the reverse.
+RESULT_OPS = {"inbox": (["INBOX"], []), "archive": ([], ["INBOX"]), "read": ([], ["UNREAD"]),
+              "unread": (["UNREAD"], []), "star": (["STARRED"], []), "unstar": ([], ["STARRED"])}
+
+
+def result_op(item_id: str, op: str, gmail: GmailClient | None) -> dict:
+    """An action on a Gmail search result FrontDesk has not stored: one label change on the
+    thread in Gmail, nothing stored and no model call. Label changes are idempotent, so a retry
+    or a repeated click is harmless."""
+    m = GMAIL_THREAD.fullmatch(item_id or "")
+    if not m:
+        raise ActionError("not a Gmail thread id")
+    if op not in RESULT_OPS:
+        raise ActionError(f"unknown action on a search result: {op}")
+    if gmail is None:
+        return {"status": "done", "demo": True, "op": op}
+    add, remove = RESULT_OPS[op]
+    try:
+        gmail.modify_thread(m.group(1), add=add, remove=remove)
+    except GmailError as e:
+        raise ActionError(str(e)) from e
+    return {"status": "done", "op": op}
 
 
 def move_to_inbox(store: Store, item_id: str, gmail: GmailClient | None, client_key: str) -> dict:

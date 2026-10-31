@@ -75,4 +75,18 @@ test.describe("Gmail keys", () => {
     await page.keyboard.press("?");
     await expect(page.locator("#help")).toContainText("Shift+I / Shift+U");
   });
+
+test("the shortcut list fits a short window and scrolls to its last line", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await openDemo(page);
+  await page.keyboard.press("?");
+  const box = page.locator("#help .helpbox");
+  await expect(box).toBeVisible();
+  const r = await box.boundingBox();
+  expect(r!.y).toBeGreaterThanOrEqual(0);
+  expect(r!.y + r!.height).toBeLessThanOrEqual(600);
+  const last = box.locator("dd").last();
+  await last.scrollIntoViewIfNeeded();
+  await expect(last).toBeInViewport();
+});
 });

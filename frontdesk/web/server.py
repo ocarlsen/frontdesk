@@ -34,7 +34,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .. import config
-from ..items import Item
+from ..items import GMAIL_THREAD, Item
 from ..store import Store
 
 STATIC_DIR = Path(__file__).parent
@@ -415,7 +415,7 @@ def run_search(settings: dict, query: str, client_factory=None, slack_factory=No
                            "slack_error": serr}
 
 
-_GMAIL_THREAD = re.compile(r"gmail:[0-9a-f]{6,32}")
+_GMAIL_THREAD = GMAIL_THREAD
 
 
 def _read_gmail(client_factory):
@@ -520,6 +520,19 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
         return run_memory(db_path, settings, kind, req)
     if kind == "keep":
         return keep_result(db_path, settings, item_id if isinstance(item_id, str) else "")
+    if kind == "result":
+        # A Gmail search result, not stored: a label change straight in Gmail (actions token).
+        op = req.get("op")
+        if not isinstance(item_id, str) or not isinstance(op, str):
+            return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, op}"}
+        try:
+            gmail = None if settings.get("demo") else GmailClient(action_credentials())
+        except AuthError as e:
+            return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+        try:
+            return HTTPStatus.OK, actions.result_op(item_id, op, gmail)
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",

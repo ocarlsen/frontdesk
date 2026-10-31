@@ -40,6 +40,7 @@ def thread_row(thread: dict, account: str) -> dict | None:
         "messages": len(msgs),
         "in_inbox": "INBOX" in labels,
         "unread": "UNREAD" in labels,
+        "starred": "STARRED" in labels,
         "url": f"https://mail.google.com/mail/?authuser={quote(account, safe='@')}#all/{tid}",
     }
 

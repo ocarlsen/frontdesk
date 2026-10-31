@@ -7,7 +7,6 @@ import { card, liveUrl } from "./helpers";
 const KEPT = "gmail:e2e0000000000a01";
 const FOUND_1 = "gmail:e2e0000000000b01";
 const FOUND_2 = "gmail:e2e0000000000b02";
-const section = (page, name: string) => page.locator(`section[aria-label='${name}']`);
 
 test.describe.configure({ mode: "serial" });
 
@@ -70,7 +69,10 @@ test.describe("search, Keep and Move to inbox (live server)", () => {
     await expect(inbox).toBeVisible();
     await inbox.click();
     await expect(page.locator("#toast")).toContainText("Moved to the inbox: 2 threads.");
-    await expect(section(page, "From search")).toHaveCount(0);
+    // Per thread, not the section: other spec files keep threads into From search on this server.
+    for (const id of both) {
+      await expect(card(page, id).locator("xpath=ancestor::section")).not.toHaveAttribute("aria-label", "From search");
+    }
     for (const id of both) await expect(card(page, id)).toHaveClass(/selected/);   // the selection stays
   });
 });

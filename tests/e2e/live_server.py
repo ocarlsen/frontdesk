@@ -31,6 +31,12 @@ ROOT = Path(__file__).resolve().parents[2]
 KEPT_ID = "gmail:e2e0000000000a01"
 FOUND = [("e2e0000000000b01", "Old invoice from Harbor Supply", "Pat <pat@harbor.example.com>"),
          ("e2e0000000000b02", "Lunch next month?", "Kim <kim@example.org>")]
+# What a search for "receipts" finds instead: never kept by any test, so the result-selection
+# tests always see them as results. c01 is unread and in the inbox; c02 and c03 are read and
+# archived.
+RECEIPTS = [("e2e0000000000c01", "Receipt for your order", "Shop <orders@shop.example.com>", True),
+            ("e2e0000000000c02", "Your March receipt", "Cafe <hello@cafe.example.net>", False),
+            ("e2e0000000000c03", "Receipt: annual plan", "Billing <billing@tools.example.com>", False)]
 
 
 def seed_search(st, server) -> None:
@@ -43,20 +49,37 @@ def seed_search(st, server) -> None:
                  updated_at=old, labels=["CATEGORY_PERSONAL"],
                  messages=[Message("Dana <dana@example.com>", old, "The signed contract is attached.")]))
 
+    # Results moved to the inbox (the demo-mode label change is a no-op): Keep then fetches them
+    # with INBOX, as Gmail would after the move.
+    inboxed: set[str] = set()
+    from frontdesk import actions
+    real_result_op = actions.result_op
+
+    def result_op(item_id, op, gmail):
+        if op == "inbox":
+            inboxed.add(item_id)
+        elif op == "archive":
+            inboxed.discard(item_id)
+        return real_result_op(item_id, op, gmail)
+
+    actions.result_op = result_op
+
     def item_for(tid: str, subject: str, sender: str) -> Item:
+        inbox = ["INBOX"] if f"gmail:{tid}" in inboxed else []
         return Item(id=f"gmail:{tid}", source="gmail", account="alex@example.com", subject=subject,
                     participants=[sender.split("<")[1].rstrip(">")], updated_at=old,
-                    labels=["CATEGORY_PERSONAL"],
+                    labels=["CATEGORY_PERSONAL", *inbox],
                     messages=[Message(sender, old, f"Synthetic body of: {subject}.")])
 
     def run_search(settings, query, client_factory=None, slack_factory=None, db_path=None):
         q = (query or "").strip()
         if not q:
             return HTTPStatus.BAD_REQUEST, {"error": "type a search of up to 500 characters"}
+        found = RECEIPTS if q == "receipts" else [(t, s, f, False) for t, s, f in FOUND]
         rows = [{"id": f"gmail:{t}", "subject": s, "sender": f, "from_me": False,
-                 "updated_at": old, "messages": 1, "in_inbox": False, "unread": False,
+                 "updated_at": old, "messages": 1, "in_inbox": new, "unread": new, "starred": False,
                  "url": f"https://mail.google.com/mail/?authuser=alex@example.com#all/{t}"}
-                for t, s, f in FOUND]
+                for t, s, f, new in found]
         slack = [{"id": "slack:C0E2E0001:1740000000.000100", "kind": "channel", "where": "#ops",
                   "sender": "riley", "text": "The invoice question is answered in the thread.",
                   "updated_at": old, "url": "https://acme.slack.com/archives/C0E2E0001/p1740000000000100"},
@@ -76,7 +99,7 @@ def seed_search(st, server) -> None:
 
     def keep_result(db_path, settings, item_id, client_factory=None, provider_factory=None):
         from frontdesk.store import Store
-        for t, s, f in FOUND:
+        for t, s, f in FOUND + [r[:3] for r in RECEIPTS]:
             if item_id == f"gmail:{t}":
                 store = Store(db_path)
                 try:

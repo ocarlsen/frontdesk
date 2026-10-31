@@ -70,7 +70,12 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   connected (`search.messages`; needs the `search:read` user scope), each opening in Slack. Open one to read it in place (plain text,
   still unstored); **Keep in FrontDesk** stores it, ranks it once, and lists it under From search
   with every action until it is archived or marked done (sync keeps it current); **Move to inbox**
-  (thread or selection) puts an archived one back in Gmail's inbox. Esc clears it.
+  (thread or selection) puts an archived one back in Gmail's inbox. Gmail results can be selected
+  too (`x`, the checkbox): the bar then archives them, marks them read or unread or stars them
+  straight in Gmail by thread id (actions permission, nothing stored, no model call). Move to inbox
+  also keeps each one (ranked, one model call), so it shows in FrontDesk whatever its age, since
+  sync reads only the last week of the inbox. Slack matches open in Slack and are not selectable.
+  Esc clears it.
 - **Star** a thread from its row, its detail view or with `s`. On Gmail it is Gmail's own star
   (the `STARRED` label, through the actions permission), so it shows in Gmail too. The star count
   in the header opens a **Starred** view; a starred Gmail thread you archive or mark done stays
