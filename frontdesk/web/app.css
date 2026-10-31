@@ -262,22 +262,67 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
 /* Hover tools (read/unread, archive), Gmail's way: they take the time's place on the row while
    the pointer is over it or it is the current row. Never on touch screens: swipe and the
    thread's own buttons cover those. */
-.rowtools { display: none; position: absolute; top: 6px; right: 40px; gap: 2px;
-  background: var(--card); border-radius: 8px; }
-.rowtool { display: inline-flex; align-items: center; justify-content: center; width: 30px;
-  height: 30px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted);
+/* The row's second line (the one-line reason) leaves room under the time: the tools sit there,
+   so the time stays readable. Row padding 12px + first line 22px + 2px: the second line starts
+   at 36px. */
+.rowtools { display: none; position: absolute; top: 34px; right: 40px; gap: 2px; }
+.rowtool { display: inline-flex; align-items: center; justify-content: center; width: 26px;
+  height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted);
   cursor: pointer; }
 .rowtool:hover { background: color-mix(in srgb, var(--text) 8%, var(--card)); color: var(--text); }
 .rowtool:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
-.rowtool svg, .btn-icon svg { width: 18px; height: 18px; display: block; }
+.rowtool svg { width: 17px; height: 17px; display: block; }
+.btn-icon svg { width: 18px; height: 18px; display: block; }
 @media (hover: hover) {
   .card:hover > .rowtools, .card.current > .rowtools { display: inline-flex; }
-  .card:hover > .row .when, .card.current > .row .when { visibility: hidden; }
   /* With a pointer, the row's own tools serve an open thread too, so its button row keeps one
      line at 1280px; touch screens get the read button there instead (below). */
   .replyactions .btn.btn-read { display: none; }
 }
 .replyactions .btn.btn-icon { width: 44px; padding: 0; }
+/* Selection: the checkbox takes the dot's place on hover, on the current row, and on every row
+   while anything is selected; a selected row is tinted. */
+/* The checkbox sits under the dot, on the second line, so the urgency colour stays in view. */
+.rowcheck { display: none; position: absolute; left: 13px; top: 40px; width: 12px; height: 12px;
+  margin: 0; accent-color: var(--accent); cursor: pointer; }
+@media (hover: hover) {
+  .card:hover > .rowcheck, .card.current > .rowcheck { display: block; }
+}
+body.selecting .card > .rowcheck { display: block; }
+/* A row with no reason line (not ranked yet) is one line tall: make room for both. */
+.card:not(:has(.reason)) > .row { min-height: 64px; }
+.card.selected { background: color-mix(in srgb, var(--accent) 9%, var(--card)); }
+.selbar { position: sticky; top: 0; z-index: 20; max-width: 828px; margin: 0 auto 8px;
+  box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 8px 12px; background: var(--card); border-radius: 10px; box-shadow: var(--shadow); }
+.selbar[hidden] { display: none; }
+.selbar .selall { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.selbar .selwhich, .selbar .selmove { font: inherit; font-size: 14px; height: 36px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text);
+  padding: 0 8px; }
+.selbar .selcount { margin-right: auto; white-space: nowrap; }
+.selbar .selcount b { font-weight: 700; }
+.selbar .selwhich { width: 100px; }
+.selbar .selclear { width: 36px; padding: 0; justify-content: center; }
+.selbar .selclear .sellabel { display: none; }
+.selbar .btn { height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; }
+.selbar .btn svg { width: 16px; height: 16px; }
+.selbar[aria-busy="true"] { opacity: .6; pointer-events: none; }
+@media (max-width: 560px) {
+  /* On a phone the bar docks to the bottom, within thumb reach. */
+  .selbar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; margin: 0;
+    border-radius: 12px 12px 0 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+  .selbar { flex-wrap: nowrap; gap: 4px; }
+  .selbar .btn, .selbar .selmove { height: 44px; }
+  .selbar .btn { width: 44px; padding: 0; justify-content: center; }
+  .selbar .btn svg { width: 20px; height: 20px; }
+  .selbar .sellabel, .selbar .selwhich { display: none; }
+  .selbar .selword { display: none; }
+  .selbar .selclear { width: 44px; }
+  .selbar .selmove { width: 96px; padding: 0 4px; font-size: 14px; }
+  body.selecting main { padding-bottom: 96px; }   /* the last rows stay above the bar */
+  .rowcheck { width: 16px; height: 16px; left: 11px; top: 38px; }
+}
 .replyhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .replyall { display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
   color: var(--muted); cursor: pointer; }

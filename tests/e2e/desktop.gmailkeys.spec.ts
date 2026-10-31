@@ -60,6 +60,17 @@ test.describe("Gmail keys", () => {
     const tools = page.locator(current).locator(".rowtools");
     await expect(tools).toBeVisible();
     await expect(tools.locator("button").last()).toHaveAttribute("title", "Archive (e)");
+    // The tools sit under the time and the checkbox under the dot: both stay visible.
+    const row = page.locator(current);
+    const box = async (sel: string) => (await row.locator(sel).first().boundingBox())!;
+    await expect(row.locator(".when")).toBeVisible();
+    await expect(row.locator(".dot")).toBeVisible();
+    expect((await box(".rowtools")).y).toBeGreaterThanOrEqual((await box(".when")).y + (await box(".when")).height - 1);
+    expect((await box(".rowcheck")).y).toBeGreaterThanOrEqual((await box(".dot")).y + (await box(".dot")).height);
+    // Centred: the tools on the time, the checkbox on the dot (within 2px).
+    const mid = (b: { x: number; width: number }) => b.x + b.width / 2;
+    expect(Math.abs(mid(await box(".rowtools")) - mid(await box(".when")))).toBeLessThanOrEqual(2);
+    expect(Math.abs(mid(await box(".rowcheck")) - mid(await box(".dot")))).toBeLessThanOrEqual(2);
     await expect(tools.locator(".btn-read")).toHaveAttribute("title", /Mark (read|unread) \(Shift\+[IU]\)/);
     await page.keyboard.press("?");
     await expect(page.locator("#help")).toContainText("Shift+I / Shift+U");
