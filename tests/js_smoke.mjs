@@ -493,3 +493,32 @@ console.log("turns ok");
   if (drafts.length) throw new Error("a Slack thread asked Gmail for a draft");
 }
 console.log("drafts ok");
+// ---- Search: typing filters synced threads; Gmail results show beside them, unranked, and a
+// thread already in FrontDesk is not listed twice.
+{
+  const rows = [{ item, triage }, { item: { ...item, id: "gmail:t2", subject: "Invoice", messages: [] }, triage: null }];
+  vm.runInContext("query = 'lunch'; gmailSearch = null", ctx);
+  let main = new Node("main"), counts = new Node("ul");
+  fn("renderSearch")(rows, main, counts);
+  let tx = texts(main);
+  if (!tx.includes("In FrontDesk (1)") || !tx.includes("Lunch") || tx.includes("Invoice"))
+    throw new Error("local search filter: " + tx.join("|"));
+  if (!tx.includes("Press Enter to search all of Gmail, archived mail included.")) throw new Error("search hint");
+  vm.runInContext(`gmailSearch = { q: 'lunch', results: [
+    { id: 'gmail:t1', subject: 'Lunch', sender: 'Ann <ann@example.com>', updated_at: '2026-10-01T00:00:00Z', messages: 1 },
+    { id: 'gmail:old', subject: 'Lunch in 2024', sender: 'Bo <bo@example.com>', updated_at: '2024-01-01T00:00:00Z',
+      messages: 3, in_inbox: false, url: 'https://mail.google.com/mail/?authuser=x#all/old' }] }`, ctx);
+  main = new Node("main"); counts = new Node("ul");
+  fn("renderSearch")(rows, main, counts);
+  tx = texts(main);
+  if (!tx.includes("All of Gmail (1)") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Opens in Gmail."))
+    throw new Error("gmail results: " + tx.join("|"));
+  const res = all(main).filter(n => (n.className || "").split(" ").includes("result"));
+  if (res.length !== 1) throw new Error("a synced thread was listed twice");
+  vm.runInContext("gmailSearch = { q: 'lunch', error: 'Gmail did not answer' }", ctx);
+  main = new Node("main");
+  fn("renderSearch")(rows, main, new Node("ul"));
+  if (!texts(main).includes("Couldn't search Gmail: Gmail did not answer")) throw new Error("silent search failure");
+  vm.runInContext("query = ''; gmailSearch = null", ctx);
+}
+console.log("search ok");

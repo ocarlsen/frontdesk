@@ -74,8 +74,9 @@ class GmailClient:
                 break
         return ids[:max_threads]
 
-    def get_thread(self, thread_id: str) -> dict:
-        return self._get(f"threads/{thread_id}", {"format": "full"})
+    def get_thread(self, thread_id: str, fmt: str = "full") -> dict:
+        """fmt "metadata" returns headers and labels without bodies (a third of the quota)."""
+        return self._get(f"threads/{thread_id}", {"format": fmt})
 
     def modify_thread(self, thread_id: str, add: list[str] = (), remove: list[str] = ()) -> dict:
         """Label changes are idempotent (removing INBOX twice is a no-op), so retry is safe."""
