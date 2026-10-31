@@ -80,6 +80,11 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
     # Threads the owner kept from a search sit outside the query: fetch them too, so new replies
     # show, and keep them through prune until they are archived or marked done.
     kept = sorted(i.partition(":")[2] for i in store.kept_ids("gmail"))
+    # Gmail's thread listing can be stale: it has listed years-old threads for in:inbox whose
+    # messages no longer carry INBOX (Gmail's own inbox does not show them). The fetched
+    # messages' labels are the truth, so an inbox query drops a listed thread without INBOX.
+    inbox_only = "in:inbox" in settings["gmail_query"].lower().split()
+    stale: set[str] = set()
     for thread_id in thread_ids + [k for k in kept if k not in set(thread_ids)]:
         try:
             thread = client.get_thread(thread_id)
@@ -90,12 +95,17 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
             continue
         if item is None:
             continue
+        if inbox_only and "INBOX" not in item.labels and thread_id not in kept:
+            stale.add(thread_id)
+            continue
         store.upsert_item(item)
         if "INBOX" in item.labels and store.hidden_reason(item.id) == "archived":
             store.unhide(item.id)          # moved back to the inbox since FrontDesk archived it
         count += 1
-    keep = ({f"gmail:{t}" for t in thread_ids} | {f"gmail:{k}" for k in kept}
+    keep = ({f"gmail:{t}" for t in thread_ids if t not in stale} | {f"gmail:{k}" for k in kept}
             | starred_archived(client, store))
+    if stale:
+        log(f"  left out {len(stale)} thread(s) Gmail listed for the inbox without the INBOX label")
     removed = store.prune("gmail", account, keep)
     if removed:
         log(f"  removed {removed} thread(s) no longer in '{settings['gmail_query']}'")

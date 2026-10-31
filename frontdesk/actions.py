@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 import sqlite3
+import time
 
 import requests
 
@@ -277,11 +278,17 @@ def set_done(store: Store, item_id: str, done: bool) -> dict:
 def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None) -> dict:
     """Mark a thread read where it lives, once the owner has opened it in FrontDesk.
     Gmail: remove UNREAD from the thread. Slack DMs and group DMs: move the read position to
-    the newest message. Slack channel threads: skipped, because Slack can only mark a whole
-    channel read, which would hide other unread messages there."""
+    the newest message. Slack channel threads: read in FrontDesk only (no public API moves a
+    thread's read position, and marking the whole channel would hide other unread messages);
+    syncs keep it read here until a newer message arrives."""
     item = store.get_item(item_id)
     if item is None:
         raise ActionError("unknown thread (it may have been synced away)")
+    if item.source == "slack" and not item_id.endswith(":dm"):
+        newest = (store.slack_read(item_id) or {}).get("newest") or f"{time.time():.6f}"
+        store.set_local_read(item_id, newest)
+        store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
+        return {"status": "done", "here_only": True}
     if item_id in store.local_unread_ids():
         # Marked unread in FrontDesk only (Slack): reading it here clears that mark, whether or
         # not Slack itself can be told.
@@ -291,9 +298,7 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
     if "UNREAD" not in item.labels:
         return {"status": "already_read"}
     if item.source == "slack":
-        _, channel, ts = item_id.split(":", 2)
-        if ts != "dm":
-            return {"status": "skipped", "why": "channel thread"}
+        channel = item_id.split(":", 2)[1]
         if slack is not None:
             # A DM's deep link points at its newest message: .../archives/<ch>/p<ts digits>.
             m = re.search(r"/p(\d{10})(\d{6})", item.url)

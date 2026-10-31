@@ -145,7 +145,7 @@ def load_items(store: Store, now: datetime | None = None, demo_dir: Path = DEMO_
             store.upsert_item(item)
             keys[item.id] = item.id
     if slack:
-        slack_sync(store, {"slack_days": 7, "slack_max_items": 60}, token="demo", log=log,
+        slack_sync(store, {"slack_days": 7, "slack_max_items": 100}, token="demo", log=log,
                    client=FixtureSlackClient(slack))
         for r in store.db.execute("SELECT id FROM items WHERE source='slack'"):
             keys[r["id"]] = recording_key(r["id"], ts_map)

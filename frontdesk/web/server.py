@@ -453,17 +453,17 @@ def search_thread(settings: dict, item_id: str, client_factory=None) -> tuple[in
 
 
 def keep_result(db_path: Path, settings: dict, item_id: str, client_factory=None,
-                provider_factory=None) -> tuple[int, dict]:
+                provider_factory=None, slack_factory=None) -> tuple[int, dict]:
     """POST /api/action kind=keep: store a search result as a thread FrontDesk keeps (sync then
     keeps it current) and rank it once, so it gets a summary, a reason and a proposed reply like
     any other thread. Ranking is one model call; if it fails the thread is kept, unranked."""
     import requests
 
-    from .. import triage
     from ..gmail.auth import AuthError
     from ..gmail.client import GmailError
     from ..gmail.search import fetch_item
-    from ..providers import ProviderError, ProviderRefusal, get_provider
+    if (item_id or "").startswith("slack:"):
+        return keep_slack(db_path, settings, item_id, slack_factory, provider_factory)
     if not _GMAIL_THREAD.fullmatch(item_id or ""):
         return HTTPStatus.BAD_REQUEST, {"error": "not a Gmail thread id"}
     if settings.get("demo"):
@@ -477,10 +477,49 @@ def keep_result(db_path: Path, settings: dict, item_id: str, client_factory=None
         return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
     if item is None:
         return HTTPStatus.NOT_FOUND, {"error": "that thread holds only drafts"}
+    return _keep_and_rank(db_path, settings, item, "gmail", provider_factory)
+
+
+def keep_slack(db_path: Path, settings: dict, item_id: str, slack_factory=None,
+               provider_factory=None) -> tuple[int, dict]:
+    """Keep a Slack search match: fetch its conversation (the DM, or the channel thread) as sync
+    would, store it kept, so sync keeps it current until it is marked done, and rank it once."""
+    import time
+
+    import requests
+
+    from ..slack.client import SlackClient, SlackError
+    from ..slack.sync import SLACK_ITEM, fetch_one, workspace
+    if not SLACK_ITEM.fullmatch(item_id or ""):
+        return HTTPStatus.BAD_REQUEST, {"error": "not a Slack conversation id"}
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Demo mode: nothing can be kept."}
+    try:
+        if slack_factory is None:
+            from ..sources import slack_token
+            tok = slack_token(settings)
+            if not tok:
+                return HTTPStatus.PRECONDITION_FAILED, {"error": "Slack is not connected"}
+            client = SlackClient(tok)
+        else:
+            client = slack_factory()
+        floor = time.time() - float(settings.get("slack_unread_days", 90)) * 86400
+        got = fetch_one(client, workspace(client), item_id, floor)
+    except (SlackError, requests.RequestException) as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": f"Slack did not answer ({type(e).__name__})"}
+    if got is None:
+        return HTTPStatus.NOT_FOUND, {"error": "nothing left in that conversation"}
+    return _keep_and_rank(db_path, settings, got[0], "slack", provider_factory)
+
+
+def _keep_and_rank(db_path: Path, settings: dict, item, source: str,
+                   provider_factory=None) -> tuple[int, dict]:
+    from .. import triage
+    from ..providers import ProviderError, ProviderRefusal, get_provider
     store = Store(db_path)
     try:
         store.keep(item)
-        store.log_usage("keep", source="gmail")
+        store.log_usage("keep", source=source)
         profile = settings.get("owner_profile", "")
         version = triage.prompt_version(profile)
         try:
@@ -891,7 +930,15 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/status":
-                self._send(HTTPStatus.OK, json.dumps(_last_sync).encode(),
+                # slack: Slack has been synced into this store (hidden threads count too), so the
+                # page knows to search it before any Slack thread is on screen.
+                store = Store(db_path)
+                try:
+                    slack = store.db.execute(
+                        "SELECT 1 FROM items WHERE source='slack' LIMIT 1").fetchone() is not None
+                finally:
+                    store.db.close()
+                self._send(HTTPStatus.OK, json.dumps({**_last_sync, "slack": slack}).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/send-status":
                 from .. import actions, sending

@@ -372,6 +372,15 @@ def test_status_endpoint_and_autosync_off_by_zero(tmp_path, monkeypatch):
         s = _json.loads(urllib.request.urlopen(
             f"http://127.0.0.1:{httpd.server_address[1]}/api/status").read())
         assert s["at"] == "2026-10-28T22:00:00Z" and "auto_sync_minutes" in s
+        assert s["slack"] is False                       # nothing from Slack in this store
+        # One Slack thread, marked done: still synced here, so the page searches Slack.
+        store.upsert_item(Item(id="slack:C1:1730000000.000001", source="slack", account="t.slack.com",
+                               subject="s", participants=[], updated_at="2026-10-28T16:00:00Z",
+                               messages=[Message("Ann", "2026-10-28T16:00:00Z", "hi")]))
+        store.hide("slack:C1:1730000000.000001", "done", "2026-10-28T16:00:00Z")
+        s = _json.loads(urllib.request.urlopen(
+            f"http://127.0.0.1:{httpd.server_address[1]}/api/status").read())
+        assert s["slack"] is True
     finally:
         httpd.shutdown()
 

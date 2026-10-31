@@ -149,9 +149,25 @@ CREATE TABLE IF NOT EXISTS kept (
 CREATE TABLE IF NOT EXISTS local_unread (
     -- Slack threads the owner marked unread in FrontDesk (Shift+U). Slack's API cannot mark a
     -- message unread with FrontDesk's scopes, and each sync rewrites labels from Slack, so the
-    -- mark is kept here and merged into the list until the owner reads the thread.
+    -- mark is kept here and merged into the list until the owner reads the thread here, or
+    -- reads it in Slack (Slack's read position moves past slack_last_read, its value then).
     item_id TEXT PRIMARY KEY,
     at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS local_read (
+    -- Slack channel threads the owner read in FrontDesk while Slack still has them unread: no
+    -- public API moves a thread's read position. Sync keeps them read here until a reply
+    -- newer than `newest` (the newest message when it was read) arrives.
+    item_id TEXT PRIMARY KEY,
+    newest TEXT NOT NULL,
+    at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS slack_read (
+    -- Slack's own read position for each synced Slack item (the DM's, or the followed thread's
+    -- last_read; '' when Slack would not say) and its newest message, from the last sync.
+    item_id TEXT PRIMARY KEY,
+    last_read TEXT NOT NULL,
+    newest TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS stars (
     -- "Starred in FrontDesk" for Slack threads only: Slack has no supported API for saving a
@@ -285,7 +301,8 @@ class Store:
             except sqlite3.OperationalError as e:
                 if "duplicate column" not in str(e):
                     raise
-        added = [("triage", n, d) for n, d in TRIAGE_ADDED_COLUMNS] + MEMORY_ADDED_COLUMNS
+        added = ([("triage", n, d) for n, d in TRIAGE_ADDED_COLUMNS] + MEMORY_ADDED_COLUMNS
+                 + [("local_unread", "slack_last_read", "TEXT NOT NULL DEFAULT ''")])
         for table, name, decl in added:
             cols = {r["name"] for r in self.db.execute(f"PRAGMA table_info({table})")}
             if name in cols:
@@ -438,17 +455,50 @@ class Store:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
                                    ("message_html", "item_id"), ("hidden", "item_id"),
                                    ("stars", "item_id"), ("kept", "item_id"),
-                                   ("local_unread", "item_id"), ("items", "id")):
+                                   ("local_unread", "item_id"), ("local_read", "item_id"),
+                                   ("slack_read", "item_id"), ("items", "id")):
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
 
     def set_local_unread(self, item_id: str, on: bool) -> None:
+        """Marked unread here (on), or that mark cleared. Records Slack's read position at the
+        time, so a sync can tell when the owner has since read the thread in Slack."""
         with self.tx() as db:
+            db.execute("DELETE FROM local_read WHERE item_id=?", (item_id,))
             if on:
-                db.execute("INSERT OR IGNORE INTO local_unread (item_id, at) VALUES (?, ?)",
-                           (item_id, now()))
+                pos = (self.slack_read(item_id) or {}).get("last_read", "")
+                db.execute("INSERT OR REPLACE INTO local_unread (item_id, at, slack_last_read) "
+                           "VALUES (?, ?, ?)", (item_id, now(), pos))
             else:
                 db.execute("DELETE FROM local_unread WHERE item_id=?", (item_id,))
+
+    def set_local_read(self, item_id: str, newest: str) -> None:
+        """Read here while Slack still says unread (a channel thread): kept read through syncs
+        until a message newer than `newest` arrives."""
+        with self.tx() as db:
+            db.execute("DELETE FROM local_unread WHERE item_id=?", (item_id,))
+            db.execute("INSERT OR REPLACE INTO local_read (item_id, newest, at) VALUES (?, ?, ?)",
+                       (item_id, newest, now()))
+
+    def local_read(self, item_id: str) -> str | None:
+        r = self.db.execute("SELECT newest FROM local_read WHERE item_id=?", (item_id,)).fetchone()
+        return r["newest"] if r else None
+
+    def local_unread_mark(self, item_id: str) -> str | None:
+        """Slack's read position when the owner marked it unread here, or None if not marked."""
+        r = self.db.execute("SELECT slack_last_read FROM local_unread WHERE item_id=?",
+                            (item_id,)).fetchone()
+        return r["slack_last_read"] if r else None
+
+    def set_slack_read(self, item_id: str, last_read: str, newest: str) -> None:
+        with self.tx() as db:
+            db.execute("INSERT OR REPLACE INTO slack_read (item_id, last_read, newest) "
+                       "VALUES (?, ?, ?)", (item_id, last_read, newest))
+
+    def slack_read(self, item_id: str) -> dict | None:
+        r = self.db.execute("SELECT last_read, newest FROM slack_read WHERE item_id=?",
+                            (item_id,)).fetchone()
+        return dict(r) if r else None
 
     def local_unread_ids(self) -> set[str]:
         return {r["item_id"] for r in self.db.execute("SELECT item_id FROM local_unread")}

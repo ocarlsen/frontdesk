@@ -103,7 +103,8 @@ test("the undo toast is readable on a phone", async ({ page }) => {
   await page.keyboard.press("j");
   await page.keyboard.press("e");
   const toast = page.locator("#toast");
-  await expect(toast).toBeVisible();
+  // Measure the Undo toast, not the short "Archiving…" one that comes first.
+  await expect(toast.getByRole("button", { name: "Undo" })).toBeVisible();
   const vw = page.viewportSize()!.width;
   const box = (await toast.boundingBox())!;
   expect(box.width).toBeGreaterThan(vw * 0.6);

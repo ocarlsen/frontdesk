@@ -153,6 +153,9 @@ choose.</p>
   archived one back in Gmail's inbox. Gmail results can be selected like threads, and the bar
   then archives them, marks them read or unread or stars them right in Gmail without storing
   them. Moving them to the inbox also brings them into FrontDesk, ranked, however old they are.
+  Each result also has icons under its age, like a thread's, for its own state: mark read or
+  unread, and archive or move to inbox. A Slack match opens in Slack; Keep brings that
+  conversation in, ranked, until you mark it done.
   Esc brings the inbox back.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
@@ -162,7 +165,8 @@ choose.</p>
   Gmail's shortcuts: <code>e</code> archives, <code>[</code> and <code>]</code> archive and open
   the next thread, <code>Shift+I</code> and <code>Shift+U</code> mark read and unread (also from
   the icons that appear on a row under the pointer), <code>z</code> undoes, <code>a</code> replies
-  to everyone, and <code>g</code> then <code>i</code> or <code>s</code> goes to the inbox or Starred.
+  to everyone, <code>g</code> then <code>i</code> or <code>s</code> goes to the inbox or Starred,
+  and <code>Shift+N</code> syncs now.
   Select threads with their checkboxes, <code>x</code>, Shift-click or <code>*</code> then
   <code>a</code> (on a phone, a long press), then mark them read, archive, star or move them all at
   once, with one Undo.
@@ -255,8 +259,10 @@ never chooses recipients.</p>
 
 <h3>Slack, if you connect it</h3>
 <p>Slack is optional and uses your own Slack app with your user token. FrontDesk reads your direct
-messages, group messages and the channel threads that mention you or that you replied in, from the
-last seven days. It posts a reply only through the same Send flow: you see the exact message and
+messages, group messages and the channel threads that mention you, that you replied in or that you
+started, from the last seven days, plus direct messages and mentions you have not read yet, from
+up to 90 days back. To know what is unread it reads your read position in each conversation and
+in each thread you follow. It posts a reply only through the same Send flow: you see the exact message and
 where it goes, confirm, and have 30 seconds to undo. The token stays on your computer.</p>
 
 <h3>Unanswered email, if you set it up</h3>
@@ -334,7 +340,8 @@ exception types. No other HTTP client in the package.</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
 (frontdesk/gmail/auth.py).</li>
 <li>Slack: frontdesk/slack (reads conversations.list/history/replies, users.info; posts only
-chat.postMessage from sending.py). Window slack_days = 7. Token from SLACK_USER_TOKEN or the
+chat.postMessage from sending.py; conversations.mark only for DMs you read here). Window
+slack_days = 7, unread back to slack_unread_days = 90, cap slack_max_items = 100. Token from SLACK_USER_TOKEN or the
 Keychain item frontdesk-slack (frontdesk/sources.py).</li>
 <li>Sends only on confirm: frontdesk/sending.py is the only caller of GmailClient.send_message and
 SlackClient.post_message (tests/test_sending.py pins it);
