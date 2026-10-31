@@ -200,11 +200,47 @@ def note_line(person: dict, exclude: set[str] = frozenset()) -> str:
             f"{_owner_text(person['note'])}")
 
 
+# A busy channel can hold many people with notes, and every Ask would carry all of them. The
+# block keeps the most recent senders first and stops at whichever limit comes first, saying how
+# many it left out. 6,000 characters is about 1,500 tokens: three notes at their 2,000 limit.
+NOTES_MAX_PEOPLE = 8
+NOTES_MAX_CHARS = 6000
+
+
+def _recent_senders(item: Item) -> dict[str, int]:
+    """{participant key: rank}, 0 for the newest message's author, by each one's latest message."""
+    rank: dict[str, int] = {}
+    for m in reversed(item.messages):
+        key = (m.sender_key or parseaddr(m.sender)[1]).strip().lower()
+        if key and key not in rank:
+            rank[key] = len(rank)
+    return rank
+
+
 def note_lines(store: Store, item: Item) -> list[str]:
     """The <owner_notes> lines for a thread: one per person with a note, however many of their
-    addresses are in it."""
+    addresses are in it. Most recent senders first, then people who never wrote in the thread
+    (CC'd, channel members) in participant order; at most NOTES_MAX_PEOPLE lines and
+    NOTES_MAX_CHARS characters, with one closing line counting the people left out."""
     mine = owner_keys(item)
-    return [note_line(p, mine) for p in store.people_for(others(item)) if p["note"]]
+    people = [p for p in store.people_for(others(item)) if p["note"]]
+    rank = _recent_senders(item)
+    last = len(rank)   # never wrote here: after every sender, in participant order (sort is stable)
+    people.sort(key=lambda p: min((rank.get(a, last) for a in p["matched"]), default=last))
+    lines: list[str] = []
+    used = 0
+    for p in people:
+        line = note_line(p, mine)
+        if len(lines) >= NOTES_MAX_PEOPLE or used + len(line) > NOTES_MAX_CHARS:
+            break
+        lines.append(line)
+        used += len(line)
+    left = len(people) - len(lines)
+    if left:
+        lines.append(f"(FrontDesk left out the notes on {left} more "
+                     f"{'person' if left == 1 else 'people'} in this thread to keep this block "
+                     "short; the people listed are the most recent senders.)")
+    return lines
 
 
 def build_prompt(store: Store, item: Item, question: str, profile: str, *, author: str) -> str:
