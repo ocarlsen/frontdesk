@@ -185,21 +185,22 @@ const rowGroups = det => {
   const row = all(det).find(n => n.className === "actions replyactions");
   if (!row) throw new Error("no reply action row");
   const g = cls => row.children.find(n => n.className === cls);
-  const label = n => n.tagName === "LABEL" ? "moveto" : n.tagName === "A" ? "link:" + n.textContent : n.textContent;
+  const label = n => n.tagName === "LABEL" ? "moveto" : n.tagName === "A" ? "link:" + n.textContent
+    : (n.className || "").split(" ").includes("btn-icon") ? "icon:" + n.attrs["aria-label"] : n.textContent;
   return { row, reply: (g("replygroup")?.children || []).map(label), thread: (g("threadgroup")?.children || []).map(label),
            threadNodes: g("threadgroup")?.children || [] };
 };
 const gd = rowGroups(fn("buildDetail")(item, triage));
 sameRow(gd.row.children.map(n => n.className), ["replygroup", "threadgroup"], "row holds the two groups");
 sameRow(gd.reply, ["Save as Gmail draft", "Send...", "Copy"], "Gmail reply group");
-sameRow(gd.thread, ["moveto", "\u2606 Star", "Archive", "link:Open in Gmail"], "Gmail thread group");
+sameRow(gd.thread, ["moveto", "\u2606 Star", "icon:Mark unread (Shift+U)", "Archive", "link:Open in Gmail"], "Gmail thread group");
 const gLink = gd.threadNodes.at(-1);
 if (gLink.className !== "openlink" || (gLink.className || "").split(" ").includes("btn")) throw new Error("Open in Gmail must be a link, not a .btn");
 const gPick = all(gd.row).find(n => n.tagName === "SELECT");
 if (!gPick || gPick.className !== "movepick") throw new Error("Move to select must be movepick without modelpick: " + gPick?.className);
 const sl = rowGroups(fn("buildDetail")({ ...demoSlack, url: "https://acme.slack.com/archives/C1/p1" }, triage));
 sameRow(sl.reply, ["Send...", "Copy"], "Slack reply group");
-sameRow(sl.thread, ["moveto", "\u2606 Star", "Done", "link:Open in Slack"], "Slack thread group");
+sameRow(sl.thread, ["moveto", "\u2606 Star", "icon:Mark unread (Shift+U)", "Done", "link:Open in Slack"], "Slack thread group");
 const staticRoot = new Node("html");
 staticRoot.dataset = { static: "1" };
 const sctx = { document: { ...document, documentElement: staticRoot }, window: { __items: [{ item: demoSlack }] },

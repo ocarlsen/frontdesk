@@ -259,6 +259,29 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
 .card > .row { grid-row: 1; grid-column: 1; }
 .card > .star { grid-row: 1; grid-column: 2; align-self: stretch; }
 .card > .detail { grid-row: 2; grid-column: 1 / -1; }
+/* Hover tools (read/unread, archive), Gmail's way: they take the time's place on the row while
+   the pointer is over it or it is the current row. Never on touch screens: swipe and the
+   thread's own buttons cover those. */
+.rowtools { display: none; position: absolute; top: 6px; right: 40px; gap: 2px;
+  background: var(--card); border-radius: 8px; }
+.rowtool { display: inline-flex; align-items: center; justify-content: center; width: 30px;
+  height: 30px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted);
+  cursor: pointer; }
+.rowtool:hover { background: color-mix(in srgb, var(--text) 8%, var(--card)); color: var(--text); }
+.rowtool:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.rowtool svg, .btn-icon svg { width: 18px; height: 18px; display: block; }
+@media (hover: hover) {
+  .card:hover > .rowtools, .card.current > .rowtools { display: inline-flex; }
+  .card:hover > .row .when, .card.current > .row .when { visibility: hidden; }
+  /* With a pointer, the row's own tools serve an open thread too, so its button row keeps one
+     line at 1280px; touch screens get the read button there instead (below). */
+  .replyactions .btn.btn-read { display: none; }
+}
+.replyactions .btn.btn-icon { width: 44px; padding: 0; }
+.replyhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.replyall { display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+  color: var(--muted); cursor: pointer; }
+svg.icons { position: absolute; width: 0; height: 0; overflow: hidden; }
 .card > .row { touch-action: pan-y; }   /* vertical scroll stays the browser's; we read sideways */
 .star { font: inherit; font-size: 18px; line-height: 1; width: 40px; padding: 0; border: 0;
   border-radius: 0 10px 10px 0; background: none; color: var(--u1); cursor: pointer; }

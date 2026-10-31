@@ -49,7 +49,11 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   chooses the model). **Second opinion** has the review model check the answer; **Polish draft**
   tightens the reply. Each answer resets the box to the built-in question.
 - **Auto-sync** every 15 minutes (`auto_sync_minutes`), and Gmail-style keyboard shortcuts (`?`):
-  `j`/`k` move, `o` opens, `e` archives (or marks a Slack thread done), `s` stars, `r` replies.
+  `j`/`k` move, `o` opens, `e`/`y` archive (or mark a Slack thread done), `[`/`]` archive and
+  open the next thread, `s` stars, `r` replies, `a` replies all, `Shift+I`/`Shift+U` mark read
+  and unread (Gmail too; on Slack, unread is kept in FrontDesk), `z` undoes, `g i`/`g s` go to the
+  inbox or Starred. Each action that changes mail also has a control: row icons on hover, the
+  thread's buttons, and the toast's Undo.
 - **Stats:** `frontdesk stats [--days N] [--json]` shows what FrontDesk did and what it cost:
   threads ranked and cost per thread by model, Ask answers, drafts saved and replies sent (with the
   share sent as FrontDesk proposed, as Ask drafted, edited, or written from scratch), searches and

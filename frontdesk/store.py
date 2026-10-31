@@ -146,6 +146,13 @@ CREATE TABLE IF NOT EXISTS kept (
     item_id TEXT PRIMARY KEY,
     kept_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS local_unread (
+    -- Slack threads the owner marked unread in FrontDesk (Shift+U). Slack's API cannot mark a
+    -- message unread with FrontDesk's scopes, and each sync rewrites labels from Slack, so the
+    -- mark is kept here and merged into the list until the owner reads the thread.
+    item_id TEXT PRIMARY KEY,
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS stars (
     -- "Starred in FrontDesk" for Slack threads only: Slack has no supported API for saving a
     -- message for later (stars.add has no user-visible effect since 2023). Gmail stars are
@@ -430,9 +437,21 @@ class Store:
             for item_id in stale:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
                                    ("message_html", "item_id"), ("hidden", "item_id"),
-                                   ("stars", "item_id"), ("kept", "item_id"), ("items", "id")):
+                                   ("stars", "item_id"), ("kept", "item_id"),
+                                   ("local_unread", "item_id"), ("items", "id")):
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
+
+    def set_local_unread(self, item_id: str, on: bool) -> None:
+        with self.tx() as db:
+            if on:
+                db.execute("INSERT OR IGNORE INTO local_unread (item_id, at) VALUES (?, ?)",
+                           (item_id, now()))
+            else:
+                db.execute("DELETE FROM local_unread WHERE item_id=?", (item_id,))
+
+    def local_unread_ids(self) -> set[str]:
+        return {r["item_id"] for r in self.db.execute("SELECT item_id FROM local_unread")}
 
     def set_labels(self, item_id: str, labels: list[str]) -> None:
         """Change only an item's labels (e.g. UNREAD), leaving its messages and HTML alone."""

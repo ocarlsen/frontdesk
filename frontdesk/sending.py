@@ -80,7 +80,7 @@ def _slack_target(item) -> tuple[str, str | None, str]:
 
 def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
             gmail: GmailClient | None, client_key: str, now: datetime | None = None,
-            slack=None) -> dict:
+            slack=None, reply_all: bool = False) -> dict:
     now = now or _now()
     if not _CLIENT_KEY.fullmatch(client_key or ""):
         raise ActionError("missing or malformed idempotency key")
@@ -127,7 +127,8 @@ def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
     else:
         _check_account(gmail, item.account)
         try:
-            msg, ctx = drafting.build_reply(gmail, _native_id(item_id), body)
+            msg, ctx = drafting.build_reply(gmail, _native_id(item_id), body,
+                                            reply_all=reply_all)
         except drafting.DraftError as e:
             raise ActionError(str(e)) from e
         p = {"raw": base64.urlsafe_b64encode(msg.as_bytes()).decode(),
