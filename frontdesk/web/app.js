@@ -660,8 +660,15 @@ async function moveToInbox(item, btn) {
   }
 }
 
-function bulkInbox() {
-  const items = selectedItems().filter(it => !inInbox(it) && !it.hidden);
+// Slack matches only have Keep: say so when an action leaves nothing else to act on.
+function gmailOnly(items) {
+  const rest = items.filter(it => !it.slackMatch);
+  if (!rest.length && items.length) toast("Slack matches: Keep them first, then read, archive or star them.");
+  return rest;
+}
+
+function bulkInbox(from) {
+  const items = gmailOnly(from || selectedItems()).filter(it => !inInbox(it) && !it.hidden);
   if (!items.length) { toast("Already in the inbox."); return; }
   // A search result moved to the inbox is also kept, so it shows here too: sync only fetches
   // the last week of the inbox, and a kept thread is fetched whatever its age. Keeping ranks it
@@ -698,8 +705,9 @@ async function setRead(item, read, li) {
   if (item.source !== "slack") toast((read ? "Marking read" : "Marking unread") + " in Gmail\u2026");
   try {
     const out = await postAction(read ? "read" : "unread", item.id, read ? { explicit: true } : undefined);
-    if (out.status === "skipped" && read && item.source === "slack") {
-      toast("Marked read here (Slack marks a channel thread read only when you read the channel).");
+    if (out.here_only) {
+      toast("Marked read here. Slack keeps its own read state for threads.", "Undo",
+            () => setRead(item, false, li));
       return;
     }
     toast(read ? "Marked read." : "Marked unread.", "Undo", () => setRead(item, !read, li));
@@ -913,14 +921,20 @@ const LONG_PRESS_MS = 500;
 const TOUCH = typeof matchMedia === "function" ? matchMedia("(hover: none)") : { matches: false };
 
 function itemRow(id) { return (window.__items || []).find(r => r.item.id === id) || null; }
-// A Gmail search result on screen (not stored, not ranked), by id; Slack matches are never one.
+// A search result on screen (not stored, not ranked), by id: a Gmail thread or a Slack match.
 function searchResult(id) {
   const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
-  return g && g.results ? g.results.find(r => r.id === id) || null : null;
+  if (!g) return null;
+  return (g.results || []).find(r => r.id === id) ||
+         (Array.isArray(g.slack) ? g.slack.find(r => r.id === id) : null) || null;
 }
 // A result as the bulk actions see a thread: its labels, and result: true so its actions go
 // straight to Gmail by thread id instead of through the store.
 function resultItem(r) {
+  if (r.id.startsWith("slack:")) {
+    // Keep is the only action: Slack's read state and Done apply once FrontDesk stores it.
+    return { id: r.id, source: "slack", subject: r.where, labels: [], result: true, slackMatch: true };
+  }
   const labels = [...(r.in_inbox ? ["INBOX"] : []), ...(r.unread ? ["UNREAD"] : [])];
   return { id: r.id, source: "gmail", subject: r.subject, labels, starred: !!r.starred, result: true };
 }
@@ -1012,7 +1026,7 @@ async function runBulk(items, doOne, undoOne, said, keep = false, doing = "Worki
     toast(doing + " " + (i + 1) + " of " + items.length + "\u2026");
     try { await doOne(it); done.push(it); } catch (e) { /* counted below */ }
   }
-  if (!keep) clearSelection();
+  if (!keep && !(items.length === 1 && items[0].result && !selected.has(items[0].id))) clearSelection();
   if (bar) bar.removeAttribute("aria-busy");
   await load();
   const failed = items.length - done.length;
@@ -1031,18 +1045,20 @@ async function runBulk(items, doOne, undoOne, said, keep = false, doing = "Worki
 
 const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
 
-function bulkArchive() {
-  const items = selectedItems().filter(it => !it.hidden && !(it.result && !inInbox(it)));
-  if (!items.length) { toast("Already archived."); return; }
+function bulkArchive(from) {
+  const all = gmailOnly(from || selectedItems());
+  const items = all.filter(it => !it.hidden && !(it.result && !inInbox(it)));
+  if (!items.length) { if (all.length) toast("Already archived."); return; }
   runBulk(items, it => bulkAct(it, it.source === "slack" ? "done" : "archive"),
           it => bulkAct(it, it.source === "slack" ? "undone" : "unarchive"),
           n => (items.some(it => it.source === "slack") ? "Archived or marked done: " : "Archived: ") +
                plural(n, "thread", "threads") + ".", false, "Archiving");
 }
 
-function bulkRead(read) {
-  const items = selectedItems().filter(it => isUnread(it) === read);
-  if (!items.length) { toast("Already " + (read ? "read." : "unread.")); return; }
+function bulkRead(read, from) {
+  const all = gmailOnly(from || selectedItems());
+  const items = all.filter(it => isUnread(it) === read);
+  if (!items.length) { if (all.length) toast("Already " + (read ? "read." : "unread.")); return; }
   runBulk(items, it => bulkAct(it, read ? "read" : "unread", read ? { explicit: true } : undefined),
           it => bulkAct(it, read ? "unread" : "read", read ? undefined : { explicit: true }),
           n => "Marked " + (read ? "read: " : "unread: ") + plural(n, "thread", "threads") + ".", true,
@@ -1050,7 +1066,7 @@ function bulkRead(read) {
 }
 
 function bulkStar() {
-  const items = selectedItems();
+  const items = gmailOnly(selectedItems());
   if (!items.length) return;
   const want = items.some(it => !it.starred);
   const change = items.filter(it => !!it.starred !== want);
@@ -1058,6 +1074,16 @@ function bulkStar() {
           it => bulkAct(it, want ? "unstar" : "star"),
           n => (want ? "Starred: " : "Unstarred: ") + plural(n, "thread", "threads") + ".", true,
           want ? "Starring" : "Unstarring");
+}
+
+// Keep Slack matches: each is fetched from Slack, stored, ranked once (one model call) and kept
+// current by sync until it is marked done; Undo marks it done.
+function bulkKeep(from) {
+  const items = (from || selectedItems()).filter(it => it.slackMatch);
+  if (!items.length) return;
+  runBulk(items, it => postAction("keep", it.id), it => postAction("done", it.id),
+          n => "Kept: " + plural(n, "conversation", "conversations") + ". They're in FrontDesk now.",
+          false, "Keeping");
 }
 
 function bulkMove(bucket) {
@@ -1111,13 +1137,17 @@ function renderSelBar() {
   move.addEventListener("change", () => { if (move.value) bulkMove(move.value); });
   const items = selectedItems();
   const stored = items.some(it => !it.result);
+  const others = items.some(it => !it.slackMatch);
   bar.replaceChildren(all, which, count,
-    btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
-    btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
-    btn("Archive", "Archive, or Done for Slack (e)", bulkArchive, "i-archive"),
-    ...(items.some(it => !inInbox(it) && !it.hidden)
-      ? [btn("Inbox", "Move to inbox", bulkInbox, "i-inbox")] : []),
-    btn("Star", "Star or unstar (s)", bulkStar, "i-star"),
+    ...(others ? [
+      btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
+      btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
+      btn("Archive", "Archive, or Done for Slack (e)", () => bulkArchive(), "i-archive")] : []),
+    ...(items.some(it => !it.slackMatch && !inInbox(it) && !it.hidden)
+      ? [btn("Inbox", "Move to inbox", () => bulkInbox(), "i-inbox")] : []),
+    ...(others ? [btn("Star", "Star or unstar (s)", bulkStar, "i-star")] : []),
+    ...(items.some(it => it.slackMatch)
+      ? [btn("Keep", "Keep in FrontDesk (ranked, one model call each)", () => bulkKeep(), "i-keep")] : []),
     ...(stored ? [move] : []),
     btn("Clear", "Clear the selection (Esc)", clearSelection, "i-clear"));
   bar.lastChild.classList.add("selclear");
@@ -1750,7 +1780,23 @@ function buildResultCard(r) {
   pick.checked = selected.has(r.id);
   if (pick.checked) li.classList.add("selected");
   pick.addEventListener("click", ev => { ev.stopPropagation(); toggleSelect(li, ev.shiftKey); });
-  li.append(row, pick);
+  // Hover tools under the age, as on a FrontDesk row, each for this thread's own state: read or
+  // unread, and Archive or (when archived) Move to inbox, which also keeps it. They act through
+  // the bar's actions, so the icons change only once Gmail has, and the toast offers Undo.
+  const tools = el("span", "rowtools");
+  const it = resultItem(r);
+  const readBtn = iconButton("rowtool btn-read", r.unread ? "i-read" : "i-unread",
+                             r.unread ? "Mark read" : "Mark unread");
+  readBtn.addEventListener("click", ev => { ev.stopPropagation(); bulkRead(!!r.unread, [it]); });
+  const boxBtn = r.in_inbox ? iconButton("rowtool btn-box", "i-archive", "Archive")
+                            : iconButton("rowtool btn-box", "i-inbox", "Move to inbox");
+  boxBtn.addEventListener("click", ev => {
+    ev.stopPropagation();
+    if (r.in_inbox) bulkArchive([it]); else bulkInbox([it]);
+  });
+  tools.append(readBtn, boxBtn);
+  li.append(row, pick, tools);
+  li.addEventListener("mouseenter", () => centerTools(li));
   return li;
 }
 
@@ -1814,9 +1860,13 @@ async function keepResult(r, btn) {
 // on their tab). j/k walk the open tab (hidden panes have no layout); h/l switch tabs.
 let searchTab = "frontdesk";
 
+// Until a search answers, the server's status says whether Slack is synced here: the threads
+// on screen can't, since every Slack thread may be marked done.
+let slackSynced = false;
+
 function slackConnected(g) {
   if (g && !g.loading && !g.error) return g.slack !== null && g.slack !== undefined;
-  return STATIC || (window.__items || []).some(r => r.item.source === "slack");
+  return STATIC || slackSynced || (window.__items || []).some(r => r.item.source === "slack");
 }
 
 function searchTabs(g) {
@@ -1971,7 +2021,21 @@ function buildSlackResult(r) {
     if (u) window.open(u, "_blank", "noopener");
   });
   row.title = "Open in Slack";
-  li.append(row);
+  // Select (x) and Keep, under the age like a thread's tools: Keep brings the conversation into
+  // FrontDesk, where it gets read state, Done, star and reply.
+  const pick = el("input", "rowcheck");
+  pick.type = "checkbox";
+  pick.title = "Select (x)";
+  pick.setAttribute("aria-label", "Select " + (r.where || "Slack match"));
+  pick.checked = selected.has(r.id);
+  if (pick.checked) li.classList.add("selected");
+  pick.addEventListener("click", ev => { ev.stopPropagation(); toggleSelect(li, ev.shiftKey); });
+  const tools = el("span", "rowtools");
+  const keep = iconButton("rowtool btn-keep", "i-keep", "Keep in FrontDesk");
+  keep.addEventListener("click", ev => { ev.stopPropagation(); bulkKeep([resultItem(r)]); });
+  tools.append(keep);
+  li.append(row, pick, tools);
+  li.addEventListener("mouseenter", () => centerTools(li));
   return li;
 }
 
@@ -2452,6 +2516,7 @@ const SHORTCUTS = [
   ["[ / ]", "Archive, then open the thread above / below"],
   ["Shift+I / Shift+U", "Mark read / unread"],
   ["z", "Undo the last archive, move, read change or send"],
+  ["Shift+N", "Sync now: fetch new mail and Slack, and rank what is new (the Sync button)"],
   ["x", "Select the thread (Shift-click a checkbox for a range)"],
   ["* then a / n / r / u", "Select all / none / read / unread"],
   ["Esc", "Clear the selection, leave the reply box, or close this list"],
@@ -2636,6 +2701,12 @@ function onKey(e) {
     case "U":
       if (li && cardItems.get(li)) setRead(cardItems.get(li), false, li);
       break;
+    case "N": {
+      // Gmail's "update" key: the Sync button, unless a sync is already running.
+      const b = document.getElementById("sync");
+      if (b && !b.disabled) syncNow();
+      break;
+    }
     case "z": {
       // Undo is whatever the toast on screen offers (archive, done, move, read change, send).
       const t = document.getElementById("toast");
@@ -2711,6 +2782,7 @@ async function pollStatus() {
     const s = await res.json();
     const changed = lastSyncSeen !== null && s.at && s.at !== lastSyncSeen;
     lastSyncSeen = s.at || "";
+    slackSynced = s.slack === true;
     showSyncLine(s);
     if (changed) {
       if (!busy()) {

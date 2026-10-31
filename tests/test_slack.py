@@ -315,21 +315,309 @@ def test_list_conversations_filters_and_user_cache(monkeypatch):
     assert sum("users.info" in u for u in calls) == 1
 
 
-def test_dm_unread_compares_last_read_with_others_messages():
-    from frontdesk.slack.sync import _dm_unread
+def test_dm_unread_compares_last_read_with_others_messages(tmp_path):
+    # Someone else's message after the read position is unread; the owner's own is not.
+    store = Store(tmp_path / "s.db")
+    convs = [{"id": "D1", "is_im": True, "user": "U0ANN"}, {"id": "D2", "is_im": True, "user": "U0BO"}]
+    hist = {"D1": [{"user": "U0ANN", "ts": ts(600)}],
+            "D2": [{"user": "U0BO", "ts": ts(900)}, {"user": OWNER, "ts": ts(300)}]}
+    fake = ReadClient(convs, hist, {}, last_read={"D1": ts(700), "D2": ts(600)})
+    sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    assert "UNREAD" in store.get_item("slack:D1:dm").labels
+    assert "UNREAD" not in store.get_item("slack:D2:dm").labels
 
-    class C:
-        def __init__(self, last_read):
-            self.last_read = last_read
 
-        def info(self, ch):
-            return {"last_read": self.last_read}
-    msgs = [{"user": "U0ANN", "ts": "1730000000.000200"},
-            {"user": "U0OWNER", "ts": "1730000000.000300"}]
-    assert _dm_unread(C("1730000000.000100"), "D1", msgs, "U0OWNER") is True
-    assert _dm_unread(C("1730000000.000200"), "D1", msgs, "U0OWNER") is False   # only own after
+# ---- unread reaches past the window -------------------------------------------------------
 
-    class Broken:
-        def info(self, ch):
-            raise RuntimeError("missing_scope")
-    assert _dm_unread(Broken(), "D1", msgs, "U0OWNER") is False
+class ReadClient(FakeClient):
+    """FakeClient with read positions (conversations.info last_read), and a log of the oldest
+    timestamp each history call asked for."""
+
+    def __init__(self, convs, histories, replies, last_read=None, info_fails=()):
+        super().__init__(convs, histories, replies)
+        self.last_read = last_read or {}
+        self.info_fails = set(info_fails)
+        self.asked: dict[str, float] = {}
+
+    def info(self, channel):
+        if channel in self.info_fails:
+            raise SlackError("conversations.info", "missing_scope")
+        return {"last_read": self.last_read.get(channel, "0")}
+
+    def history(self, channel, oldest_ts):
+        self.asked[channel] = float(oldest_ts)
+        return super().history(channel, oldest_ts)
+
+
+DAY = 86400
+
+
+def _old_world():
+    t_ask = ts(30 * DAY)
+    convs = [{"id": "D0OLDUN", "is_im": True, "user": "U0ANN"},     # unread, 40 days old
+             {"id": "D0OLDRD", "is_im": True, "user": "U0BO"},      # read, 40 days old
+             {"id": "D0ANCIENT", "is_im": True, "user": "U0CY"},    # unread, past the floor
+             {"id": "G0GROUP", "is_mpim": True, "name": "mpdm-ann--bo--pat-1"},   # unread group DM
+             CHAN]
+    hist = {
+        "D0OLDUN": [{"ts": ts(40 * DAY), "user": "U0ANN", "text": "still need the W-9"}],
+        "D0OLDRD": [{"ts": ts(40 * DAY), "user": "U0BO", "text": "thanks!"}],
+        "D0ANCIENT": [{"ts": ts(120 * DAY), "user": "U0CY", "text": "long ago"}],
+        "G0GROUP": [{"ts": ts(20 * DAY), "user": "U0BO", "text": "plan for Friday?"}],
+        "C0ENG": [
+            {"ts": t_ask, "user": "U0ANN", "text": f"<@{OWNER}> can you sign off?"},  # unread
+            {"ts": ts(50 * DAY), "user": "U0BO", "text": f"<@{OWNER}> old, already read"},
+            {"ts": ts(25 * DAY), "user": "U0BO", "text": "unread chatter, no mention"},
+        ],
+    }
+    last_read = {"D0OLDUN": ts(41 * DAY), "D0OLDRD": ts(39 * DAY), "D0ANCIENT": "0",
+                 "G0GROUP": ts(21 * DAY), "C0ENG": ts(45 * DAY)}
+    return convs, hist, last_read, t_ask
+
+
+def test_unread_dms_and_mentions_come_in_however_old(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, t_ask = _old_world()
+    fake = ReadClient(convs, hist, {}, last_read=last_read)
+    res = sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    ids = {r["id"] for r in store.db.execute("SELECT id FROM items")}
+    assert ids == {"slack:D0OLDUN:dm", "slack:G0GROUP:dm", f"slack:C0ENG:{t_ask}"}
+    assert res.synced == 3
+    assert "UNREAD" in store.get_item("slack:D0OLDUN:dm").labels
+    assert "UNREAD" in store.get_item("slack:G0GROUP:dm").labels
+    # Channel threads are never marked unread: Slack keeps one read position per channel, so
+    # FrontDesk could never clear it.
+    assert "UNREAD" not in store.get_item(f"slack:C0ENG:{t_ask}").labels
+    # History reaches back to the read position, but no further than slack_unread_days (90).
+    now = time.time()
+    assert abs(fake.asked["D0OLDUN"] - (now - 41 * DAY)) < 60
+    assert abs(fake.asked["D0ANCIENT"] - (now - 90 * DAY)) < 60
+    # Read, but its read position is older than the window: history must reach it to know.
+    assert abs(fake.asked["D0OLDRD"] - (now - 39 * DAY)) < 60
+
+
+def test_reading_it_in_slack_lets_it_go_on_the_next_sync(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, t_ask = _old_world()
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, {}, last_read=last_read))
+    caught_up = {k: ts(1) for k in last_read}
+    res = sync(store, {}, TOKEN, log=lambda s: None,
+               client=ReadClient(convs, hist, {}, last_read=caught_up))
+    assert {r["id"] for r in store.db.execute("SELECT id FROM items")} == set()
+    assert res.removed == 3
+
+
+def test_no_read_position_means_the_window_only(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, t_ask = _old_world()
+    fake = ReadClient(convs, hist, {}, last_read=last_read,
+                      info_fails={"D0OLDUN", "G0GROUP", "C0ENG", "D0OLDRD", "D0ANCIENT"})
+    sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    assert {r["id"] for r in store.db.execute("SELECT id FROM items")} == set()
+    assert all(abs(v - (time.time() - 7 * DAY)) < 60 for v in fake.asked.values())
+
+
+def test_the_window_still_brings_in_recent_read_conversations(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, histories, replies, t_mention, t_replied = _world()
+    everything_read = {"D0ANN": ts(1), "D0OLD": ts(1), "C0ENG": ts(1)}
+    sync(store, {}, TOKEN, log=lambda s: None,
+         client=ReadClient(convs, histories, replies, last_read=everything_read))
+    ids = {r["id"] for r in store.db.execute("SELECT id FROM items")}
+    assert ids == {"slack:D0ANN:dm", f"slack:C0ENG:{t_mention}", f"slack:C0ENG:{t_replied}"}
+    assert "UNREAD" not in store.get_item("slack:D0ANN:dm").labels
+
+
+def test_default_cap_is_100_like_gmail(tmp_path):
+    from frontdesk import config
+    assert config.DEFAULTS["slack_max_items"] == config.DEFAULTS["gmail_max_threads"] == 100
+    store = Store(tmp_path / "s.db")
+    convs = [{"id": f"D{i:03d}", "is_im": True, "user": "U0ANN"} for i in range(120)]
+    hist = {c["id"]: [{"ts": ts(60 + i), "user": "U0ANN", "text": "hi"}] for i, c in enumerate(convs)}
+    logs: list[str] = []
+    res = sync(store, {}, TOKEN, log=logs.append, client=ReadClient(convs, hist, {}))
+    assert res.synced == 100
+    assert {r["id"] for r in store.db.execute("SELECT id FROM items")} == \
+        {f"slack:D{i:03d}:dm" for i in range(100)}                # the newest 100
+    assert any("kept the newest 100 of 120" in line for line in logs)
+
+
+def test_unread_old_dm_reaches_the_page_marked_unread(tmp_path):
+    from frontdesk.web import server
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, t_ask = _old_world()
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, {}, last_read=last_read))
+    rows = {r["item"]["id"]: r for r in server.ranked_payload(store)}
+    assert "UNREAD" in rows["slack:D0OLDUN:dm"]["item"]["labels"]
+
+
+# ---- thread read state and the owner's FrontDesk marks ------------------------------------
+
+def _thread_world(subscribed=True, thread_last_read=None, extra_reply=False, now=None):
+    """A thread the owner started in #eng (no mention, no reply by them) with two replies from
+    others; the parent carries the thread's own read position, as conversations.replies does."""
+    now = now or time.time()
+
+    def at(ago: float) -> str:
+        return f"{now - ago:.6f}"
+    root, r1, r2 = at(5 * 3600), at(3 * 3600), at(2 * 3600)
+    parent = {"ts": root, "thread_ts": root, "user": OWNER, "text": "shipping today?",
+              "reply_count": 2, "reply_users": ["U0ANN", "U0BO"], "latest_reply": r2,
+              "subscribed": subscribed}
+    if thread_last_read is not None:
+        parent["last_read"] = thread_last_read
+    replies = [parent, {"ts": r1, "thread_ts": root, "user": "U0ANN", "text": "yes"},
+               {"ts": r2, "thread_ts": root, "user": "U0BO", "text": "after lunch"}]
+    if extra_reply:
+        r3 = at(60)
+        replies.append({"ts": r3, "thread_ts": root, "user": "U0ANN", "text": "done"})
+        parent["latest_reply"] = r3
+    hist = {"C0ENG": [{k: v for k, v in parent.items() if k not in ("subscribed", "last_read")}]}
+    return [CHAN], hist, {("C0ENG", root): replies}, root, r1
+
+
+def test_a_thread_the_owner_started_comes_in(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, replies, root, _ = _thread_world()
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    assert store.get_item(f"slack:C0ENG:{root}") is not None
+
+
+@pytest.mark.parametrize("subscribed,read_to,unread", [
+    (True, "r1", True),        # followed, a reply after the read position: unread
+    (True, "now", False),      # followed, read to the end
+    (False, "r1", False),      # not followed: Slack's position is not the owner's to trust
+    (True, None, False),       # followed but no position given: never guess
+])
+def test_thread_unread_comes_from_its_own_read_position(tmp_path, subscribed, read_to, unread):
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    _, _, _, _, r1 = _thread_world(now=now)
+    pos = {"r1": r1, "now": ts(1), None: None}[read_to]
+    convs, hist, replies, root, _ = _thread_world(subscribed=subscribed, thread_last_read=pos,
+                                                  now=now)
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    assert ("UNREAD" in store.get_item(f"slack:C0ENG:{root}").labels) is unread
+
+
+def test_channel_without_a_read_position_gets_the_window_only(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, t_ask = _old_world()
+    channel_only = {k: v for k, v in last_read.items() if k != "C0ENG"}
+
+    class NoChannelPos(ReadClient):
+        def info(self, channel):
+            return {} if channel == "C0ENG" else super().info(channel)
+    fake = NoChannelPos(convs, hist, {}, last_read=channel_only)
+    sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    assert store.get_item(f"slack:C0ENG:{t_ask}") is None          # the old mention stays out
+    assert abs(fake.asked["C0ENG"] - (time.time() - 7 * DAY)) < 60
+
+
+def test_marked_unread_here_survives_syncs_until_read_in_slack(tmp_path):
+    from frontdesk import actions
+    from frontdesk.web import server
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    convs, hist, replies, root, _ = _thread_world(thread_last_read=ts(1), now=now)   # read in Slack
+    item_id = f"slack:C0ENG:{root}"
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    actions.mark_unread(store, item_id, None)
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    row = next(r for r in server.ranked_payload(store) if r["item"]["id"] == item_id)
+    assert "UNREAD" in row["item"]["labels"]                       # a sync that sees read: kept
+    later = f"{time.time() + 5:.6f}"                                # read further in Slack
+    convs, hist, replies, root, _ = _thread_world(thread_last_read=later, now=now)
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    row = next(r for r in server.ranked_payload(store) if r["item"]["id"] == item_id)
+    assert "UNREAD" not in row["item"]["labels"]
+
+
+def test_read_here_survives_syncs_until_a_new_reply(tmp_path):
+    from frontdesk import actions
+    from frontdesk.web import server
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    _, _, _, _, r1 = _thread_world(now=now)
+    convs, hist, replies, root, _ = _thread_world(thread_last_read=r1, now=now)   # unread in Slack
+    item_id = f"slack:C0ENG:{root}"
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    assert "UNREAD" in store.get_item(item_id).labels
+    assert actions.mark_read(store, item_id, None)["here_only"] is True
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    row = next(r for r in server.ranked_payload(store) if r["item"]["id"] == item_id)
+    assert "UNREAD" not in row["item"]["labels"]                   # Slack still unread: kept read
+    convs, hist, replies, root, _ = _thread_world(thread_last_read=r1, extra_reply=True, now=now)
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, replies))
+    assert "UNREAD" in store.get_item(item_id).labels              # a new reply: unread again
+
+
+# ---- Keep for Slack search matches --------------------------------------------------------
+
+class KeepClient(ReadClient):
+    """conversations.info answers with the conversation itself, as Slack does."""
+
+    def info(self, channel):
+        conv = next((c for c in self.convs if c["id"] == channel), {"id": channel})
+        return {**conv, "last_read": self.last_read.get(channel, "0")}
+
+
+def _keep_world(now):
+    old = f"{now - 60 * DAY:.6f}"                 # quiet for 60 days: outside the window
+    r1 = f"{now - 59 * DAY:.6f}"
+    thread = [{"ts": old, "thread_ts": old, "user": "U0ANN", "text": "budget for Q3?",
+               "reply_count": 1, "reply_users": ["U0BO"], "latest_reply": r1},
+              {"ts": r1, "thread_ts": old, "user": "U0BO", "text": "approved"}]
+    convs = [CHAN, {"id": "D0QUIET", "is_im": True, "user": "U0ANN"}]
+    hist = {"C0ENG": [thread[0]], "D0QUIET": [{"ts": old, "user": "U0ANN", "text": "see you"}]}
+    return convs, hist, {("C0ENG", old): thread}, old
+
+
+def test_keep_slack_stores_ranks_and_sync_keeps_it_current(tmp_path, monkeypatch):
+    from frontdesk.web import server
+    now = time.time()
+    convs, hist, replies, old = _keep_world(now)
+    db = tmp_path / "s.db"
+    Store(db).db.close()
+    fake = KeepClient(convs, hist, replies, last_read={"C0ENG": old, "D0QUIET": old})
+
+    class Provider:
+        calls = 0
+    monkeypatch.setattr("frontdesk.triage.triage_item",
+                        lambda p, item, profile="": (_ for _ in ()).throw(
+                            __import__("frontdesk.providers", fromlist=["ProviderError"]).ProviderError("offline")))
+    code, out = server.keep_slack(db, {}, f"slack:C0ENG:{old}", slack_factory=lambda: fake,
+                                  provider_factory=lambda: Provider())
+    assert code == 200 and out["kind"] == "keep"
+    code, _ = server.keep_slack(db, {}, "slack:D0QUIET:dm", slack_factory=lambda: fake,
+                                provider_factory=lambda: Provider())
+    assert code == 200
+    store = Store(db)
+    thread = store.get_item(f"slack:C0ENG:{old}")
+    assert [m.body for m in thread.messages] == ["budget for Q3?", "approved"]
+    assert store.is_kept(thread.id) and store.is_kept("slack:D0QUIET:dm")
+    # Both are 60 days quiet, outside the window: sync keeps them, and fetches a new reply.
+    replies[("C0ENG", old)].append({"ts": f"{now - 60:.6f}", "thread_ts": old, "user": "U0ANN",
+                                    "text": "thanks"})
+    sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    assert [m.body for m in store.get_item(f"slack:C0ENG:{old}").messages][-1] == "thanks"
+    assert store.get_item("slack:D0QUIET:dm") is not None
+    # Marked done: the next sync lets it go.
+    from frontdesk import actions
+    actions.set_done(store, f"slack:C0ENG:{old}", True)
+    sync(store, {}, TOKEN, log=lambda s: None, client=fake)
+    assert store.get_item(f"slack:C0ENG:{old}") is None
+
+
+@pytest.mark.parametrize("item_id", ["slack:C0ENG:abc", "slack:../x:dm", "gmail:abc", ""])
+def test_keep_slack_refuses_other_ids(tmp_path, item_id):
+    from frontdesk.web import server
+    code, _ = server.keep_slack(tmp_path / "s.db", {}, item_id, slack_factory=lambda: None)
+    assert code == 400
+
+
+def test_keep_slack_is_refused_in_demo_mode(tmp_path):
+    from frontdesk.web import server
+    code, _ = server.keep_slack(tmp_path / "s.db", {"demo": True}, "slack:C0ENG:1740000000.000100",
+                                slack_factory=lambda: None)
+    assert code == 409

@@ -76,16 +76,22 @@ test.describe("selecting Gmail search results (live server)", () => {
     expect(ops).toEqual([`read ${NEW}`, `archive ${NEW}`, `inbox ${NEW}`, `inbox ${OLD}`, `keep ${OLD}`]);
   });
 
-  test("Slack matches have no checkbox and x does not select them", async ({ page }) => {
+  test("x selects a Slack match; the bar then offers only Keep", async ({ page }) => {
     await searchReceipts(page);
     await page.getByRole("tab").nth(2).click();
     const s = card(page, SLACK);
     await expect(s).toBeVisible();
-    await expect(s.locator(".rowcheck")).toHaveCount(0);
     await s.locator(":scope > .row").focus();
     await page.keyboard.press("x");
-    await expect(s).not.toHaveClass(/selected/);
-    await expect(page.locator("#selbar")).toBeHidden();
+    await expect(s).toHaveClass(/selected/);
+    const bar = page.locator("#selbar");
+    await expect(bar.getByRole("button", { name: /^Keep/ })).toBeVisible();
+    for (const name of ["Mark read", "Mark unread", "Archive", "Star or unstar", "Move to inbox"]) {
+      await expect(bar.getByRole("button", { name, exact: true })).toHaveCount(0);
+    }
+    await page.keyboard.press("e");                                  // nothing to archive yet
+    await expect(page.locator("#toast")).toContainText("Keep them first");
+    await page.keyboard.press("Escape");
   });
 
   test("star from the bar", async ({ page }) => {

@@ -229,10 +229,15 @@ def test_mark_read_slack_dm_moves_read_position_to_newest(tmp_path):
     assert "UNREAD" not in store.get_item("slack:D9:dm").labels
 
 
-def test_mark_read_skips_slack_channel_threads(tmp_path):
+def test_mark_read_on_a_slack_channel_thread_is_here_only(tmp_path):
+    # Never told to Slack (no public API moves a thread's read position, and marking the whole
+    # channel would hide other unread messages); kept read here through syncs instead.
     store = Store(tmp_path / "sc.db")
     _slack_item(store, "slack:C1:1730000000.000001",
                 "https://example-team.slack.com/archives/C1/p1730000000000001")
     sl = FakeSlackMark()
-    assert actions.mark_read(store, "slack:C1:1730000000.000001", None, sl)["status"] == "skipped"
+    out = actions.mark_read(store, "slack:C1:1730000000.000001", None, sl)
+    assert out == {"status": "done", "here_only": True}
     assert sl.marked == []
+    assert store.local_read("slack:C1:1730000000.000001") is not None
+    assert "UNREAD" not in store.get_item("slack:C1:1730000000.000001").labels

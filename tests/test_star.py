@@ -7,6 +7,7 @@ import pytest
 
 from frontdesk import actions
 from frontdesk.gmail.client import GmailError
+from frontdesk.gmail.normalize import thread_to_item
 from frontdesk.items import Item, Message
 from frontdesk.store import Store
 from frontdesk.web import server
@@ -259,3 +260,29 @@ def test_page_does_not_duplicate_the_built_in_question():
     from frontdesk.assist import ADVISE
     js = (Path(server.__file__).parent / "app.js").read_text()
     assert ADVISE[:40] not in js and "Advise me" not in js and "Ask all\"" not in js
+
+
+# Gmail's listing can be stale: it has listed 2014 threads for in:inbox whose messages carry no
+# INBOX label (Gmail's own inbox does not show them). Sync goes by the fetched labels.
+def test_inbox_sync_leaves_out_listed_threads_without_the_inbox_label(tmp_path, monkeypatch):
+    store = Store(tmp_path / "s.db")
+    threads = {"a": _raw("a", ["INBOX"]), "old": _raw("old", ["IMPORTANT"]), "k": _raw("k", [])}
+    store.keep(thread_to_item(threads["k"], "owner@example.com"))     # kept from a search
+    stored_before = thread_to_item(threads["old"], "owner@example.com")
+    store.upsert_item(stored_before)                                   # synced by an older version
+    res = _sync(monkeypatch, store, SyncGmail(["a", "old", "k"], "", threads))
+    assert store.get_item("gmail:a") is not None
+    assert store.get_item("gmail:old") is None                         # left out, and pruned
+    assert store.get_item("gmail:k") is not None                       # kept threads stay
+    assert res.removed == 1
+
+
+def test_a_non_inbox_query_keeps_threads_without_the_inbox_label(tmp_path, monkeypatch):
+    from frontdesk.gmail import sync as gsync
+    store = Store(tmp_path / "s.db")
+    threads = {"w": _raw("w", ["Label_7"])}
+    monkeypatch.setattr(gsync, "GmailClient", lambda creds: SyncGmail(["w"], "", threads))
+    monkeypatch.setattr(gsync.auth, "credentials", lambda interactive=True: None)
+    gsync.sync(store, {"gmail_query": "label:work newer_than:7d", "gmail_max_threads": 50},
+               log=lambda *_: None)
+    assert store.get_item("gmail:w") is not None

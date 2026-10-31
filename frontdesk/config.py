@@ -33,7 +33,8 @@ DEFAULTS = {
     "gmail_max_threads": 100,
     "slack_keychain_service": "frontdesk-slack",   # or set SLACK_USER_TOKEN
     "slack_days": 7,
-    "slack_max_items": 60,
+    "slack_max_items": 100,   # the newest conversations kept, like gmail_max_threads
+    "slack_unread_days": 90,  # unread DMs and mentions come in from this far back
     "serve_host": "127.0.0.1",
     "serve_port": 8765,
     "auto_sync_minutes": 15,    # the server syncs and ranks on its own; 0 turns it off
