@@ -4,6 +4,7 @@
 // href only after a prefix check against Gmail's origin.
 
 const SECTIONS = [
+  { key: "kept", title: "From search", collapsed: false },   // threads kept from a search
   { key: "needs_you", title: "Needs you", collapsed: false },
   { key: "fyi", title: "FYI", collapsed: false },
   { key: "ignore", title: "Ignore", collapsed: true },
@@ -117,6 +118,23 @@ function safeOpenUrl(u) {
   return typeof u === "string" && /^https:\/\/[a-z0-9-]+\.slack\.com\//.test(u) ? u : null;
 }
 
+// One message of a thread: sender, time, then its HTML in a sandboxed frame (stored threads
+// only) or its plain text.
+function messageBox(itemId, m, i) {
+  const box = el("div", m.is_mine ? "msg mine" : "msg");
+  const head = el("div", "msg-head");
+  const who = parseSender(m.sender);
+  const avatar = el("span", "avatar", (who.name.trim()[0] || "?").toUpperCase());
+  const ident = el("div", "ident");
+  const line = el("div", "who");
+  line.append(el("span", "from", who.name));
+  if (who.addr && who.addr !== who.name) line.append(el("span", "addr", "<" + who.addr + ">"));
+  ident.append(line);
+  head.append(avatar, ident, el("span", "at", gmailTime(m.sent_at)));
+  box.append(head, m.has_html ? messageFrame(itemId, i) : el("p", "body", m.body || ""));
+  return box;
+}
+
 function buildDetail(item, triage) {
   const d = el("div", "detail");
   const msgs = Array.isArray(item.messages) ? item.messages : [];
@@ -141,20 +159,7 @@ function buildDetail(item, triage) {
   const buildThread = () => {
     if (built) return;
     built = true;
-    msgs.forEach((m, i) => {
-      const box = el("div", m.is_mine ? "msg mine" : "msg");
-      const head = el("div", "msg-head");
-      const who = parseSender(m.sender);
-      const avatar = el("span", "avatar", (who.name.trim()[0] || "?").toUpperCase());
-      const ident = el("div", "ident");
-      const line = el("div", "who");
-      line.append(el("span", "from", who.name));
-      if (who.addr && who.addr !== who.name) line.append(el("span", "addr", "<" + who.addr + ">"));
-      ident.append(line);
-      head.append(avatar, ident, el("span", "at", gmailTime(m.sent_at)));
-      box.append(head, m.has_html ? messageFrame(item.id, i) : el("p", "body", m.body || ""));
-      thread.append(box);
-    });
+    msgs.forEach((m, i) => thread.append(messageBox(item.id, m, i)));
   };
   full.addEventListener("toggle", () => { if (full.open) buildThread(); });
   if (!summary) { full.open = true; buildThread(); }
@@ -1258,7 +1263,8 @@ function render(rows) {
 
   const groups = Object.fromEntries(SECTIONS.map(s => [s.key, []]));
   for (const r of rows) {
-    const key = r.triage && groups[r.triage.bucket] ? r.triage.bucket : "untriaged";
+    const key = r.item.kept ? "kept"
+      : r.triage && groups[r.triage.bucket] ? r.triage.bucket : "untriaged";
     groups[key].push(r);
   }
 
@@ -1272,7 +1278,7 @@ function render(rows) {
 
   for (const s of SECTIONS) {
     const list = groups[s.key];
-    if (s.key !== "untriaged" || list.length) {
+    if ((s.key !== "untriaged" && s.key !== "kept") || list.length) {
       const c = el("li");
       c.append(el("b", null, String(list.length)), document.createTextNode(" " + s.title));
       counts.append(c);
@@ -1312,7 +1318,7 @@ function matches(r, q) {
 
 function buildResultCard(r) {
   // A thread Gmail's search found that FrontDesk has not synced: not ranked, not stored, so no
-  // dot colour, reason or actions. Opening it opens Gmail.
+  // dot colour or reason. Opening it reads it in place; Keep brings it in.
   const li = el("li", "card result");
   li.dataset.id = r.id;
   if (r.unread) li.classList.add("unread");
@@ -1326,18 +1332,78 @@ function buildResultCard(r) {
                el("span", "subject", r.subject || "(no subject)"));
   const n = Number(r.messages) || 1;
   meta.append(line1, el("span", "reason", (r.in_inbox ? "In the inbox" : "Archived") + ", " + n +
-                                          (n === 1 ? " message" : " messages") + ". Opens in Gmail."));
+                                          (n === 1 ? " message" : " messages") + ". Not ranked."));
   const when = el("span", "when", relTime(r.updated_at));
   when.title = absTime(r.updated_at);
   row.append(dot, meta, when);
+  row.setAttribute("aria-expanded", "false");
+  let detail = null;
   row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li); });
   row.addEventListener("click", () => {
     setCurrent(li);
-    const u = safeOpenUrl(r.url);
-    if (u) window.open(u, "_blank", "noopener");
+    const open = row.getAttribute("aria-expanded") === "true";
+    if (!detail) { detail = buildPreview(r); li.append(detail); }
+    detail.hidden = open;
+    row.setAttribute("aria-expanded", String(!open));
+    li.classList.toggle("open", !open);
   });
   li.append(row);
   return li;
+}
+
+// A search result opened in place: the whole thread, fetched from Gmail when first opened and
+// shown as plain text (nothing stored, no model), with Keep in FrontDesk and Open in Gmail.
+function buildPreview(r) {
+  const d = el("div", "detail");
+  const status = el("p", "status", "Loading the thread from Gmail\u2026");
+  const thread = el("div", "thread");
+  const actions = el("div", "actions replyactions");
+  const keep = el("button", "btn primary", "Keep in FrontDesk");
+  keep.type = "button";
+  keep.title = "Store it here, ranked, with Ask, reply and every action (one model call)";
+  keep.addEventListener("click", () => keepResult(r, keep));
+  actions.append(keep);
+  const u = safeOpenUrl(r.url);
+  if (u) {
+    const a = el("a", "openlink", "Open in Gmail");
+    a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer";
+    actions.append(a);
+  }
+  d.append(status, thread, el("p", "kbdhint",
+    "Not kept: this thread is read from Gmail and not stored. Keep it to rank it, ask about it " +
+    "and reply."), actions);
+  (async () => {
+    try {
+      const res = await fetch("/api/search/thread?id=" + encodeURIComponent(r.id), { cache: "no-store" });
+      const out = await res.json();
+      if (!res.ok) throw new Error((out && out.error) || "HTTP " + res.status);
+      const msgs = (out.item && Array.isArray(out.item.messages)) ? out.item.messages : [];
+      msgs.forEach((m, i) => thread.append(messageBox(r.id, { ...m, has_html: false }, i)));
+      status.remove();
+    } catch (e) {
+      status.textContent = "Couldn't load the thread: " + e.message;
+    }
+  })();
+  return d;
+}
+
+async function keepResult(r, btn) {
+  btn.disabled = true;
+  btn.textContent = "Keeping\u2026";
+  try {
+    const out = await postAction("keep", r.id);
+    openThreads.add(r.id);
+    clearSearch();
+    await load();
+    const li = visibleCards().find(c => c.dataset.id === r.id);
+    if (li) setCurrent(li);
+    toast(out.ranked ? "Kept and ranked. It's under From search until you archive it or mark it done."
+                     : "Kept, but ranking failed; it's under From search, unranked.");
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Keep in FrontDesk";
+    toast("Keep failed: " + e.message);
+  }
 }
 
 function renderSearch(rows, main, counts) {

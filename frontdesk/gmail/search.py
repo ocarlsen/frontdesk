@@ -51,3 +51,14 @@ def search(gmail: GmailClient, query: str, limit: int = SEARCH_LIMIT) -> list[di
         if row:
             rows.append(row)
     return rows
+
+
+def fetch_item(gmail: GmailClient, thread_id: str, inline_images: bool = False):
+    """The whole thread as an Item (None when it holds only drafts). For a preview nothing is
+    stored; keeping a thread also fetches its inline images, as sync does."""
+    from .normalize import thread_to_item
+    from .sync import fetch_inline_images
+    thread = gmail.get_thread(thread_id)
+    if inline_images:
+        fetch_inline_images(gmail, thread)
+    return thread_to_item(thread, gmail.profile_email())

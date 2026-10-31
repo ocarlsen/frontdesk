@@ -52,7 +52,9 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   `j`/`k` move, `o` opens, `e` archives (or marks a Slack thread done), `s` stars, `r` replies.
 - **Search** with `/`: typing filters the synced threads; Enter also searches all of Gmail
   (archived mail too, Gmail's operators work) with the read-only token and lists up to 20 threads
-  FrontDesk has not synced, unranked and unstored, each opening in Gmail. Esc clears it.
+  FrontDesk has not synced, unranked and unstored. Open one to read it in place (plain text,
+  still unstored); **Keep in FrontDesk** stores it, ranks it once, and lists it under From search
+  with every action until it is archived or marked done (sync keeps it current). Esc clears it.
 - **Star** a thread from its row, its detail view or with `s`. On Gmail it is Gmail's own star
   (the `STARRED` label, through the actions permission), so it shows in Gmail too. The star count
   in the header opens a **Starred** view; a starred Gmail thread you archive or mark done stays

@@ -511,7 +511,7 @@ console.log("drafts ok");
   main = new Node("main"); counts = new Node("ul");
   fn("renderSearch")(rows, main, counts);
   tx = texts(main);
-  if (!tx.includes("All of Gmail (1)") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Opens in Gmail."))
+  if (!tx.includes("All of Gmail (1)") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Not ranked."))
     throw new Error("gmail results: " + tx.join("|"));
   const res = all(main).filter(n => (n.className || "").split(" ").includes("result"));
   if (res.length !== 1) throw new Error("a synced thread was listed twice");
@@ -522,3 +522,32 @@ console.log("drafts ok");
   vm.runInContext("query = ''; gmailSearch = null", ctx);
 }
 console.log("search ok");
+// ---- Keep from search: a result opens in place (read from Gmail, plain text, Keep button);
+// a kept thread is listed under From search, above Needs you.
+{
+  const fetched = [];
+  ctx.fetch = async url => {
+    fetched.push(String(url));
+    if (String(url).startsWith("/api/search/thread?")) return { ok: true, json: async () => ({ item: {
+      messages: [{ sender: "Bo <bo@example.com>", sent_at: "2024-01-01T00:00:00Z", body: "Old lunch plan.", has_html: true }] } }) };
+    return { ok: true, json: async () => [] };
+  };
+  const card = fn("buildResultCard")({ id: "gmail:old", subject: "Lunch in 2024", sender: "Bo <bo@example.com>",
+    updated_at: "2024-01-01T00:00:00Z", messages: 1, url: "https://mail.google.com/mail/?authuser=x#all/old" });
+  const row = card.children.find(n => n.tagName === "BUTTON");
+  (row.listeners.click || []).forEach(f => f());
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  const tx = texts(card);
+  if (!fetched.some(u => u === "/api/search/thread?id=gmail%3Aold")) throw new Error("preview fetch: " + fetched);
+  for (const want of ["Old lunch plan.", "Keep in FrontDesk", "Open in Gmail"])
+    if (!tx.includes(want)) throw new Error("preview lacks " + want + ": " + tx.join("|"));
+  if (all(card).some(n => n.tagName === "IFRAME")) throw new Error("a preview must never frame sender HTML");
+  const rowsK = [{ item: { ...item, id: "gmail:k1", subject: "Kept one", kept: true }, triage }, { item, triage }];
+  const fakeMain = new Node("main"), fakeCounts = new Node("ul");
+  ctx.document.getElementById = id => id === "main" ? fakeMain : id === "counts" ? fakeCounts : new Node("div");
+  fn("render")(rowsK);
+  const order = fakeMain.children.map(sc => sc.attrs["aria-label"]);
+  if (order[0] !== "From search" || order[1] !== "Needs you") throw new Error("section order: " + order);
+  ctx.document.getElementById = () => new Node("div");
+}
+console.log("keep ok");

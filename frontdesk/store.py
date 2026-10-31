@@ -126,6 +126,12 @@ CREATE TABLE IF NOT EXISTS labels (
     at TEXT NOT NULL,
     PRIMARY KEY (item_id, item_updated_at)
 );
+CREATE TABLE IF NOT EXISTS kept (
+    -- Gmail threads the owner kept from a search (outside the sync query). Sync re-fetches them
+    -- so they stay current, and lets prune drop one once it is archived or marked done.
+    item_id TEXT PRIMARY KEY,
+    kept_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS stars (
     -- "Starred in FrontDesk" for Slack threads only: Slack has no supported API for saving a
     -- message for later (stars.add has no user-visible effect since 2023). Gmail stars are
@@ -339,7 +345,7 @@ class Store:
             for item_id in stale:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
                                    ("message_html", "item_id"), ("hidden", "item_id"),
-                                   ("stars", "item_id"), ("items", "id")):
+                                   ("stars", "item_id"), ("kept", "item_id"), ("items", "id")):
                     db.execute(f"DELETE FROM {table} WHERE {col}=?", (item_id,))
         return len(stale)
 
@@ -782,6 +788,24 @@ class Store:
             "SELECT 1 FROM hidden h JOIN items i ON i.id = h.item_id WHERE h.item_id=? AND "
             "(h.reason='archived' OR h.item_updated_at = i.updated_at)",
             (item_id,)).fetchone() is not None
+
+    # ---- kept: threads brought in from a search
+    def keep(self, item: Item) -> None:
+        """Store a thread found by search and mark it kept, so sync keeps it current."""
+        self.upsert_item(item)
+        with self.tx() as db:
+            db.execute("INSERT OR IGNORE INTO kept (item_id, kept_at) VALUES (?, ?)",
+                       (item.id, now()))
+
+    def kept_ids(self, source: str = "gmail") -> set[str]:
+        """Kept threads of `source` that are not archived or done: the ones sync re-fetches.
+        A kept thread that is hidden is left out, so the next sync prunes it."""
+        rows = self.db.execute("SELECT item_id FROM kept WHERE item_id LIKE ?", (source + ":%",))
+        return {r["item_id"] for r in rows if not self.hidden_reason(r["item_id"])}
+
+    def is_kept(self, item_id: str) -> bool:
+        row = self.db.execute("SELECT 1 FROM kept WHERE item_id=?", (item_id,)).fetchone()
+        return row is not None
 
     def unhide(self, item_id: str) -> None:
         with self.tx() as db:

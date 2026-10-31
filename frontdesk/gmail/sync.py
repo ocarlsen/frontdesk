@@ -77,7 +77,10 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
     count = 0
     thread_ids = list(client.list_thread_ids(settings["gmail_query"],
                                              int(settings["gmail_max_threads"])))
-    for thread_id in thread_ids:
+    # Threads the owner kept from a search sit outside the query: fetch them too, so new replies
+    # show, and keep them through prune until they are archived or marked done.
+    kept = sorted(i.partition(":")[2] for i in store.kept_ids("gmail"))
+    for thread_id in thread_ids + [k for k in kept if k not in set(thread_ids)]:
         try:
             thread = client.get_thread(thread_id)
             fetch_inline_images(client, thread)
@@ -91,7 +94,8 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
         if "INBOX" in item.labels and store.hidden_reason(item.id) == "archived":
             store.unhide(item.id)          # moved back to the inbox since FrontDesk archived it
         count += 1
-    keep = {f"gmail:{t}" for t in thread_ids} | starred_archived(client, store)
+    keep = ({f"gmail:{t}" for t in thread_ids} | {f"gmail:{k}" for k in kept}
+            | starred_archived(client, store))
     removed = store.prune("gmail", account, keep)
     if removed:
         log(f"  removed {removed} thread(s) no longer in '{settings['gmail_query']}'")
