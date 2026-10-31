@@ -53,3 +53,34 @@ test.describe("search", () => {
     await expect(box).not.toBeFocused();
   });
 });
+
+test.describe("search tabs", () => {
+  test.beforeEach(async ({ page }) => { await openDemo(page); });
+
+  test("FrontDesk, Gmail and Slack are tabs; h and l switch; j/k stay in the open tab", async ({ page }) => {
+    await page.keyboard.press("/");
+    await page.keyboard.type("order");
+    const tabs = page.getByRole("tab");
+    await expect(tabs).toHaveText([/FrontDesk\s*\d+/, /Gmail/, /Slack/]);
+    await expect(tabs.nth(0)).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("Enter");                 // the static demo searches nothing remote
+    await page.keyboard.press("l");
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tabpanel").filter({ visible: true })).toContainText("live app");
+    await page.keyboard.press("l");
+    await expect(tabs.nth(2)).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("h");
+    await page.keyboard.press("h");
+    await expect(tabs.nth(0)).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("j");
+    const current = page.locator("main li.card.current");
+    await expect(current).toHaveCount(1);
+    await expect(current).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("tab")).toHaveCount(0);
+  });
+
+  test("the search box names both sources", async ({ page }) => {
+    await expect(page.locator("#search")).toHaveAttribute("placeholder", /Gmail and Slack/);
+  });
+});

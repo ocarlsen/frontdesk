@@ -38,6 +38,49 @@ def display_name(user: dict) -> str:
             or user.get("name") or user.get("id") or "unknown")
 
 
+# Slack's :shortcodes: for the emoji that turn up in work chat, as the characters Slack shows.
+# A code not listed stays as typed (never dropped: it may be a custom emoji worth seeing).
+EMOJI = {
+    "incoming_envelope": "\U0001F4E8", "envelope": "\u2709\ufe0f", "email": "\U0001F4E7",
+    "white_check_mark": "\u2705", "heavy_check_mark": "\u2714\ufe0f", "x": "\u274C",
+    "warning": "\u26A0\ufe0f", "rotating_light": "\U0001F6A8", "mag": "\U0001F50D",
+    "ocean": "\U0001F30A", "tada": "\U0001F389", "rocket": "\U0001F680", "fire": "\U0001F525",
+    "eyes": "\U0001F440", "thumbsup": "\U0001F44D", "+1": "\U0001F44D", "-1": "\U0001F44E",
+    "thumbsdown": "\U0001F44E", "pray": "\U0001F64F", "clap": "\U0001F44F", "wave": "\U0001F44B",
+    "smile": "\U0001F604", "slightly_smiling_face": "\U0001F642", "joy": "\U0001F602",
+    "thinking_face": "\U0001F914", "heart": "\u2764\ufe0f", "memo": "\U0001F4DD",
+    "calendar": "\U0001F4C6", "date": "\U0001F4C5", "clock3": "\U0001F552",
+    "hourglass": "\u231B", "bell": "\U0001F514", "pushpin": "\U0001F4CC",
+    "link": "\U0001F517", "lock": "\U0001F512", "key": "\U0001F511", "bulb": "\U0001F4A1",
+    "chart_with_upwards_trend": "\U0001F4C8", "moneybag": "\U0001F4B0", "dollar": "\U0001F4B5",
+    "package": "\U0001F4E6", "inbox_tray": "\U0001F4E5", "outbox_tray": "\U0001F4E4",
+    "handshake": "\U0001F91D", "house": "\U0001F3E0", "robot_face": "\U0001F916",
+    "large_green_circle": "\U0001F7E2", "large_yellow_circle": "\U0001F7E1",
+    "red_circle": "\U0001F534", "black_circle": "\u26AB", "point_right": "\U0001F449",
+    "question": "\u2753", "exclamation": "\u2757", "no_entry": "\u26D4",
+    "construction": "\U0001F6A7", "sparkles": "\u2728", "star": "\u2B50",
+}
+_EMOJI_CODE = re.compile(r":([a-z][a-z0-9_+\-]*):")
+
+
+def emojize(text: str) -> str:
+    return _EMOJI_CODE.sub(lambda m: EMOJI.get(m.group(1), m.group(0)), text or "")
+
+
+_MRKDWN = (re.compile(r"```\n?(.*?)\n?```", re.S), re.compile(r"`([^`\n]+)`"),
+           re.compile(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])"),
+           re.compile(r"(?<![\w_])_([^_\n]+)_(?![\w_])"),
+           re.compile(r"(?<![\w~])~([^~\n]+)~(?![\w~])"))
+
+
+def plain_mrkdwn(text: str) -> str:
+    """*bold*, _italic_, ~strike~ and `code` markers removed, the words kept: for a one-line
+    snippet, where the markers are noise. (Synced messages keep them; the model reads them.)"""
+    for rx in _MRKDWN:
+        text = rx.sub(r"\1", text)
+    return text
+
+
 def readable(text: str, name_of: NameOf) -> str:
     """Slack mrkdwn markup -> plain text. Markup is rewritten BEFORE entities are unescaped,
     so a literal '&lt;@U1&gt;' typed by a person stays text instead of becoming a mention."""
@@ -55,7 +98,7 @@ def readable(text: str, name_of: NameOf) -> str:
             return f"{label} ({target})"
         return target
     out = _MARKUP.sub(sub, text or "")
-    return out.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    return emojize(out.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&"))
 
 
 def is_system(m: dict) -> bool:

@@ -1406,11 +1406,58 @@ async function keepResult(r, btn) {
   }
 }
 
+// Search results in tabs, one source at a time, so every source and its count is visible
+// without scrolling: FrontDesk (instant, as you type), Gmail and Slack (after Enter, or a click
+// on their tab). j/k walk the open tab (hidden panes have no layout); h/l switch tabs.
+let searchTab = "frontdesk";
+
+function slackConnected(g) {
+  if (g && !g.loading && !g.error) return g.slack !== null && g.slack !== undefined;
+  return STATIC || (window.__items || []).some(r => r.item.source === "slack");
+}
+
+function searchTabs(g) {
+  const tabs = ["frontdesk", "gmail"];
+  if (slackConnected(g)) tabs.push("slack");
+  return tabs;
+}
+
+function switchSearchTab(step) {
+  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
+  const tabs = searchTabs(g);
+  const i = Math.max(0, tabs.indexOf(searchTab));
+  pickSearchTab(tabs[(i + step + tabs.length) % tabs.length]);
+}
+
+function pickSearchTab(tab) {
+  searchTab = tab;
+  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
+  if (tab !== "frontdesk" && !g && !STATIC) { searchGmail(query); return; }   // runs both sources
+  render(window.__items || []);
+  const first = visibleCards()[0];
+  if (first) setCurrent(first);
+}
+
 function renderSearch(rows, main, counts) {
   const local = rows.filter(r => (!r.item.hidden || r.item.starred) && matches(r, query));
-  const c = el("li");
-  c.append(el("b", null, String(local.length)), document.createTextNode(" in FrontDesk"));
-  counts.append(c);
+  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
+  const known = new Set(rows.map(r => r.item.id));
+  const found = g && g.results ? g.results.filter(r => !known.has(r.id)) : [];
+  const seen = new Set(known);
+  const fromSlack = g && Array.isArray(g.slack) ? g.slack.filter(r => !seen.has(r.id) && seen.add(r.id)) : [];
+  const slackOn = slackConnected(g);
+  const tabs = searchTabs(g);
+  if (!tabs.includes(searchTab)) searchTab = "frontdesk";
+  const ran = g && !g.loading && !g.error;
+  const n = { frontdesk: String(local.length),
+              gmail: g && g.loading ? "\u2026" : ran && !g.gmail_error ? String(found.length) : "",
+              slack: g && g.loading ? "\u2026" : ran && !g.slack_error ? String(fromSlack.length) : "" };
+  for (const [tab, label] of [["frontdesk", " in FrontDesk"], ["gmail", " in Gmail"], ["slack", " in Slack"]]) {
+    if (!tabs.includes(tab) || !n[tab] || n[tab] === "\u2026") continue;
+    const c = el("li");
+    c.append(el("b", null, n[tab]), document.createTextNode(label));
+    counts.append(c);
+  }
   const sec = el("section", "searchres");
   sec.setAttribute("aria-label", "Search results");
   const head = el("div", "sechead");
@@ -1418,36 +1465,111 @@ function renderSearch(rows, main, counts) {
   clear.type = "button";
   clear.addEventListener("click", clearSearch);
   head.append(el("h2", null, "Search: " + query), clear);
-  sec.append(head, el("h3", null, "In FrontDesk (" + local.length + ")"));
+  const bar = el("div", "searchtabs");
+  bar.setAttribute("role", "tablist");
+  bar.setAttribute("aria-label", "Search sources");
+  const names = { frontdesk: "FrontDesk", gmail: "Gmail", slack: "Slack" };
+  for (const tab of tabs) {
+    const b = el("button", "searchtab");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(tab === searchTab));
+    b.id = "searchtab-" + tab;
+    b.append(el("span", "name", names[tab]));
+    if (n[tab]) b.append(el("span", "count", n[tab]));
+    else b.classList.add("pending");
+    b.title = tab === "frontdesk" ? "Threads FrontDesk has synced" : n[tab] ? "" : "Press Enter to search " + names[tab];
+    b.addEventListener("click", () => pickSearchTab(tab));
+    bar.append(b);
+  }
+  sec.append(head, bar);
+  const pane = tab => {
+    const p = el("div", "searchpane");
+    p.setAttribute("role", "tabpanel");
+    p.setAttribute("aria-labelledby", "searchtab-" + tab);
+    p.hidden = tab !== searchTab;
+    sec.append(p);
+    return p;
+  };
+  const both = slackOn ? "Gmail and Slack" : "Gmail";
+  // FrontDesk
+  const pf = pane("frontdesk");
   if (local.length) {
     const ul = el("ul", "list");
     for (const r of local) ul.append(buildCard(r.item, r.triage));
-    sec.append(ul);
+    pf.append(ul);
   } else {
-    sec.append(el("p", "status", "No synced thread matches."));
+    pf.append(el("p", "status", "No synced thread matches."));
   }
-  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
-  const known = new Set(rows.map(r => r.item.id));
-  const found = g && g.results ? g.results.filter(r => !known.has(r.id)) : [];
-  sec.append(el("h3", null, "All of Gmail" + (g && g.results ? " (" + found.length + ")" : "")));
+  if (!g && !STATIC) pf.append(el("p", "kbdhint", "Press Enter to search all of " + both + ", archived mail included."));
+  // Gmail
+  const pg = pane("gmail");
   let note = null;
   if (STATIC) note = "Searching all of Gmail runs against your own account in the live app.";
-  else if (!g) note = "Press Enter to search all of Gmail, archived mail included.";
-  else if (g.loading) note = "Searching Gmail\u2026";
+  else if (!g) note = "Press Enter to search all of " + both + ", archived mail included.";
+  else if (g.loading) note = "Searching " + both + "\u2026";
   else if (g.error) note = "Couldn't search Gmail: " + g.error;
+  else if (g.gmail_error) note = "Couldn't search Gmail: " + g.gmail_error;
   else if (g.demo) note = "Searching all of Gmail is off in demo mode.";
   else if (!found.length) note = "No other matches in Gmail.";
-  if (note) sec.append(el("p", "status", note));
+  if (note) pg.append(el("p", "status", note));
   if (found.length) {
     const ul = el("ul", "list");
     for (const r of found) ul.append(buildResultCard(r));
-    sec.append(ul);
+    pg.append(ul);
     if (g.results.length >= 20) {
-      sec.append(el("p", "kbdhint", "The 20 newest matches. Narrow it with Gmail's operators, " +
-                                    "such as from:, before: or has:attachment."));
+      pg.append(el("p", "kbdhint", "The 20 newest matches. Narrow it with Gmail's operators, " +
+                                   "such as from:, before: or has:attachment."));
+    }
+  }
+  // Slack
+  if (slackOn) {
+    const ps = pane("slack");
+    let snote = null;
+    if (STATIC) snote = "Searching all of Slack runs against your own workspace in the live app.";
+    else if (!g) snote = "Press Enter to search all of " + both + ".";
+    else if (g.loading) snote = "Searching " + both + "\u2026";
+    else if (g.slack_error) snote = "Couldn't search Slack: " + g.slack_error;
+    else if (!fromSlack.length) snote = "No other matches in Slack.";
+    if (snote) ps.append(el("p", "status", snote));
+    if (fromSlack.length) {
+      const ul = el("ul", "list");
+      for (const r of fromSlack) ul.append(buildSlackResult(r));
+      ps.append(ul);
+      if ((g.slack || []).length >= 20) {
+        ps.append(el("p", "kbdhint", "The 20 newest matches. Narrow it with Slack's operators, " +
+                                     "such as from:@name, in:#channel or after:2026-10-01."));
+      }
     }
   }
   main.append(sec);
+}
+
+// A Slack message found by search: not synced, not ranked. Its row shows the message itself;
+// opening it opens the conversation in Slack.
+function buildSlackResult(r) {
+  const li = el("li", "card result");
+  li.dataset.id = r.id;
+  const row = el("button", "row");
+  row.type = "button";
+  const dot = el("span", "dot none");
+  dot.title = "Not ranked: found by search";
+  const meta = el("span", "meta");
+  const line1 = el("span", "line1");
+  line1.append(el("span", "sender", r.sender || "Slack"), el("span", "subject", r.where || "Slack"));
+  meta.append(line1, el("span", "reason", r.text || "(no text)"));
+  const when = el("span", "when", relTime(r.updated_at));
+  when.title = absTime(r.updated_at);
+  row.append(dot, meta, when);
+  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li); });
+  row.addEventListener("click", () => {
+    setCurrent(li);
+    const u = safeOpenUrl(r.url);
+    if (u) window.open(u, "_blank", "noopener");
+  });
+  row.title = "Open in Slack";
+  li.append(row);
+  return li;
 }
 
 async function searchGmail(q) {
@@ -1459,7 +1581,9 @@ async function searchGmail(q) {
     const res = await fetch("/api/search?q=" + encodeURIComponent(q), { cache: "no-store" });
     const out = await res.json();
     if (!res.ok) throw new Error((out && out.error) || "HTTP " + res.status);
-    next = { q, results: Array.isArray(out.results) ? out.results : [], demo: !!out.demo };
+    next = { q, results: Array.isArray(out.results) ? out.results : [], demo: !!out.demo,
+             gmail_error: out.gmail_error || "",
+             slack: Array.isArray(out.slack) ? out.slack : null, slack_error: out.slack_error || "" };
   } catch (e) {
     next = { q, error: e.message };
   }
@@ -1471,6 +1595,7 @@ async function searchGmail(q) {
 function clearSearch() {
   const box = document.getElementById("search");
   if (box) { box.value = ""; box.blur(); }
+  searchTab = "frontdesk";
   if (!query && !gmailSearch) return;
   query = "";
   gmailSearch = null;
@@ -1483,7 +1608,15 @@ function setupSearch() {
   box.addEventListener("input", () => { query = box.value.trim(); render(window.__items || []); });
   box.addEventListener("keydown", e => {
     // Enter searches Gmail and leaves the box, as Gmail does, so j/k move through the results.
-    if (e.key === "Enter") { e.preventDefault(); box.blur(); searchGmail(query); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      box.blur();
+      // Nothing synced matches: the wider search is what you want, so show it.
+      if (!(window.__items || []).some(r => (!r.item.hidden || r.item.starred) && matches(r, query))) {
+        searchTab = "gmail";
+      }
+      searchGmail(query);
+    }
   });
 }
 
@@ -1899,7 +2032,8 @@ function mergeStep(li, p, others, act, reload) {
 // ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open and close, u only closes, e archive,
 // r reply, m memory, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
 const SHORTCUTS = [
-  ["/", "Search: type to filter, Enter searches all of Gmail"],
+  ["/", "Search: type to filter, Enter searches all of Gmail and Slack"],
+  ["h / l", "Search results: previous / next tab (FrontDesk, Gmail, Slack)"],
   ["j / k", "Next / previous thread"],
   ["o or Enter", "Open the thread; press again to close it"],
   ["u", "Close the thread (never opens one)"],
@@ -2004,6 +2138,7 @@ function onKey(e) {
   const li = currentCard();
   // A search result is not a stored thread: only moving and opening apply to it.
   if (li && li.classList.contains("result") && "esvru".includes(e.key)) return;
+  if (query && (e.key === "h" || e.key === "l")) { switchSearchTab(e.key === "l" ? 1 : -1); e.preventDefault(); return; }
   switch (e.key) {
     case "/": {
       const box = document.getElementById("search");

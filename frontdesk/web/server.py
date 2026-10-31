@@ -345,35 +345,71 @@ def gmail_draft(db_path: Path, settings: dict, item_id: str,
                                      "url": drafting.draft_url(item.account, d["message_id"])}}
 
 
-def search_gmail(settings: dict, query: str, client_factory=None,
-                 db_path: Path | None = None) -> tuple[int, dict]:
-    """GET /api/search: all of Gmail (archived too) for `query`, read-only token, nothing stored
-    and nothing sent to a model. Never opens a consent flow."""
+def run_search(settings: dict, query: str, client_factory=None, slack_factory=None,
+               db_path: Path | None = None) -> tuple[int, dict]:
+    """GET /api/search: all of Gmail (archived too) and, when Slack is connected, all of Slack,
+    for `query`, both read-only and at the same time. Nothing is stored and nothing is sent to a
+    model. One source failing does not hide the other: its error travels beside the results.
+    Never opens a consent flow."""
+    from concurrent.futures import ThreadPoolExecutor
+
     import requests
 
     from ..gmail.auth import AuthError, credentials
     from ..gmail.client import GmailClient, GmailError
     from ..gmail.search import MAX_QUERY_CHARS, search
+    from ..slack.client import SlackClient, SlackError
+    from ..slack.search import search as slack_search
     query = query.strip()
     if not query or len(query) > MAX_QUERY_CHARS:
         return HTTPStatus.BAD_REQUEST, {"error": "type a search of up to 500 characters"}
     if settings.get("demo"):
-        return HTTPStatus.OK, {"results": [], "demo": True}
-    try:
-        gmail = (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
-        results = search(gmail, query)
-        if db_path is not None:
-            store = Store(db_path)
-            try:
+        return HTTPStatus.OK, {"results": [], "demo": True, "slack": None}
+
+    def gmail_part() -> tuple[list, str]:
+        try:
+            gmail = (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
+            return search(gmail, query), ""
+        except AuthError as e:
+            return [], str(e)
+        except (GmailError, requests.RequestException):
+            return [], "Gmail did not answer"   # not str(e): it can quote the response body
+
+    def slack_part() -> tuple[list | None, str]:
+        factory = slack_factory
+        if factory is None:
+            if not (os.environ.get("SLACK_USER_TOKEN") or settings.get("slack_keychain_service")):
+                return None, ""
+            from ..sources import slack_token
+            tok = slack_token(settings)
+            if not tok:
+                return None, ""                   # Slack not connected: no Slack section
+            factory = lambda: SlackClient(tok)   # noqa: E731
+        try:
+            return slack_search(factory(), query), ""
+        except SlackError as e:
+            if "missing_scope" in str(e):
+                return [], "searching Slack needs the search:read permission on your Slack app"
+            return [], "Slack did not answer"
+        except requests.RequestException:
+            return [], "Slack did not answer"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        g, sl = pool.submit(gmail_part), pool.submit(slack_part)
+        (results, gerr), (slack, serr) = g.result(), sl.result()
+    if gerr and slack is None:
+        return HTTPStatus.BAD_GATEWAY, {"error": gerr}
+    if db_path is not None:
+        store = Store(db_path)
+        try:
+            if not gerr:
                 store.log_usage("search", source="gmail")
-            finally:
-                store.db.close()
-        return HTTPStatus.OK, {"results": results}
-    except AuthError as e:
-        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
-    except (GmailError, requests.RequestException):
-        # Not str(e): a Gmail error can quote the response body.
-        return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
+            if slack is not None and not serr:
+                store.log_usage("search", source="slack")
+        finally:
+            store.db.close()
+    return HTTPStatus.OK, {"results": results, "gmail_error": gerr, "slack": slack,
+                           "slack_error": serr}
 
 
 _GMAIL_THREAD = re.compile(r"gmail:[0-9a-f]{6,32}")
@@ -802,8 +838,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 code, out = search_thread(settings or {}, parse_qs(query).get("id", [""])[0])
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/search":
-                code, out = search_gmail(settings or {}, parse_qs(query).get("q", [""])[0],
-                                         db_path=db_path)
+                code, out = run_search(settings or {}, parse_qs(query).get("q", [""])[0],
+                                       db_path=db_path)
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/gmail-draft":
                 code, out = gmail_draft(db_path, settings or {},

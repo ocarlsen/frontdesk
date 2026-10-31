@@ -501,9 +501,11 @@ console.log("drafts ok");
   let main = new Node("main"), counts = new Node("ul");
   fn("renderSearch")(rows, main, counts);
   let tx = texts(main);
-  if (!tx.includes("In FrontDesk (1)") || !tx.includes("Lunch") || tx.includes("Invoice"))
+  if (!tx.includes("FrontDesk") || !tx.includes("Lunch") || tx.includes("Invoice"))
     throw new Error("local search filter: " + tx.join("|"));
   if (!tx.includes("Press Enter to search all of Gmail, archived mail included.")) throw new Error("search hint");
+  const tabs = all(main).filter(n => n.attrs && n.attrs.role === "tab");
+  if (tabs.map(t => t.attrs["aria-selected"]).join() !== "true,false") throw new Error("tabs: FrontDesk selected, Gmail next");
   vm.runInContext(`gmailSearch = { q: 'lunch', results: [
     { id: 'gmail:t1', subject: 'Lunch', sender: 'Ann <ann@example.com>', updated_at: '2026-10-01T00:00:00Z', messages: 1 },
     { id: 'gmail:old', subject: 'Lunch in 2024', sender: 'Bo <bo@example.com>', updated_at: '2024-01-01T00:00:00Z',
@@ -511,7 +513,7 @@ console.log("drafts ok");
   main = new Node("main"); counts = new Node("ul");
   fn("renderSearch")(rows, main, counts);
   tx = texts(main);
-  if (!tx.includes("All of Gmail (1)") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Not ranked."))
+  if (!tx.includes("Gmail") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Not ranked."))
     throw new Error("gmail results: " + tx.join("|"));
   const res = all(main).filter(n => (n.className || "").split(" ").includes("result"));
   if (res.length !== 1) throw new Error("a synced thread was listed twice");
@@ -551,3 +553,28 @@ console.log("search ok");
   ctx.document.getElementById = () => new Node("div");
 }
 console.log("keep ok");
+// ---- Slack in search: an "In Slack" group once a search ran; a conversation FrontDesk already
+// has, or a second match in the same thread, is listed once.
+{
+  const rows = [{ item, triage }];
+  vm.runInContext(`query = 'budget'; gmailSearch = { q: 'budget', results: [], slack: [
+    { id: 'gmail:t1', where: '#x', sender: 'Ann', text: 'dup of a synced id', updated_at: '2026-10-30T00:00:00Z' },
+    { id: 'slack:C1:1', where: '#analytics', sender: 'Dana', text: 'Budget line by Friday?', updated_at: '2026-10-30T00:00:00Z', url: 'https://acme.slack.com/archives/C1/p1' },
+    { id: 'slack:C1:1', where: '#analytics', sender: 'Theo', text: 'second match, same thread', updated_at: '2026-10-30T00:00:00Z' }],
+    slack_error: '' }`, ctx);
+  const main = new Node("main");
+  fn("renderSearch")(rows, main, new Node("ul"));
+  const tx = texts(main);
+  if (!tx.includes("Slack") || !tx.includes("Budget line by Friday?") || tx.includes("second match, same thread"))
+    throw new Error("slack results: " + tx.join("|"));
+  vm.runInContext("gmailSearch = { q: 'budget', results: [], slack: [], slack_error: 'Slack did not answer' }", ctx);
+  const main2 = new Node("main");
+  fn("renderSearch")(rows, main2, new Node("ul"));
+  if (!texts(main2).includes("Couldn't search Slack: Slack did not answer")) throw new Error("silent Slack failure");
+  vm.runInContext("gmailSearch = { q: 'budget', results: [], slack: null }", ctx);
+  const main3 = new Node("main");
+  fn("renderSearch")(rows, main3, new Node("ul"));
+  if (all(main3).some(n => n.attrs && n.attrs.id === "searchtab-slack")) throw new Error("no Slack tab without Slack");
+  vm.runInContext("query = ''; gmailSearch = null", ctx);
+}
+console.log("slack search ok");
