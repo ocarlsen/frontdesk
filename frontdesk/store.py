@@ -92,6 +92,20 @@ CREATE TABLE IF NOT EXISTS addresses (
     addr TEXT PRIMARY KEY,
     person_id INTEGER NOT NULL REFERENCES people(id)
 );
+CREATE TABLE IF NOT EXISTS usage (
+    -- Append-only: one row per model call or owner action, for `frontdesk stats`. Never any mail
+    -- content, address or thread id: a kind, the source, the model and its cost, and for drafts
+    -- and sends whether the text went out as FrontDesk wrote it.
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL,
+    kind TEXT NOT NULL,          -- rank | ask | draft | send | search | keep
+    source TEXT NOT NULL DEFAULT '',
+    model TEXT NOT NULL DEFAULT '',
+    cost_usd REAL NOT NULL DEFAULT 0,
+    tokens_in INTEGER NOT NULL DEFAULT 0,
+    tokens_out INTEGER NOT NULL DEFAULT 0,
+    origin TEXT NOT NULL DEFAULT ''   -- draft/send: proposed | ask_draft | edited | written
+);
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -186,6 +200,9 @@ SITUATION_MAX_CHARS = 500
 NOTE_MAX_CHARS = 2000
 NAME_MAX_CHARS = 100
 PEOPLE_MARKER = "people_migrated"
+USAGE_MARKER = "usage_backfilled"
+USAGE_KINDS = ("rank", "ask", "draft", "send", "search", "keep")
+ORIGINS = ("proposed", "ask_draft", "edited", "written")
 _TOMBSTONE = ("CREATE TRIGGER IF NOT EXISTS notes_retired_{op} BEFORE {op} ON notes BEGIN "
               "SELECT RAISE(ABORT, 'notes is retired: write to people and addresses'); END")
 
@@ -248,6 +265,7 @@ class Store:
         self.db.executescript(SCHEMA)
         self._migrate()
         self._migrate_people()
+        self._backfill_usage()
         self.path.chmod(0o600)
 
     def _migrate(self) -> None:
@@ -276,6 +294,73 @@ class Store:
     def meta(self, key: str) -> str | None:
         row = self.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         return row["value"] if row else None
+
+    def _backfill_usage(self) -> None:
+        """Once per database, seed the usage log from the rankings and Ask answers already
+        stored (with their own dates, models and costs), so stats do not start at zero. Only what
+        is still stored can be counted: rankings of threads pruned before this ran are gone."""
+        if self.meta(USAGE_MARKER) is not None:
+            return
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            if self.meta(USAGE_MARKER) is None:
+                ranks = self.db.execute(
+                    "INSERT INTO usage (at, kind, source, model, cost_usd, tokens_in, tokens_out) "
+                    "SELECT triaged_at, 'rank', substr(item_id, 1, instr(item_id, ':') - 1), "
+                    "COALESCE(NULLIF(model_served, ''), model), COALESCE(cost_usd, 0), "
+                    "COALESCE(tokens_in, 0), COALESCE(tokens_out, 0) FROM triage").rowcount
+                asks = 0
+                for r in self.db.execute("SELECT item_id, extra, at FROM asks "
+                                         "WHERE role='assistant'").fetchall():
+                    e = json.loads(r["extra"] or "{}")
+                    cost = e.get("cost_usd")
+                    self.db.execute(
+                        "INSERT INTO usage (at, kind, source, model, cost_usd) VALUES (?,?,?,?,?)",
+                        (r["at"], "ask", r["item_id"].partition(":")[0], str(e.get("model", "")),
+                         cost if isinstance(cost, (int, float)) else 0))
+                    asks += 1
+                self.db.execute("INSERT INTO meta VALUES (?,?)", (USAGE_MARKER, json.dumps(
+                    {"at": now(), "ranks": ranks, "asks": asks})))
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+
+    # ---- usage: counts and costs only, for `frontdesk stats`
+    @staticmethod
+    def _log_usage(db, kind: str, source: str = "", model: str = "", cost_usd: float = 0.0,
+                   tokens_in: int = 0, tokens_out: int = 0, origin: str = "") -> None:
+        if kind not in USAGE_KINDS or (origin and origin not in ORIGINS):
+            raise ValueError(f"usage: bad kind/origin {kind!r}/{origin!r}")
+        db.execute("INSERT INTO usage (at, kind, source, model, cost_usd, tokens_in, tokens_out, "
+                   "origin) VALUES (?,?,?,?,?,?,?,?)",
+                   (now(), kind, source, model or "", float(cost_usd or 0), int(tokens_in or 0),
+                    int(tokens_out or 0), origin))
+
+    def log_usage(self, kind: str, **fields) -> None:
+        with self.tx() as db:
+            self._log_usage(db, kind, **fields)
+
+    def usage_summary(self, since: str = "") -> dict:
+        """{"since", "first", "kinds": {kind: {"n", "cost_usd", "models": {model: {"n",
+        "cost_usd"}}, "origins": {origin: n}}}} over rows at or after `since` (ISO), else all."""
+        rows = self.db.execute("SELECT kind, model, origin, COUNT(*) n, SUM(cost_usd) c, "
+                               "MIN(at) first FROM usage WHERE at >= ? "
+                               "GROUP BY kind, model, origin", (since or "",)).fetchall()
+        kinds: dict = {}
+        first = ""
+        for r in rows:
+            k = kinds.setdefault(r["kind"], {"n": 0, "cost_usd": 0.0, "models": {}, "origins": {}})
+            k["n"] += r["n"]
+            k["cost_usd"] += r["c"] or 0
+            if r["model"]:
+                m = k["models"].setdefault(r["model"], {"n": 0, "cost_usd": 0.0})
+                m["n"] += r["n"]
+                m["cost_usd"] += r["c"] or 0
+            if r["origin"]:
+                k["origins"][r["origin"]] = k["origins"].get(r["origin"], 0) + r["n"]
+            first = min(first, r["first"]) if first else r["first"]
+        return {"since": since, "first": first, "kinds": kinds}
 
     def _migrate_people(self) -> None:
         """One note per address (notes) -> one person per note, reachable by that address. Runs
@@ -636,6 +721,11 @@ class Store:
             db.execute("INSERT INTO asks (item_id, role, text, extra, at, author) "
                        "VALUES (?,?,?,?,?,?)",
                        (item_id, role, text, json.dumps(extra or {}), now(), author))
+            if role == "assistant":
+                cost = (extra or {}).get("cost_usd")
+                self._log_usage(db, "ask", item_id.partition(":")[0],
+                                str((extra or {}).get("model", "")),
+                                cost if isinstance(cost, (int, float)) else 0)
 
     def situation(self) -> list[dict]:
         """Oldest first: {"id", "text", "author", "created_at", "updated_at"}."""
@@ -725,6 +815,11 @@ class Store:
         ).fetchall()
         return [Item.from_dict(json.loads(r["data"])) for r in rows]
 
+    def triage_for(self, item_id: str) -> Triage | None:
+        r = self.db.execute(f"SELECT {','.join(TRIAGE_FIELDS)} FROM triage WHERE item_id=?",
+                            (item_id,)).fetchone()
+        return Triage(**{f: r[f] for f in TRIAGE_FIELDS}) if r else None
+
     def save_triage(self, t: Triage) -> None:
         with self.tx() as db:
             db.execute(
@@ -733,6 +828,8 @@ class Store:
                 tuple(getattr(t, f) for f in TRIAGE_FIELDS),
             )
             db.execute("DELETE FROM triage_failures WHERE item_id=?", (t.item_id,))
+            self._log_usage(db, "rank", t.item_id.partition(":")[0], t.model_served or t.model,
+                            t.cost_usd, t.tokens_in, t.tokens_out)
 
     def record_failure(self, item: Item, prompt_version: str, kind: str, error: str) -> None:
         """Count attempts per (item state, prompt version); a new message or prompt resets it."""

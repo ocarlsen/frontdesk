@@ -182,6 +182,8 @@ def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
     result = {"status": "done", "kind": "draft", "draft_id": d.draft_id, "url": d.url,
               "body_sha256": sha}
     store.finish_action(action_id, "done", result)
+    from .usage import origin_of
+    store.log_usage("draft", source=item.source, origin=origin_of(store, item, body))
     return result
 
 

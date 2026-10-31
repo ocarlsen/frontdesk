@@ -345,7 +345,8 @@ def gmail_draft(db_path: Path, settings: dict, item_id: str,
                                      "url": drafting.draft_url(item.account, d["message_id"])}}
 
 
-def search_gmail(settings: dict, query: str, client_factory=None) -> tuple[int, dict]:
+def search_gmail(settings: dict, query: str, client_factory=None,
+                 db_path: Path | None = None) -> tuple[int, dict]:
     """GET /api/search: all of Gmail (archived too) for `query`, read-only token, nothing stored
     and nothing sent to a model. Never opens a consent flow."""
     import requests
@@ -360,7 +361,14 @@ def search_gmail(settings: dict, query: str, client_factory=None) -> tuple[int, 
         return HTTPStatus.OK, {"results": [], "demo": True}
     try:
         gmail = (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
-        return HTTPStatus.OK, {"results": search(gmail, query)}
+        results = search(gmail, query)
+        if db_path is not None:
+            store = Store(db_path)
+            try:
+                store.log_usage("search", source="gmail")
+            finally:
+                store.db.close()
+        return HTTPStatus.OK, {"results": results}
     except AuthError as e:
         return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
     except (GmailError, requests.RequestException):
@@ -433,6 +441,7 @@ def keep_result(db_path: Path, settings: dict, item_id: str, client_factory=None
     store = Store(db_path)
     try:
         store.keep(item)
+        store.log_usage("keep", source="gmail")
         profile = settings.get("owner_profile", "")
         version = triage.prompt_version(profile)
         try:
@@ -793,7 +802,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 code, out = search_thread(settings or {}, parse_qs(query).get("id", [""])[0])
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/search":
-                code, out = search_gmail(settings or {}, parse_qs(query).get("q", [""])[0])
+                code, out = search_gmail(settings or {}, parse_qs(query).get("q", [""])[0],
+                                         db_path=db_path)
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/gmail-draft":
                 code, out = gmail_draft(db_path, settings or {},

@@ -160,7 +160,8 @@ def test_two_stores_migrating_at_once_create_no_duplicates(tmp_path):
     s = Store(db)
     assert len(people_rows(s)) == 2
     assert s.db.execute("SELECT COUNT(*) FROM addresses").fetchone()[0] == 2
-    assert s.db.execute("SELECT COUNT(*) FROM meta").fetchone()[0] == 1
+    for marker in (store_mod.PEOPLE_MARKER, store_mod.USAGE_MARKER):   # each written once
+        assert s.db.execute("SELECT COUNT(*) FROM meta WHERE key=?", (marker,)).fetchone()[0] == 1
 
 
 def test_many_stores_opening_one_old_file_at_once(tmp_path):

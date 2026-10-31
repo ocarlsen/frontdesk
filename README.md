@@ -50,6 +50,11 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   tightens the reply. Each answer resets the box to the built-in question.
 - **Auto-sync** every 15 minutes (`auto_sync_minutes`), and Gmail-style keyboard shortcuts (`?`):
   `j`/`k` move, `o` opens, `e` archives (or marks a Slack thread done), `s` stars, `r` replies.
+- **Stats:** `frontdesk stats [--days N] [--json]` shows what FrontDesk did and what it cost:
+  threads ranked and cost per thread by model, Ask answers, drafts saved and replies sent (with the
+  share sent as FrontDesk proposed, as Ask drafted, edited, or written from scratch), searches and
+  keeps. It counts from the first run that has it, seeded from the rankings and answers already
+  stored.
 - **Search** with `/`: typing filters the synced threads; Enter also searches all of Gmail
   (archived mail too, Gmail's operators work) with the read-only token and lists up to 20 threads
   FrontDesk has not synced, unranked and unstored. Open one to read it in place (plain text,
@@ -177,7 +182,10 @@ forged quote placed at the very top of a message survives quote stripping.
 ## Data handling
 
 - Stored locally in `~/.frontdesk` (mode 0700): the SQLite database, your Google OAuth client and
-  token, optional `settings.json`.
+  token, optional `settings.json`. The database includes an append-only usage log for
+  `frontdesk stats`: counts and model costs only (rankings, Ask answers, drafts saved, replies
+  sent and whether each went out as FrontDesk wrote it, searches, keeps), no mail text, addresses
+  or thread ids.
 - **Sent off the machine:** the text of each thread, to the model vendor you configure; and the
   searches you run against all of Gmail, to Google (results are shown, never stored or sent to a
   model). Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.

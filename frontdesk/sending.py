@@ -133,6 +133,9 @@ def prepare(store: Store, item_id: str, body: str, seen_updated_at: str,
         p = {"raw": base64.urlsafe_b64encode(msg.as_bytes()).decode(),
              "thread_id": ctx["thread_id"], "to": ctx["to"], "cc": ctx["cc"],
              "subject": ctx["subject"], "body_sha256": sha, "seen_updated_at": seen_updated_at}
+    from .usage import origin_of
+    p["origin"] = origin_of(store, item, body)   # for the usage log; the verdict, not the text
+    p["source_kind"] = item.source
     action_id = store.begin_action(key, item_id, "send", {})
     store.finish_action(action_id, "prepared", p)
     return {"action_id": action_id, "to": p["to"], "cc": p["cc"], "subject": p["subject"],
@@ -217,5 +220,8 @@ def dispatch_due(store: Store, gmail_factory, now: datetime | None = None,
             except requests.RequestException:
                 result = "unknown"   # it may have gone out; never resend blindly
         store.finish_action(row["id"], result, p)
+        if result == "sent":
+            store.log_usage("send", source=p.get("source_kind", p.get("source", "")),
+                            origin=p.get("origin", ""))
         out.append((row["id"], result))
     return out
