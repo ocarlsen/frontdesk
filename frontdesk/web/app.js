@@ -188,12 +188,13 @@ function buildDetail(item, triage) {
     send.disabled = save.disabled;
     hint.textContent = open.length ? "Fill in " + open.join(", ") + " before saving." : "";
   };
-  ta.addEventListener("input", () => {
+  const edited = () => {
     // Editing after a save or a cancelled send means there is something new to save or send.
     save.textContent = "Save as Gmail draft";
     send.textContent = "Send...";
     refresh();
-  });
+  };
+  ta.addEventListener("input", edited);
   refresh();
   save.addEventListener("click", () => saveDraft(item, ta, save));
   const copy = el("button", "btn", "Copy");
@@ -208,9 +209,11 @@ function buildDetail(item, triage) {
     }
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
-  reply.append(head, label, ta, hint);
+  const draftNote = el("p", "hint draftnote");
+  reply.append(head, label, ta, hint, draftNote);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
+  if (isGmail && !STATIC) loadGmailDraft(item, { ta, label, save, proposed, draftNote, edited });
   if (isGmail) replyGroup.append(save);
   replyGroup.append(send, copy);
   if (triage) {
@@ -248,11 +251,22 @@ function buildDetail(item, triage) {
     threadGroup.append(doneBtn);
   }
   const url = safeOpenUrl(item.url);
-  if (url) {
-    const a = el("a", "openlink", item.source === "slack" ? "Open in Slack" : "Open in Gmail");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
+  // The demo always shows the link (its Slack threads have no real workspace URL).
+  if (url || STATIC) {
+    const where = item.source === "slack" ? "Slack" : "Gmail";
+    const a = el("a", "openlink", "Open in " + where);
+    if (STATIC) {
+      // The demo's threads are synthetic, so the real link would land on an error page. Keep the
+      // link looking and acting like one, and say what it does in the live app.
+      const note = "Demo: in the live app this opens the thread in " + where + ".";
+      a.href = "#";
+      a.title = note;
+      a.addEventListener("click", ev => { ev.preventDefault(); toast(note); });
+    } else {
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
     threadGroup.append(a);
   }
   for (const g of [replyGroup, threadGroup]) if (g.childNodes.length) actions.append(g);
@@ -480,6 +494,30 @@ async function finishSend(item, actionId, c, btn) {
   toast("Still sending; check Gmail's Sent folder.");
 }
 
+// The thread's unsent Gmail draft, read from Gmail when the thread opens (FrontDesk keeps no
+// copy, so an edit made in Gmail is what shows here). It replaces the proposal only if the box
+// is untouched: nothing the owner has typed is ever overwritten.
+async function loadGmailDraft(item, ui) {
+  let out = null, error = "";
+  try {
+    const res = await fetch("/api/gmail-draft?item=" + encodeURIComponent(item.id), { cache: "no-store" });
+    out = await res.json();
+    if (!res.ok) error = (out && out.error) || ("HTTP " + res.status);
+  } catch (e) { error = e.message; }
+  if (error) {
+    ui.draftNote.textContent = "Couldn't check Gmail for a saved draft: " + error;
+    return;
+  }
+  const d = out && out.draft;
+  if (!d || typeof d.body !== "string" || !d.body.trim() || ui.ta.value !== ui.proposed) return;
+  ui.ta.value = d.body;
+  ui.label.textContent = "Your Gmail draft: edit, then save or send";
+  ui.edited();
+  fitText(ui.ta);
+  ui.save.textContent = "Saved";
+  ui.save.disabled = true;
+}
+
 async function saveDraft(item, ta, btn) {
   btn.disabled = true;
   const label = btn.textContent;
@@ -597,6 +635,11 @@ const STAR_SLACK_NOTE = "Starred in FrontDesk only: Slack has no supported API f
   "message for later, so nothing changes in Slack";
 const starButtons = new Map();   // item id -> its star buttons (row and detail)
 let view = "all";                // "all" | "starred"
+// Search: `query` filters the synced threads as you type; Enter also asks Gmail (all mail,
+// archived too) through GET /api/search. gmailSearch holds that answer for one query:
+// {q, loading} | {q, results, demo} | {q, error}. Results live in this tab only.
+let query = "";
+let gmailSearch = null;
 
 function paintStar(b, on, pending, item) {
   b.textContent = b.classList.contains("star") ? (on ? "\u2605" : "\u2606") : (on ? "\u2605 Starred" : "\u2606 Star");
@@ -1193,6 +1236,7 @@ function render(rows) {
   main.replaceChildren();
   counts.replaceChildren();
   starButtons.clear();
+  if (query) { renderSearch(rows, main, counts); return; }
   const starred = rows.filter(r => r.item.starred);
 
   if (view === "starred") {
@@ -1256,6 +1300,125 @@ function render(rows) {
     main.append(sec);
   }
   counts.append(starredToggle(starred.length));
+}
+
+// ---- Search ----
+function matches(r, q) {
+  const t = r.triage || {};
+  const hay = [r.item.subject, t.summary, t.reason,
+               ...(r.item.messages || []).flatMap(m => [m.sender, m.body])].join("\n").toLowerCase();
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+
+function buildResultCard(r) {
+  // A thread Gmail's search found that FrontDesk has not synced: not ranked, not stored, so no
+  // dot colour, reason or actions. Opening it opens Gmail.
+  const li = el("li", "card result");
+  li.dataset.id = r.id;
+  if (r.unread) li.classList.add("unread");
+  const row = el("button", "row");
+  row.type = "button";
+  const dot = el("span", "dot none");
+  dot.title = "Not ranked: found by search";
+  const meta = el("span", "meta");
+  const line1 = el("span", "line1");
+  line1.append(el("span", "sender", r.from_me ? "me" : senderName(r.sender || "")),
+               el("span", "subject", r.subject || "(no subject)"));
+  const n = Number(r.messages) || 1;
+  meta.append(line1, el("span", "reason", (r.in_inbox ? "In the inbox" : "Archived") + ", " + n +
+                                          (n === 1 ? " message" : " messages") + ". Opens in Gmail."));
+  const when = el("span", "when", relTime(r.updated_at));
+  when.title = absTime(r.updated_at);
+  row.append(dot, meta, when);
+  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li); });
+  row.addEventListener("click", () => {
+    setCurrent(li);
+    const u = safeOpenUrl(r.url);
+    if (u) window.open(u, "_blank", "noopener");
+  });
+  li.append(row);
+  return li;
+}
+
+function renderSearch(rows, main, counts) {
+  const local = rows.filter(r => (!r.item.hidden || r.item.starred) && matches(r, query));
+  const c = el("li");
+  c.append(el("b", null, String(local.length)), document.createTextNode(" in FrontDesk"));
+  counts.append(c);
+  const sec = el("section", "searchres");
+  sec.setAttribute("aria-label", "Search results");
+  const head = el("div", "sechead");
+  const clear = el("button", "linkbtn", "Clear search (Esc)");
+  clear.type = "button";
+  clear.addEventListener("click", clearSearch);
+  head.append(el("h2", null, "Search: " + query), clear);
+  sec.append(head, el("h3", null, "In FrontDesk (" + local.length + ")"));
+  if (local.length) {
+    const ul = el("ul", "list");
+    for (const r of local) ul.append(buildCard(r.item, r.triage));
+    sec.append(ul);
+  } else {
+    sec.append(el("p", "status", "No synced thread matches."));
+  }
+  const g = gmailSearch && gmailSearch.q === query ? gmailSearch : null;
+  const known = new Set(rows.map(r => r.item.id));
+  const found = g && g.results ? g.results.filter(r => !known.has(r.id)) : [];
+  sec.append(el("h3", null, "All of Gmail" + (g && g.results ? " (" + found.length + ")" : "")));
+  let note = null;
+  if (STATIC) note = "Searching all of Gmail runs against your own account in the live app.";
+  else if (!g) note = "Press Enter to search all of Gmail, archived mail included.";
+  else if (g.loading) note = "Searching Gmail\u2026";
+  else if (g.error) note = "Couldn't search Gmail: " + g.error;
+  else if (g.demo) note = "Searching all of Gmail is off in demo mode.";
+  else if (!found.length) note = "No other matches in Gmail.";
+  if (note) sec.append(el("p", "status", note));
+  if (found.length) {
+    const ul = el("ul", "list");
+    for (const r of found) ul.append(buildResultCard(r));
+    sec.append(ul);
+    if (g.results.length >= 20) {
+      sec.append(el("p", "kbdhint", "The 20 newest matches. Narrow it with Gmail's operators, " +
+                                    "such as from:, before: or has:attachment."));
+    }
+  }
+  main.append(sec);
+}
+
+async function searchGmail(q) {
+  if (STATIC || !q) { render(window.__items || []); return; }
+  gmailSearch = { q, loading: true };
+  render(window.__items || []);
+  let next;
+  try {
+    const res = await fetch("/api/search?q=" + encodeURIComponent(q), { cache: "no-store" });
+    const out = await res.json();
+    if (!res.ok) throw new Error((out && out.error) || "HTTP " + res.status);
+    next = { q, results: Array.isArray(out.results) ? out.results : [], demo: !!out.demo };
+  } catch (e) {
+    next = { q, error: e.message };
+  }
+  if (!gmailSearch || gmailSearch.q !== q) return;   // a newer search replaced this one
+  gmailSearch = next;
+  if (query === q) render(window.__items || []);
+}
+
+function clearSearch() {
+  const box = document.getElementById("search");
+  if (box) { box.value = ""; box.blur(); }
+  if (!query && !gmailSearch) return;
+  query = "";
+  gmailSearch = null;
+  render(window.__items || []);
+}
+
+function setupSearch() {
+  const box = document.getElementById("search");
+  if (!box) return;
+  box.addEventListener("input", () => { query = box.value.trim(); render(window.__items || []); });
+  box.addEventListener("keydown", e => {
+    // Enter searches Gmail and leaves the box, as Gmail does, so j/k move through the results.
+    if (e.key === "Enter") { e.preventDefault(); box.blur(); searchGmail(query); }
+  });
 }
 
 async function load() {
@@ -1670,6 +1833,7 @@ function mergeStep(li, p, others, act, reload) {
 // ---- Keyboard shortcuts, after Gmail's: j/k move, o or Enter open and close, u only closes, e archive,
 // r reply, m memory, ? help. Never while typing in a box, and never with Ctrl/Cmd/Alt held.
 const SHORTCUTS = [
+  ["/", "Search: type to filter, Enter searches all of Gmail"],
   ["j / k", "Next / previous thread"],
   ["o or Enter", "Open the thread; press again to close it"],
   ["u", "Close the thread (never opens one)"],
@@ -1761,6 +1925,9 @@ function onKey(e) {
   const typing = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" ||
                        t.tagName === "SELECT" || t.isContentEditable);
   if (e.key === "Escape") {
+    if (t && t.id === "search") { clearSearch(); return; }
+    if (!typing && query && document.getElementById("help").hidden &&
+        document.getElementById("profilepanel").hidden) { clearSearch(); return; }
     if (typing) t.blur();
     for (const s of document.querySelectorAll(".peoplestrip")) if (s.closeEditor) s.closeEditor();
     toggleHelp(false);
@@ -1769,7 +1936,14 @@ function onKey(e) {
   }
   if (typing) return;
   const li = currentCard();
+  // A search result is not a stored thread: only moving and opening apply to it.
+  if (li && li.classList.contains("result") && "esvru".includes(e.key)) return;
   switch (e.key) {
+    case "/": {
+      const box = document.getElementById("search");
+      if (box) { box.focus(); box.select(); }
+      break;
+    }
     case "j": move(1); break;
     case "k": move(-1); break;
     case "o":
@@ -1864,6 +2038,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("profile").addEventListener("click", openProfile);
   document.getElementById("memory").addEventListener("click", openMemory);
   buildHelp();
+  setupSearch();
   document.addEventListener("keydown", onKey);
   load();
   pollStatus();

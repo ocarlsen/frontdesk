@@ -448,3 +448,77 @@ const turns = vm.runInContext("groupTurns", ctx)([
   { role: "owner", text: "Next?", author: "owner" }, { role: "assistant", text: "A3" }]);
 if (turns.length !== 2 || turns[0].entries.length !== 4) throw new Error("turn grouping");
 console.log("turns ok");
+// ---- A saved Gmail draft is read from Gmail when the thread opens and fills the reply box,
+// unless the owner has already typed; a failed check says so instead of failing silently.
+{
+  const findTa = d => all(d).find(n => n.tagName === "TEXTAREA" && n.placeholder === "Write a reply");
+  const findBtn = (d, t) => all(d).find(n => n.tagName === "BUTTON" && n.textContent === t);
+  const drafts = [];
+  ctx.fetch = async url => {
+    if (String(url).startsWith("/api/gmail-draft?")) { drafts.push(url);
+      return { ok: true, json: async () => ({ draft: { body: "My edited draft.\n\nBest,\nAlex", url: "x" } }) }; }
+    return { ok: true, json: async () => [] };
+  };
+  const d1 = fn("buildDetail")(item, triage);
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (drafts.length !== 1 || !drafts[0].includes("item=gmail%3At1")) throw new Error("draft fetch: " + drafts);
+  if (findTa(d1).value !== "My edited draft.\n\nBest,\nAlex") throw new Error("draft not loaded: " + findTa(d1).value);
+  if (!texts(d1).includes("Your Gmail draft: edit, then save or send")) throw new Error("draft label");
+  const saved = findBtn(d1, "Saved");
+  if (!saved || !saved.disabled) throw new Error("a loaded draft starts as Saved");
+  // Typed before Gmail answered: kept.
+  let release;
+  ctx.fetch = async url => {
+    if (String(url).startsWith("/api/gmail-draft?")) { await new Promise(r => { release = r; });
+      return { ok: true, json: async () => ({ draft: { body: "Old draft.", url: "x" } }) }; }
+    return { ok: true, json: async () => [] };
+  };
+  const d2 = fn("buildDetail")(item, triage);
+  findTa(d2).value = "I am typing.";
+  await new Promise(r => setTimeout(r, 0)); release(); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (findTa(d2).value !== "I am typing.") throw new Error("a loaded draft overwrote typing");
+  // Gmail unreachable: the proposal stays and a note says why.
+  ctx.fetch = async url => String(url).startsWith("/api/gmail-draft?")
+    ? { ok: false, status: 502, json: async () => ({ error: "Gmail did not answer" }) }
+    : { ok: true, json: async () => [] };
+  const d3 = fn("buildDetail")(item, triage);
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  if (findTa(d3).value !== "Yes.") throw new Error("proposal lost on a failed draft check");
+  if (!texts(d3).includes("Couldn't check Gmail for a saved draft: Gmail did not answer")) throw new Error("silent draft failure");
+  // Slack threads never ask Gmail.
+  drafts.length = 0;
+  ctx.fetch = async url => { if (String(url).startsWith("/api/gmail-draft?")) drafts.push(url); return { ok: true, json: async () => [] }; };
+  fn("buildDetail")({ ...item, id: "slack:C1:1", source: "slack" }, triage);
+  await new Promise(r => setTimeout(r, 0));
+  if (drafts.length) throw new Error("a Slack thread asked Gmail for a draft");
+}
+console.log("drafts ok");
+// ---- Search: typing filters synced threads; Gmail results show beside them, unranked, and a
+// thread already in FrontDesk is not listed twice.
+{
+  const rows = [{ item, triage }, { item: { ...item, id: "gmail:t2", subject: "Invoice", messages: [] }, triage: null }];
+  vm.runInContext("query = 'lunch'; gmailSearch = null", ctx);
+  let main = new Node("main"), counts = new Node("ul");
+  fn("renderSearch")(rows, main, counts);
+  let tx = texts(main);
+  if (!tx.includes("In FrontDesk (1)") || !tx.includes("Lunch") || tx.includes("Invoice"))
+    throw new Error("local search filter: " + tx.join("|"));
+  if (!tx.includes("Press Enter to search all of Gmail, archived mail included.")) throw new Error("search hint");
+  vm.runInContext(`gmailSearch = { q: 'lunch', results: [
+    { id: 'gmail:t1', subject: 'Lunch', sender: 'Ann <ann@example.com>', updated_at: '2026-10-01T00:00:00Z', messages: 1 },
+    { id: 'gmail:old', subject: 'Lunch in 2024', sender: 'Bo <bo@example.com>', updated_at: '2024-01-01T00:00:00Z',
+      messages: 3, in_inbox: false, url: 'https://mail.google.com/mail/?authuser=x#all/old' }] }`, ctx);
+  main = new Node("main"); counts = new Node("ul");
+  fn("renderSearch")(rows, main, counts);
+  tx = texts(main);
+  if (!tx.includes("All of Gmail (1)") || !tx.includes("Lunch in 2024") || !tx.includes("Archived, 3 messages. Opens in Gmail."))
+    throw new Error("gmail results: " + tx.join("|"));
+  const res = all(main).filter(n => (n.className || "").split(" ").includes("result"));
+  if (res.length !== 1) throw new Error("a synced thread was listed twice");
+  vm.runInContext("gmailSearch = { q: 'lunch', error: 'Gmail did not answer' }", ctx);
+  main = new Node("main");
+  fn("renderSearch")(rows, main, new Node("ul"));
+  if (!texts(main).includes("Couldn't search Gmail: Gmail did not answer")) throw new Error("silent search failure");
+  vm.runInContext("query = ''; gmailSearch = null", ctx);
+}
+console.log("search ok");

@@ -50,6 +50,9 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   tightens the reply. Each answer resets the box to the built-in question.
 - **Auto-sync** every 15 minutes (`auto_sync_minutes`), and Gmail-style keyboard shortcuts (`?`):
   `j`/`k` move, `o` opens, `e` archives (or marks a Slack thread done), `s` stars, `r` replies.
+- **Search** with `/`: typing filters the synced threads; Enter also searches all of Gmail
+  (archived mail too, Gmail's operators work) with the read-only token and lists up to 20 threads
+  FrontDesk has not synced, unranked and unstored, each opening in Gmail. Esc clears it.
 - **Star** a thread from its row, its detail view or with `s`. On Gmail it is Gmail's own star
   (the `STARRED` label, through the actions permission), so it shows in Gmail too. The star count
   in the header opens a **Starred** view; a starred Gmail thread you archive or mark done stays
@@ -173,8 +176,9 @@ forged quote placed at the very top of a message survives quote stripping.
 
 - Stored locally in `~/.frontdesk` (mode 0700): the SQLite database, your Google OAuth client and
   token, optional `settings.json`.
-- **Sent off the machine:** the text of each thread, to the model vendor you configure, and nothing
-  else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
+- **Sent off the machine:** the text of each thread, to the model vendor you configure; and the
+  searches you run against all of Gmail, to Google (results are shown, never stored or sent to a
+  model). Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
 - The model API key is read at call time from `ANTHROPIC_API_KEY` or, on macOS, the Keychain item
   `frontdesk-anthropic`. It is never written to disk by FrontDesk.
 
