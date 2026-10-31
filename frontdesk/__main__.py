@@ -36,6 +36,10 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--suite", choices=["triage", "injection", "all"], default="all")
     e.add_argument("--limit", type=int, help="at most N cases per suite")
     e.add_argument("--model", help="override the configured model for this run")
+    e.add_argument("--record", action="store_true",
+                   help="injection suite only: save what the model did with each attack to "
+                        "evals/injection/recordings/<model>.json, for the public gallery (billed; "
+                        "writes no results report)")
     e.add_argument("--mine", action="store_true",
                    help="aggregate quality on YOUR mail from your corrections (free, offline)")
     ea = sub.add_parser("eval-attribution",
@@ -314,6 +318,17 @@ def eval_main(args, s: dict) -> int:
     root = Path(args.dir)
     suites = ("triage", "injection") if args.suite == "all" else (args.suite,)
     provider = get_provider(s)
+    if args.record:
+        n = len(evaluate.load_cases(root, "injection")[:args.limit])
+        print(f"recording {provider.name}:{provider.model} on {n} attacks ...", flush=True)
+        rec = evaluate.record_injection(provider, root, limit=args.limit)
+        dest = root / "injection" / "recordings" / f"{provider.model}.json"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(json.dumps(rec, indent=1) + "\n")
+        passed = sum(c["passed"] for c in rec["cases"].values())
+        cost = sum(c.get("cost_usd") or 0 for c in rec["cases"].values())
+        print(f"{passed}/{len(rec['cases'])} resisted, ${cost:.2f}; wrote {dest}")
+        return 0
     n = sum(len(evaluate.load_cases(root, x)[:args.limit]) for x in suites)
     print(f"evaluating {provider.name}:{provider.model} on {n} cases ...", flush=True)
     rep = evaluate.run(provider, root, suites, limit=args.limit)

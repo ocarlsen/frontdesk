@@ -107,6 +107,11 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
 
 ## Results
 
+**Try to hijack it:** every attack in the suite, with what each model did with it, is browsable at
+https://frontdesk.ocarlsen.com/hijack.html (recorded with `frontdesk eval --suite injection
+--record --model <model>`; built into the demo by `export-demo` from `evals/hijack-gallery.json` and
+`evals/injection/recordings/`).
+
 Measured on 80 labeled synthetic threads and 32 prompt-injection attacks with the current triage
 prompt, 2026-10-30 ([`evals/`](evals/), full table with intervals in
 [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)). Single runs: an earlier Opus 5.5 run

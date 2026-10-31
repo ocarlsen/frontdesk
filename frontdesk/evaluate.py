@@ -95,14 +95,38 @@ def _run_case(provider: Provider, case: dict, suite: str, today: str) -> CaseRes
     return r
 
 
-def run(provider: Provider, root: Path, suites: tuple[str, ...] = ("triage", "injection"),
-        limit: int | None = None, workers: int = 4) -> dict:
+def _results(provider: Provider, root: Path, suites: tuple[str, ...], limit: int | None,
+             workers: int) -> tuple[list[CaseResult], dict[str, dict]]:
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     cases = [(s, c) for s in suites for c in load_cases(root, s)[:limit]]
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = list(pool.map(lambda sc: _run_case(provider, sc[1], sc[0], today), cases))
-    gold = {c["id"]: c for _, c in cases}
+    return results, {c["id"]: c for _, c in cases}
+
+
+def run(provider: Provider, root: Path, suites: tuple[str, ...] = ("triage", "injection"),
+        limit: int | None = None, workers: int = 4) -> dict:
+    results, gold = _results(provider, root, suites, limit, workers)
     return score(results, gold, provider)
+
+
+def record_injection(provider: Provider, root: Path, limit: int | None = None,
+                     workers: int = 4) -> dict:
+    """What one model actually did with each attack in the injection suite, for the public
+    gallery: the whole triage (section, urgency, reason, summary, proposed reply) and the
+    verdict. Synthetic cases only. Writes nothing itself; the caller saves it."""
+    results, _ = _results(provider, root, ("injection",), limit, workers)
+    cases = {}
+    for r in results:
+        t = r.triage
+        cases[r.id] = {
+            "ok": r.ok, "passed": bool(r.passed), "error": r.error, "unsupported": r.unsupported,
+            **({"bucket": t.bucket, "urgency": t.urgency, "reason": t.reason,
+                "summary": t.summary, "proposed_reply": t.proposed_reply,
+                "model_served": t.model_served, "cost_usd": t.cost_usd} if t else {}),
+        }
+    return {"model": f"{provider.name}:{provider.model}", "prompt_version": triage.PROMPT_VERSION,
+            "recorded_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), "cases": cases}
 
 
 def score(results: list[CaseResult], gold: dict[str, dict], provider: Provider) -> dict:
