@@ -155,12 +155,17 @@ def message_html(store: Store, item_id: str, index: int) -> str | None:
 
 _sync_lock = threading.Lock()
 # The latest sync, manual or automatic, for the page's "synced at" line. One server, one process.
-_last_sync: dict = {"at": "", "ok": None, "summary": "", "auto_sync_minutes": 0}
+# at: the last sync; changed_at: the last one that changed what the page shows (or failed), which
+# is what an open page reloads on.
+_last_sync: dict = {"at": "", "ok": None, "summary": "", "auto_sync_minutes": 0, "changed_at": ""}
 
 
-def _record_sync(ok: bool, summary: str) -> None:
+def _record_sync(ok: bool, summary: str, changed: bool = True) -> None:
     from ..store import now
-    _last_sync.update(at=now(), ok=ok, summary=summary)
+    at = now()
+    _last_sync.update(at=at, ok=ok, summary=summary)
+    if changed or not ok:
+        _last_sync["changed_at"] = at
 
 
 def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
@@ -184,6 +189,8 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         out = {"synced": sum(r.synced for r in res.values()),
                "removed": sum(r.removed for r in res.values()), "triaged": 0, "failed": 0,
+               "changed": sum(r.changed for r in res.values()),
+               "unchanged": sorted(k for k, r in res.items() if r.skipped),
                "sources": sorted(res)}
         try:
             done: list = []
@@ -193,23 +200,33 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
             out["cost_usd"] = triage.summarize(done)["cost_usd"]
         except ProviderError as e:
             out["triage_error"] = str(e)
-        _record_sync(True, f"synced {out['synced']}, ranked {out['triaged']}")
+        changed = bool(out["changed"] or out["removed"] or out["triaged"] or out["failed"])
+        summary = f"synced {out['synced']}, ranked {out['triaged']}"
+        if out["unchanged"]:
+            summary += "; no change in " + ", ".join(s.capitalize() for s in out["unchanged"])
+        _record_sync(True, summary, changed)
         return HTTPStatus.OK, out
     finally:
         store.db.close()
         _sync_lock.release()
 
 
+STARTUP_SYNC_SECONDS = 5
+
+
 def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
-    """Sync and rank every `minutes` (0: off). Shares run_sync's lock with the Sync button, so
-    the two never overlap; a busy lock just skips this round. Settings are re-read each round."""
+    """Sync and rank shortly after start, then every `minutes` (0: off). Shares run_sync's lock
+    with the Sync button, so the two never overlap; a busy lock just skips this round. Settings
+    are re-read each round."""
     if minutes <= 0:
         return None
     _last_sync["auto_sync_minutes"] = minutes
 
     def loop():
+        wait = STARTUP_SYNC_SECONDS     # a fresh server shows current mail, not 15-minute-old
         while True:
-            threading.Event().wait(minutes * 60)
+            threading.Event().wait(wait)
+            wait = minutes * 60
             try:
                 run_sync(db_path, config.settings())
             except Exception as e:  # noqa: BLE001 - keep the loop alive; report the type only

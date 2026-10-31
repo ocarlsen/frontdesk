@@ -192,12 +192,20 @@ def test_ask_payload_carries_the_built_in_question(tmp_path):
 class SyncGmail:
     """Listing answers per query; get_thread from a dict of raw threads."""
 
-    def __init__(self, inbox, starred, threads, fail_starred=False):
+    _snapshots = iter(range(1, 10**6))
+
+    def __init__(self, inbox, starred, threads, fail_starred=False, history=None):
+        """Each instance is a mailbox snapshot: a new historyId unless one is given."""
         self.inbox, self.starred, self.threads = inbox, starred, threads
         self.fail_starred = fail_starred
+        self.history = history or str(next(SyncGmail._snapshots))
+        self.fetched: list[str] = []
 
     def profile_email(self):
         return "owner@example.com"
+
+    def profile(self):
+        return {"emailAddress": "owner@example.com", "historyId": self.history}
 
     def list_thread_ids(self, query, max_threads):
         if query == "is:starred":
@@ -207,6 +215,7 @@ class SyncGmail:
         return list(self.inbox)
 
     def get_thread(self, tid):
+        self.fetched.append(tid)
         return self.threads[tid]
 
 
@@ -286,3 +295,58 @@ def test_a_non_inbox_query_keeps_threads_without_the_inbox_label(tmp_path, monke
     gsync.sync(store, {"gmail_query": "label:work newer_than:7d", "gmail_max_threads": 50},
                log=lambda *_: None)
     assert store.get_item("gmail:w") is not None
+
+
+# ---- skip when nothing changed (Gmail's historyId) ----------------------------------------
+
+def test_an_unchanged_mailbox_is_not_fetched_again(tmp_path, monkeypatch):
+    store = Store(tmp_path / "h.db")
+    threads = {"a": _raw("a", ["INBOX"]), "b": _raw("b", ["INBOX"])}
+    first = SyncGmail("ab", "", threads, history="100")
+    res = _sync(monkeypatch, store, first)
+    assert (res.synced, res.changed, res.skipped) == (2, 2, False)
+    same = SyncGmail("ab", "", threads, history="100")
+    res = _sync(monkeypatch, store, same)
+    assert res.skipped and same.fetched == []                       # one profile call, no fetches
+    moved = SyncGmail("ab", "", threads, history="101")             # something changed in Gmail
+    res = _sync(monkeypatch, store, moved)
+    assert not res.skipped and sorted(moved.fetched) == ["a", "b"]
+    assert res.changed == 0                                         # same threads: nothing new
+
+
+def test_a_failed_fetch_is_retried_next_time(tmp_path, monkeypatch):
+    store = Store(tmp_path / "r.db")
+    threads = {"a": _raw("a", ["INBOX"])}
+
+    class Flaky(SyncGmail):
+        def get_thread(self, tid):
+            raise GmailError(500, "threads", "x")
+    _sync(monkeypatch, store, Flaky("a", "", threads, history="7"))
+    again = SyncGmail("a", "", threads, history="7")
+    res = _sync(monkeypatch, store, again)
+    assert not res.skipped and again.fetched == ["a"]
+
+
+def test_a_new_query_or_kept_thread_is_not_skipped(tmp_path, monkeypatch):
+    from frontdesk.gmail import sync as gsync
+    store = Store(tmp_path / "q.db")
+    threads = {"a": _raw("a", ["INBOX"]), "k": _raw("k", [])}
+    _sync(monkeypatch, store, SyncGmail("a", "", threads, history="5"))
+    store.keep(thread_to_item(threads["k"], "owner@example.com"))
+    res = _sync(monkeypatch, store, SyncGmail("a", "", threads, history="5"))
+    assert not res.skipped                                          # a thread was kept since
+    fake = SyncGmail("a", "", threads, history="5")
+    monkeypatch.setattr(gsync, "GmailClient", lambda creds: fake)
+    res = gsync.sync(store, {"gmail_query": "in:inbox newer_than:7d", "gmail_max_threads": 50},
+                     log=lambda *_: None)
+    assert not res.skipped                                          # the query changed
+
+
+def test_upsert_reports_whether_anything_changed(tmp_path):
+    store = Store(tmp_path / "u.db")
+    item = thread_to_item(_raw("a", ["INBOX"]), "owner@example.com")
+    assert store.upsert_item(item) is True
+    assert store.upsert_item(item) is False
+    item.labels.append("UNREAD")
+    assert store.upsert_item(item) is True
+

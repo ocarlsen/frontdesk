@@ -395,3 +395,34 @@ def test_run_sync_records_the_result(tmp_path, monkeypatch):
     status, out = srv.run_sync(tmp_path / "rs.db", {})
     assert status == 200 and out["synced"] == 2
     assert srv._last_sync["ok"] is True and srv._last_sync["summary"] == "synced 2, ranked 1"
+
+
+def test_the_page_reload_mark_moves_only_when_a_sync_changed_something(tmp_path, monkeypatch):
+    from frontdesk import sources, triage
+    from frontdesk.gmail.sync import SyncResult
+    from frontdesk.web import server as srv
+    monkeypatch.setattr("frontdesk.providers.get_provider", lambda s: object())
+    monkeypatch.setitem(srv._last_sync, "changed_at", "before")
+    # Gmail unchanged (skipped), Slack re-fetched identical threads, nothing to rank.
+    monkeypatch.setattr(sources, "sync_all", lambda *a, **k: {
+        "gmail": SyncResult(0, 0, 0, skipped=True), "slack": SyncResult(3, 0, 0)})
+    monkeypatch.setattr(triage, "run", lambda *a, **k: (0, 0))
+    status, out = srv.run_sync(tmp_path / "c.db", {})
+    assert status == 200 and out["changed"] == 0 and out["unchanged"] == ["gmail"]
+    assert srv._last_sync["changed_at"] == "before"                 # open pages stay as they are
+    assert srv._last_sync["summary"] == "synced 3, ranked 0; no change in Gmail"
+    # One new Slack message: the mark moves, so open pages reload.
+    monkeypatch.setattr(sources, "sync_all", lambda *a, **k: {
+        "gmail": SyncResult(0, 0, 0, skipped=True), "slack": SyncResult(3, 0, 1)})
+    srv.run_sync(tmp_path / "c.db", {})
+    assert srv._last_sync["changed_at"] not in ("before", "")
+    assert srv._last_sync["changed_at"] == srv._last_sync["at"]
+
+
+def test_autosync_runs_soon_after_start(tmp_path, monkeypatch):
+    from frontdesk.web import server as srv
+    ran = threading.Event()
+    monkeypatch.setattr(srv, "STARTUP_SYNC_SECONDS", 0.05)
+    monkeypatch.setattr(srv, "run_sync", lambda db, s: ran.set())
+    srv.start_autosync(tmp_path / "a.db", 15)
+    assert ran.wait(2), "the first sync waited for the 15-minute interval"
