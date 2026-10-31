@@ -8,7 +8,7 @@ import requests
 from frontdesk.gmail.auth import AuthError
 from frontdesk.gmail.client import GmailError
 from frontdesk.gmail.search import thread_row
-from frontdesk.web.server import search_gmail
+from frontdesk.web.server import run_search
 
 ME = "owner@example.com"
 
@@ -57,7 +57,7 @@ def test_archived_thread_is_found_and_marked():
 
 def test_route_passes_the_query_through_fetches_metadata_and_caps_at_20():
     g = G({"t1": {"id": "t1", "messages": [_m("a", 1000, "Ann <ann@example.com>", ["INBOX"])]}})
-    code, out = search_gmail({}, "  from:ann has:attachment ", client_factory=lambda: g)
+    code, out = run_search({}, "  from:ann has:attachment ", client_factory=lambda: g)
     assert code == HTTPStatus.OK and [r["id"] for r in out["results"]] == ["gmail:t1"]
     assert g.calls[0] == ("list", "from:ann has:attachment", 20)
     assert g.calls[1] == ("get", "t1", "metadata")
@@ -65,19 +65,19 @@ def test_route_passes_the_query_through_fetches_metadata_and_caps_at_20():
 
 def test_empty_or_long_query_and_demo_never_reach_gmail():
     g = G()
-    assert search_gmail({}, "   ", client_factory=lambda: g)[0] == HTTPStatus.BAD_REQUEST
-    assert search_gmail({}, "x" * 501, client_factory=lambda: g)[0] == HTTPStatus.BAD_REQUEST
-    assert search_gmail({"demo": True}, "lunch", client_factory=lambda: g) == \
-        (HTTPStatus.OK, {"results": [], "demo": True})
+    assert run_search({}, "   ", client_factory=lambda: g)[0] == HTTPStatus.BAD_REQUEST
+    assert run_search({}, "x" * 501, client_factory=lambda: g)[0] == HTTPStatus.BAD_REQUEST
+    assert run_search({"demo": True}, "lunch", client_factory=lambda: g) == \
+        (HTTPStatus.OK, {"results": [], "demo": True, "slack": None})
     assert g.calls == []
 
 
 def test_failures_are_loud_and_never_echo_gmail_text():
-    code, out = search_gmail({}, "x", client_factory=lambda: G(exc=GmailError(500, "threads", "<body>")))
+    code, out = run_search({}, "x", client_factory=lambda: G(exc=GmailError(500, "threads", "<body>")))
     assert code == HTTPStatus.BAD_GATEWAY and out == {"error": "Gmail did not answer"}
-    code, _ = search_gmail({}, "x", client_factory=lambda: G(exc=requests.ConnectionError("x")))
+    code, _ = run_search({}, "x", client_factory=lambda: G(exc=requests.ConnectionError("x")))
     assert code == HTTPStatus.BAD_GATEWAY
-    code, out = search_gmail({}, "x", client_factory=lambda: G(exc=AuthError("Gmail sign-in needed.")))
+    code, out = run_search({}, "x", client_factory=lambda: G(exc=AuthError("Gmail sign-in needed.")))
     assert code == HTTPStatus.BAD_GATEWAY and "sign-in" in out["error"]
 
 
@@ -125,5 +125,5 @@ def test_a_failed_fetch_fails_the_whole_search_loudly():
 
     ids = [f"t{i:02d}" for i in range(6)]
     threads = {t: {"id": t, "messages": [_m("a", 1000, "Ann <ann@example.com>", ["INBOX"])]} for t in ids}
-    code, out = search_gmail({}, "x", client_factory=lambda: Bad(threads))
+    code, out = run_search({}, "x", client_factory=lambda: Bad(threads))
     assert code == HTTPStatus.BAD_GATEWAY and out == {"error": "Gmail did not answer"}

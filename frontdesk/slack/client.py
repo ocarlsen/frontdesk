@@ -67,6 +67,13 @@ class SlackClient:
             if not cursor:
                 return out
 
+    def search_messages(self, query: str, count: int = 20) -> list[dict]:
+        """search.messages (user token, search:read): the newest `count` matches across every
+        conversation the owner can see, with Slack's own query operators (from:, in:, before:)."""
+        data = self._call("search.messages", {"query": query, "count": count, "sort": "timestamp",
+                                              "sort_dir": "desc", "highlight": "false"})
+        return (data.get("messages") or {}).get("matches", [])
+
     def post_message(self, channel: str, text: str, thread_ts: str | None = None) -> dict:
         """chat.postMessage as the owner (user token, chat:write). One attempt, never retried:
         a timeout may already have posted it."""
