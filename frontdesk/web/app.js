@@ -1012,7 +1012,7 @@ function renderSelBar() {
     const b = symbol ? iconButton("btn selbtn", symbol, title) : el("button", "btn selbtn");
     b.type = "button";
     b.title = title;
-    b.setAttribute("aria-label", text);
+    b.setAttribute("aria-label", title.replace(/ \(.*\)$/, ""));   // "Mark read", without the key
     b.append(el("span", "sellabel", text));
     b.addEventListener("click", fn);
     return b;
@@ -1024,8 +1024,8 @@ function renderSelBar() {
   for (const [b, name] of BUCKET_NAMES) move.append(Object.assign(el("option", null, name), { value: b }));
   move.addEventListener("change", () => { if (move.value) bulkMove(move.value); });
   bar.replaceChildren(all, which, count,
-    btn("Mark read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
-    btn("Mark unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
+    btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
+    btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
     btn("Archive", "Archive, or Done for Slack (e)", bulkArchive, "i-archive"),
     btn("Star", "Star or unstar (s)", bulkStar, "i-star"),
     move,
