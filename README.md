@@ -8,7 +8,7 @@ that already has all the context.
 
 **Live demo:** https://frontdesk.ocarlsen.com/index.html (a synthetic inbox, nothing to install).
 
-**Walkthrough video (about two minutes, no sound):** [docs/site/frontdesk-tour.mp4](docs/site/frontdesk-tour.mp4),
+**Walkthrough video (about three minutes, no sound):** [docs/site/frontdesk-tour.mp4](docs/site/frontdesk-tour.mp4),
 a guided tour of the same synthetic inbox in six parts: triage (with Move to), the keyboard, Ask, Memory,
 guardrails (two planted instructions that do not work, and Send's confirm and undo), and the
 inbox on a phone.
