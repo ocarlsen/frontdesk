@@ -148,12 +148,12 @@ def draft_reply(gmail: GmailClient, thread_id: str, body: str, *, is_html: bool 
     return create(gmail, msg, ctx["thread_id"])
 
 
-def save_reply(gmail: GmailClient, thread_id: str, body: str) -> Draft:
+def save_reply(gmail: GmailClient, thread_id: str, body: str, reply_all: bool = False) -> Draft:
     """Like draft_reply, but when the thread already has a draft (saved earlier, or started in
     Gmail) it replaces that draft's text instead of adding a second draft."""
     thread = gmail.get_thread(thread_id)
     existing = thread_draft(thread)
-    msg, ctx = build_reply(gmail, thread_id, body, thread=thread)
+    msg, ctx = build_reply(gmail, thread_id, body, thread=thread, reply_all=reply_all)
     if existing is None:
         return create(gmail, msg, ctx["thread_id"])
     draft_id = next((d["id"] for d in gmail.list_drafts()

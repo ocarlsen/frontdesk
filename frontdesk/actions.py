@@ -135,7 +135,7 @@ _PLACEHOLDER = re.compile(r"\[[^\]\n]{1,80}\]")
 
 
 def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
-               gmail: GmailClient | None, client_key: str) -> dict:
+               gmail: GmailClient | None, client_key: str, reply_all: bool = False) -> dict:
     """A threaded Gmail draft from exactly the text in the box. Drafts only: nothing here sends."""
     if not _CLIENT_KEY.fullmatch(client_key or ""):
         raise ActionError("missing or malformed idempotency key")
@@ -171,7 +171,7 @@ def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
         return result
     try:
         _check_account(gmail, item.account)
-        d = drafting.save_reply(gmail, _native_id(item_id), body)
+        d = drafting.save_reply(gmail, _native_id(item_id), body, reply_all=reply_all)
     except (GmailError, ActionError, drafting.DraftError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
@@ -221,6 +221,12 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
     item = store.get_item(item_id)
     if item is None:
         raise ActionError("unknown thread (it may have been synced away)")
+    if item_id in store.local_unread_ids():
+        # Marked unread in FrontDesk only (Slack): reading it here clears that mark, whether or
+        # not Slack itself can be told.
+        store.set_local_unread(item_id, False)
+        store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
+        item = store.get_item(item_id)
     if "UNREAD" not in item.labels:
         return {"status": "already_read"}
     if item.source == "slack":
@@ -244,6 +250,27 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
         except GmailError as e:
             raise ActionError(str(e)) from e
     store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
+    store.set_local_unread(item_id, False)
+    return {"status": "done"}
+
+
+def mark_unread(store: Store, item_id: str, gmail: GmailClient | None) -> dict:
+    """The owner marks a thread unread (Shift+U). Gmail: add UNREAD to the thread, so Gmail
+    shows it unread too. Slack: its API cannot mark a message unread with FrontDesk's scopes, so
+    the mark is kept in FrontDesk only (like the Slack star) until the owner reads it here."""
+    item = store.get_item(item_id)
+    if item is None:
+        raise ActionError("unknown thread (it may have been synced away)")
+    if item.source == "slack":
+        store.set_local_unread(item_id, True)
+    elif gmail is not None:
+        _check_account(gmail, item.account)
+        try:
+            gmail.modify_thread(_native_id(item_id), add=["UNREAD"])
+        except GmailError as e:
+            raise ActionError(str(e)) from e
+    if "UNREAD" not in item.labels:
+        store.set_labels(item_id, [*item.labels, "UNREAD"])
     return {"status": "done"}
 
 

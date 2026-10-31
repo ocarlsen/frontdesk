@@ -67,6 +67,7 @@ def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     listed only when starred, for the Starred view, after every visible one."""
     from ..assist import with_signoff
     with_html = store.html_indexes()
+    unread_here = store.local_unread_ids()
     out = []
     rows = [(i, t, "") for i, t in store.ranked()]
     rows += [(i, t, store.hidden_reason(i.id)) for i, t in store.ranked(hidden=True)
@@ -74,6 +75,8 @@ def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     for item, tri, hidden in rows:
         d = item.to_dict()
         d["starred"] = store.is_starred(item)
+        if item.id in unread_here and "UNREAD" not in d["labels"]:
+            d["labels"] = [*d["labels"], "UNREAD"]
         d["kept"] = store.is_kept(item.id)
         d["hidden"] = hidden
         for i, m in enumerate(d["messages"]):
@@ -520,7 +523,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
-                      "undone", "read", "ask", "star", "unstar") \
+                      "undone", "read", "unread", "ask", "star", "unstar") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -579,8 +582,28 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:
             store.db.close()
+    if kind == "unread":
+        if settings.get("demo"):
+            return HTTPStatus.OK, {"status": "skipped"}
+        store = Store(db_path)
+        try:
+            item = store.get_item(str(item_id))
+            gmail = None
+            if item is not None and item.source == "gmail":
+                try:
+                    gmail = GmailClient(action_credentials())
+                except AuthError as e:
+                    return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+            return HTTPStatus.OK, actions.mark_unread(store, str(item_id), gmail)
+        except actions.ActionError as e:
+            return HTTPStatus.CONFLICT, {"error": str(e)}
+        finally:
+            store.db.close()
     if kind == "read":
-        if settings.get("demo") or not config.settings()["mark_read_on_open"]:
+        # Opening a thread marks it read only when mark_read_on_open is on; Shift+I or the Mark
+        # read button ("explicit") always does.
+        if settings.get("demo") or not (req.get("explicit") is True
+                                        or config.settings()["mark_read_on_open"]):
             return HTTPStatus.OK, {"status": "skipped"}
         from ..slack.client import SlackClient
         from ..sources import slack_token
@@ -646,11 +669,13 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             tok = None if settings.get("demo") else slack_token(config.settings())
             return HTTPStatus.OK, sending.prepare(
                 store, item_id, req.get("body"), str(req.get("seen_updated_at", "")), gmail,
-                key, slack=SlackClient(tok) if tok else None)
+                key, slack=SlackClient(tok) if tok else None,
+                reply_all=req.get("reply_all") is True)
         if kind == "draft":
             return HTTPStatus.OK, actions.save_draft(store, item_id, req.get("body"),
                                                      str(req.get("seen_updated_at", "")),
-                                                     gmail, key)
+                                                     gmail, key,
+                                                     reply_all=req.get("reply_all") is True)
         return HTTPStatus.OK, actions.set_archived(store, item_id, kind == "archive", gmail, key)
     except actions.ActionError as e:
         return HTTPStatus.CONFLICT, {"error": str(e)}

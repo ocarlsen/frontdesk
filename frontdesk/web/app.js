@@ -178,6 +178,15 @@ function buildDetail(item, triage) {
   label.htmlFor = id;
   const ta = el("textarea");
   ta.id = id;
+  if (item.source !== "slack") {
+    // Reply all (a): the reply also goes to everyone else on the thread, as Cc.
+    const all = el("label", "replyall");
+    const box = el("input");
+    box.type = "checkbox";
+    box.className = "replyall-box";
+    all.append(box, el("span", null, "Reply all (a)"));
+    ta.replyAll = box;
+  }
   ta.value = proposed;
   ta.placeholder = "Write a reply";
   const hint = el("p", "hint");
@@ -215,7 +224,10 @@ function buildDetail(item, triage) {
     setTimeout(() => { copy.textContent = "Copy"; }, 1800);
   });
   const draftNote = el("p", "hint draftnote");
-  reply.append(head, label, ta, hint, draftNote);
+  const headRow = el("div", "replyhead");
+  headRow.append(head);
+  if (ta.replyAll) headRow.append(ta.replyAll.parentNode || ta.replyAll);
+  reply.append(headRow, label, ta, hint, draftNote);
   // Save draft, Send and Archive act through Gmail; a Slack thread gets Copy and Open in Slack.
   const isGmail = item.source !== "slack";
   if (isGmail && !STATIC) loadGmailDraft(item, { ta, label, save, proposed, draftNote, edited });
@@ -237,9 +249,13 @@ function buildDetail(item, triage) {
     moveTo.append(pick);
     threadGroup.append(moveTo);
   }
-  threadGroup.append(starButton(item, "btn"));
+  const detailRead = iconButton("btn btn-icon btn-read", isUnread(item) ? "i-read" : "i-unread",
+                                isUnread(item) ? "Mark read (Shift+I)" : "Mark unread (Shift+U)");
+  detailRead.addEventListener("click", () => setRead(item, isUnread(item), detailRead.closest("li.card")));
+  threadGroup.append(starButton(item, "btn"), detailRead);
   const arch = el("button", "btn btn-archive", "Archive");
   arch.type = "button";
+  arch.title = "Archive (e)";
   arch.addEventListener("click", () => archive(item, arch));
   if (item.hidden) {
     // Only the Starred view lists a hidden thread: offer to bring it back instead.
@@ -332,7 +348,19 @@ function buildCard(item, triage) {
     if (open) openThreads.delete(item.id); else openThreads.add(item.id);
     if (!open) markReadSoon(item, li, row);
   });
-  li.append(row, starButton(item, "star"));
+  // Hover tools, as in Gmail's list: read/unread and archive (done on Slack), each with its key.
+  const tools = el("span", "rowtools");
+  const readBtn = iconButton("rowtool btn-read", isUnread(item) ? "i-read" : "i-unread",
+                             isUnread(item) ? "Mark read (Shift+I)" : "Mark unread (Shift+U)");
+  readBtn.addEventListener("click", ev => { ev.stopPropagation(); setRead(item, isUnread(item), li); });
+  tools.append(readBtn);
+  if (!item.hidden) {
+    const arcBtn = iconButton("rowtool", "i-archive",
+                              item.source === "slack" ? "Done (e)" : "Archive (e)");
+    arcBtn.addEventListener("click", ev => { ev.stopPropagation(); setCurrent(li); dismissCard(li); });
+    tools.append(arcBtn);
+  }
+  li.append(row, tools, starButton(item, "star"));
   if (!item.hidden) attachSwipe(li, row, item);
   if (openThreads.has(item.id)) {            // reopen after a re-render
     detail = buildDetail(item, triage);
@@ -360,7 +388,7 @@ async function postAction(kind, itemId, extra) {
       staticStars.set(itemId, kind === "star");
       return { status: "done", kind, starred: kind === "star", demo: true };
     }
-    if (kind === "read") return { status: "done" };
+    if (kind === "read" || kind === "unread") return { status: "done" };
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
     if (kind === "profile" || kind === "note" || kind.startsWith("note_") ||
         kind.startsWith("person_") || kind.startsWith("situation_")) throw new Error("demo mode");
@@ -414,7 +442,8 @@ async function startSend(item, ta, btn) {
   let prep;
   try {
     prep = await postAction("send_prepare", item.id,
-                            { body: ta.value, seen_updated_at: item.updated_at });
+                            { body: ta.value, seen_updated_at: item.updated_at,
+                              reply_all: !!(ta.replyAll && ta.replyAll.checked) });
   } catch (e) {
     btn.disabled = false;
     toast("Can't send: " + e.message);
@@ -529,7 +558,8 @@ async function saveDraft(item, ta, btn) {
   btn.textContent = "Saving...";
   try {
     const out = await postAction("draft", item.id,
-                                 { body: ta.value, seen_updated_at: item.updated_at });
+                                 { body: ta.value, seen_updated_at: item.updated_at,
+                                   reply_all: !!(ta.replyAll && ta.replyAll.checked) });
     if (out.demo) {
       toast(out.note);
     } else {
@@ -568,10 +598,69 @@ async function relabel(item, bucket, name, ctl, from) {
 }
 
 // Opening a thread for ~2 seconds marks it read (Gmail, Slack DMs); skimming with j/k does not.
+// An icon button from the inline SVG symbols in index.html (the CSP allows no icon fonts or
+// data: images). The label is the button's accessible name and its tooltip, with the key.
+function iconButton(cls, symbol, label) {
+  const b = el("button", cls);
+  b.type = "button";
+  b.setAttribute("aria-label", label);
+  b.title = label;
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS ? document.createElementNS(NS, "svg") : el("svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS ? document.createElementNS(NS, "use") : el("use");
+  use.setAttribute("href", "#" + symbol);
+  svg.append(use);
+  b.append(svg);
+  return b;
+}
+
+function isUnread(item) { return (item.labels || []).includes("UNREAD"); }
+
+function paintRead(item) {
+  // Every control for this thread follows its read state: the row's weight and its icons.
+  for (const li of document.querySelectorAll("li.card")) {
+    if (li.dataset.id !== item.id) continue;
+    li.classList.toggle("unread", isUnread(item));
+    for (const b of li.querySelectorAll(".btn-read")) {
+      const unread = isUnread(item);
+      const label = unread ? "Mark read (Shift+I)" : "Mark unread (Shift+U)";
+      b.setAttribute("aria-label", label);
+      b.title = label;
+      const use = b.querySelector("use");
+      if (use) use.setAttribute("href", unread ? "#i-read" : "#i-unread");
+    }
+  }
+}
+
+// Shift+I / Shift+U, the row icon and the thread's button. Marking unread also stops the
+// open-for-two-seconds rule from marking it read again while it stays open.
+async function setRead(item, read, li) {
+  if (read === !isUnread(item)) return;
+  if (li) { if (read) delete li.dataset.keepUnread; else li.dataset.keepUnread = "1"; }
+  const before = [...(item.labels || [])];
+  item.labels = read ? before.filter(l => l !== "UNREAD") : [...before, "UNREAD"];
+  paintRead(item);
+  try {
+    const out = await postAction(read ? "read" : "unread", item.id, read ? { explicit: true } : undefined);
+    if (out.status === "skipped" && read && item.source === "slack") {
+      toast("Marked read here (Slack marks a channel thread read only when you read the channel).");
+      return;
+    }
+    toast(read ? "Marked read." : "Marked unread.", "Undo", () => setRead(item, !read, li));
+  } catch (e) {
+    item.labels = before;
+    paintRead(item);
+    toast((read ? "Mark read" : "Mark unread") + " failed: " + e.message);
+  }
+}
+
 function markReadSoon(item, li, row) {
   if (!(item.labels || []).includes("UNREAD")) return;
   setTimeout(async () => {
     if (row.getAttribute("aria-expanded") !== "true") return;
+    if (li.dataset.keepUnread) return;   // marked unread while open: leave it
     try {
       const out = await postAction("read", item.id);
       if (out.status === "done" || out.status === "already_read") {
@@ -750,6 +839,23 @@ function attachSwipe(li, row, item) {
 // Archive (Gmail) or Done (Slack) one card, from the e key or a swipe. Fades the row while the
 // server works; moves the highlight only once it is gone, to the thread below it (or above, at
 // the end). Resolves true when the card left the list.
+let gPending = false;
+
+// [ and ]: archive (or mark done) the current thread, then open its neighbour above or below,
+// as Gmail does from an open conversation.
+async function archiveAndStep(li, step) {
+  const cards = visibleCards();
+  const i = cards.indexOf(li);
+  const target = cards[i + step];
+  const wasOpen = isOpen(li);
+  const gone = await dismissCard(li);
+  if (!gone || !target) return;
+  const again = visibleCards().find(c => c.dataset.id === target.dataset.id);
+  if (!again) return;
+  setCurrent(again);
+  if (wasOpen && !isOpen(again)) again.querySelector(":scope > .row").click();
+}
+
 function dismissCard(li) {
   const it = cardItems.get(li);
   if (!it || it.hidden) return Promise.resolve(false);
@@ -2037,7 +2143,12 @@ const SHORTCUTS = [
   ["j / k", "Next / previous thread"],
   ["o or Enter", "Open the thread; press again to close it"],
   ["u", "Close the thread (never opens one)"],
-  ["e", "Archive (Gmail) or Done (Slack)"],
+  ["e or y", "Archive (Gmail) or Done (Slack)"],
+  ["[ / ]", "Archive, then open the thread above / below"],
+  ["Shift+I / Shift+U", "Mark read / unread"],
+  ["z", "Undo the last archive, move, read change or send"],
+  ["a", "Reply all (Gmail)"],
+  ["g then i / g then s", "Go to the inbox / the Starred view"],
   ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
   ["r", "Reply (jump to the reply box)"],
   ["v", "Move to another section"],
@@ -2137,8 +2248,19 @@ function onKey(e) {
   if (typing) return;
   const li = currentCard();
   // A search result is not a stored thread: only moving and opening apply to it.
-  if (li && li.classList.contains("result") && "esvru".includes(e.key)) return;
+  if (li && li.classList.contains("result") && "esvruyIUa[]".includes(e.key)) return;
   if (query && (e.key === "h" || e.key === "l")) { switchSearchTab(e.key === "l" ? 1 : -1); e.preventDefault(); return; }
+  // Gmail's two-key "go to": g, then i (inbox) or s (starred) within a second and a half.
+  if (gPending) {
+    gPending = false;
+    if (e.key === "i" || e.key === "s") {
+      view = e.key === "s" ? "starred" : "all";
+      if (query) clearSearch(); else render(window.__items || []);
+      e.preventDefault();
+      return;
+    }
+  }
+  if (e.key === "g") { gPending = true; setTimeout(() => { gPending = false; }, 1500); e.preventDefault(); return; }
   switch (e.key) {
     case "/": {
       const box = document.getElementById("search");
@@ -2158,7 +2280,34 @@ function onKey(e) {
       if (li && isOpen(li)) li.querySelector(":scope > .row").click();
       break;
     case "e":
+    case "y":
       if (li) dismissCard(li);
+      break;
+    case "[":
+    case "]":
+      if (li) archiveAndStep(li, e.key === "]" ? 1 : -1);
+      break;
+    case "I":
+      if (li && cardItems.get(li)) setRead(cardItems.get(li), true, li);
+      break;
+    case "U":
+      if (li && cardItems.get(li)) setRead(cardItems.get(li), false, li);
+      break;
+    case "z": {
+      // Undo is whatever the toast on screen offers (archive, done, move, read change, send).
+      const t = document.getElementById("toast");
+      const u = t && !t.hidden ? t.querySelector(".linkbtn") : null;
+      if (u) u.click(); else toast("Nothing to undo.");
+      break;
+    }
+    case "a":
+      if (li && cardItems.get(li) && cardItems.get(li).source !== "slack") {
+        if (!isOpen(li)) li.querySelector(":scope > .row").click();
+        const box = li.querySelector(".replyall-box");
+        if (box) box.checked = true;
+        const ta = li.querySelector(".reply textarea");
+        if (ta) { ta.focus(); ta.scrollIntoView({ block: "center" }); }
+      }
       break;
     case "s":
       if (li && cardItems.get(li)) toggleStar(cardItems.get(li));

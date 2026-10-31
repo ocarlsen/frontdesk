@@ -20,7 +20,8 @@ test.describe("reply action row", () => {
 
   test("every control is one height, the Move to select as tall as Save", async ({ page }) => {
     const row = await openRow(page);
-    const boxes = await row.locator(CONTROLS).evaluateAll(ns => ns.map(n => {
+    const boxes = await row.locator(CONTROLS).evaluateAll(ns => ns
+      .filter(n => (n as HTMLElement).offsetParent !== null).map(n => {   // hidden at this width: no height
       const r = n.getBoundingClientRect();
       return { what: n.tagName + " " + (n.textContent || "").trim().slice(0, 20), h: r.height };
     }));
@@ -81,8 +82,10 @@ test.describe("reply action row", () => {
 
   test("the row stays on one line at 1280px", async ({ page }) => {
     const row = await openRow(page);
+    // Visible controls only: a control hidden at this width (the touch-only read button) has no line.
     const tops = await row.locator(".btn, select, a").evaluateAll(ns =>
-      ns.map(n => Math.round(n.getBoundingClientRect().top + n.getBoundingClientRect().height / 2)));
+      ns.filter(n => (n as HTMLElement).offsetParent !== null)
+        .map(n => Math.round(n.getBoundingClientRect().top + n.getBoundingClientRect().height / 2)));
     expect(tops.length).toBeGreaterThanOrEqual(7);
     expect(Math.max(...tops) - Math.min(...tops), "controls on different lines").toBeLessThanOrEqual(1);
   });
