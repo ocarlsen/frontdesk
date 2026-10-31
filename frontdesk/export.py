@@ -35,6 +35,25 @@ def static_file(item_id: str) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", item_id)
 
 
+EVALS = Path(__file__).resolve().parents[1] / "evals"
+
+
+def _export_gallery(out: Path, evals: Path = EVALS) -> bool:
+    """The "Try to hijack it" page: the injection suite with each recorded model's results.
+    Needs the repository's evals/ (with recordings); an installed package without it skips it."""
+    from .gallery import build
+    if not (evals / "hijack-gallery.json").exists():
+        return False
+    (out / "api" / "hijack.json").write_text(json.dumps(build(evals), ensure_ascii=False))
+    page = (WEB / "hijack.html").read_text()
+    page = page.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n'
+                        + _meta_csp(server.CSP), 1)
+    (out / "hijack.html").write_text(page)
+    for name in ("hijack.js", "hijack.css"):
+        shutil.copy(WEB / name, out / name)
+    return True
+
+
 def export_demo(out: Path, cname: str | None = None, now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     exported = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -71,10 +90,12 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
                         + _meta_csp(server.CSP), 1)
     page = page.replace('<header class="top">', (
         '<p class="demo-banner">Live demo with a synthetic inbox: every person and address is '
-        f'made up. <a href="{ABOUT}">About FrontDesk</a></p>\n<header class="top">'), 1)
+        f'made up. <a href="{ABOUT}">About FrontDesk</a> \u00b7 '
+        '<a href="hijack.html">Try to hijack it</a></p>\n<header class="top">'), 1)
     (out / "index.html").write_text(page)
     for name in ("app.js", "app.css"):
         shutil.copy(WEB / name, out / name)
+    _export_gallery(out)
     (out / ".nojekyll").write_text("")
     if cname:
         (out / "CNAME").write_text(cname + "\n")
