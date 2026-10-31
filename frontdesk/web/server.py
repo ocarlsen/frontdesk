@@ -74,6 +74,7 @@ def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
     for item, tri, hidden in rows:
         d = item.to_dict()
         d["starred"] = store.is_starred(item)
+        d["kept"] = store.is_kept(item.id)
         d["hidden"] = hidden
         for i, m in enumerate(d["messages"]):
             m.pop("html", None)
@@ -367,6 +368,88 @@ def search_gmail(settings: dict, query: str, client_factory=None) -> tuple[int, 
         return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
 
 
+_GMAIL_THREAD = re.compile(r"gmail:[0-9a-f]{6,32}")
+
+
+def _read_gmail(client_factory):
+    from ..gmail.auth import credentials
+    from ..gmail.client import GmailClient
+    return (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
+
+
+def search_thread(settings: dict, item_id: str, client_factory=None) -> tuple[int, dict]:
+    """GET /api/search/thread: one search result's whole thread, read-only, for reading in place.
+    Nothing is stored and no model sees it. Bodies are plain text: HTML display needs a stored
+    item (the /msg route serves only those), so a preview never renders sender HTML."""
+    import requests
+
+    from ..gmail.auth import AuthError
+    from ..gmail.client import GmailError
+    from ..gmail.search import fetch_item
+    if not _GMAIL_THREAD.fullmatch(item_id or ""):
+        return HTTPStatus.BAD_REQUEST, {"error": "not a Gmail thread id"}
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Search is off in demo mode."}
+    try:
+        item = fetch_item(_read_gmail(client_factory), item_id.partition(":")[2])
+    except AuthError as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+    except (GmailError, requests.RequestException):
+        return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
+    if item is None:
+        return HTTPStatus.NOT_FOUND, {"error": "that thread holds only drafts"}
+    d = item.to_dict()
+    for m in d["messages"]:
+        m.pop("html", None)
+        m["has_html"] = False
+    return HTTPStatus.OK, {"item": d}
+
+
+def keep_result(db_path: Path, settings: dict, item_id: str, client_factory=None,
+                provider_factory=None) -> tuple[int, dict]:
+    """POST /api/action kind=keep: store a search result as a thread FrontDesk keeps (sync then
+    keeps it current) and rank it once, so it gets a summary, a reason and a proposed reply like
+    any other thread. Ranking is one model call; if it fails the thread is kept, unranked."""
+    import requests
+
+    from .. import triage
+    from ..gmail.auth import AuthError
+    from ..gmail.client import GmailError
+    from ..gmail.search import fetch_item
+    from ..providers import ProviderError, ProviderRefusal, get_provider
+    if not _GMAIL_THREAD.fullmatch(item_id or ""):
+        return HTTPStatus.BAD_REQUEST, {"error": "not a Gmail thread id"}
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Demo mode: nothing can be kept."}
+    try:
+        item = fetch_item(_read_gmail(client_factory), item_id.partition(":")[2],
+                          inline_images=True)
+    except AuthError as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+    except (GmailError, requests.RequestException):
+        return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
+    if item is None:
+        return HTTPStatus.NOT_FOUND, {"error": "that thread holds only drafts"}
+    store = Store(db_path)
+    try:
+        store.keep(item)
+        profile = settings.get("owner_profile", "")
+        version = triage.prompt_version(profile)
+        try:
+            provider = (provider_factory or (lambda: get_provider(settings)))()
+            store.save_triage(triage.triage_item(provider, item, profile=profile))
+            ranked = True
+        except ProviderRefusal as e:
+            store.record_failure(item, version, "refusal", str(e))
+            ranked = False
+        except ProviderError as e:
+            store.record_failure(item, version, "error", str(e))
+            ranked = False
+    finally:
+        store.db.close()
+    return HTTPStatus.OK, {"status": "done", "kind": "keep", "ranked": ranked}
+
+
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
@@ -387,6 +470,8 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             store.db.close()
     if kind in MEMORY_KINDS:
         return run_memory(db_path, settings, kind, req)
+    if kind == "keep":
+        return keep_result(db_path, settings, item_id if isinstance(item_id, str) else "")
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
@@ -704,6 +789,9 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 else:
                     self._send(HTTPStatus.OK, json.dumps(out).encode(),
                                "application/json; charset=utf-8")
+            elif path == "/api/search/thread":
+                code, out = search_thread(settings or {}, parse_qs(query).get("id", [""])[0])
+                self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/search":
                 code, out = search_gmail(settings or {}, parse_qs(query).get("q", [""])[0])
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
