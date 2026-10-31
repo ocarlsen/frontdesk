@@ -319,6 +319,10 @@ class Store:
         row = self.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         return row["value"] if row else None
 
+    def set_meta(self, key: str, value: str) -> None:
+        with self.tx() as db:
+            db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
+
     def _backfill_usage(self) -> None:
         """Once per database, seed the usage log from the rankings and Ask answers already
         stored (with their own dates, models and costs), so stats do not start at zero. Only what
@@ -431,18 +435,28 @@ class Store:
         with self.db:
             yield self.db
 
-    def upsert_item(self, item: Item) -> None:
+    def upsert_item(self, item: Item) -> bool:
+        """Store the item; False (and no write) when it is exactly what is stored already, so a
+        sync can tell new mail from a re-fetch of the same."""
         html = [m.html for m in item.messages]
         bare = replace(item, messages=[replace(m, html="") for m in item.messages])
+        data = json.dumps(bare.to_dict())
+        row = self.db.execute("SELECT data FROM items WHERE id=?", (item.id,)).fetchone()
+        if row is not None and row["data"] == data:
+            stored = {r["idx"]: r["html"] for r in self.db.execute(
+                "SELECT * FROM message_html WHERE item_id=?", (item.id,))}
+            if stored == {i: h for i, h in enumerate(html) if h}:
+                return False
         with self.tx() as db:
             db.execute(
                 "INSERT INTO items(id, source, updated_at, data) VALUES (?,?,?,?) "
                 "ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at, data=excluded.data",
-                (item.id, item.source, item.updated_at, json.dumps(bare.to_dict())),
+                (item.id, item.source, item.updated_at, data),
             )
             db.execute("DELETE FROM message_html WHERE item_id=?", (item.id,))
             db.executemany("INSERT INTO message_html VALUES (?,?,?)",
                            [(item.id, i, h) for i, h in enumerate(html) if h])
+        return True
 
     def prune(self, source: str, account: str, keep_ids: set[str]) -> int:
         """Drop this source+account's items (and their triage) that a complete sync no longer

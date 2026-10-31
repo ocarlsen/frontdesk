@@ -66,6 +66,10 @@ class GmailClient:
     def profile_email(self) -> str:
         return self._get("profile")["emailAddress"]
 
+    def profile(self) -> dict:
+        """emailAddress and historyId, which changes whenever anything in the mailbox does."""
+        return self._get("profile")
+
     def list_thread_ids(self, query: str, max_threads: int) -> list[str]:
         ids: list[str] = []
         page_token = None

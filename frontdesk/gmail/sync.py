@@ -1,7 +1,8 @@
 """Pull recent Gmail threads into the store. Upsert by thread id makes a re-run idempotent: a
-thread that moved is rewritten (and so re-triaged), one that did not is rewritten unchanged."""
+thread that moved is rewritten (and so re-triaged), one that did not is left as it was."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from ..store import Store
@@ -17,6 +18,8 @@ IMAGES_PER_MESSAGE = 3_000_000
 class SyncResult:
     synced: int
     removed: int
+    changed: int = 0      # threads that differ from what was stored (new mail, label changes)
+    skipped: bool = False  # nothing changed in the mailbox since the last complete sync
 
 
 def fetch_inline_images(client: GmailClient, thread: dict) -> None:
@@ -46,6 +49,7 @@ def fetch_inline_images(client: GmailClient, thread: dict) -> None:
 
 
 STARRED_MAX = 200
+SYNC_KEY = "gmail_sync_key"
 
 
 def starred_archived(client: GmailClient, store: Store) -> set[str]:
@@ -73,8 +77,17 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
     A thread FrontDesk archived that Gmail still has starred is kept (hidden from the list, shown
     in the Starred view) until it is unstarred; one that is back in the inbox shows again."""
     client = GmailClient(auth.credentials(interactive=interactive))
-    account = client.profile_email()
-    count = 0
+    profile = client.profile()
+    account = profile["emailAddress"]
+    # Gmail's historyId moves on any change in the mailbox (new mail, a label, a star, a read).
+    # When it, the query and the kept threads are all as they were after the last complete
+    # sync, there is nothing to fetch: one call instead of one per thread.
+    sync_key = json.dumps([profile.get("historyId"), settings["gmail_query"],
+                           int(settings["gmail_max_threads"]), sorted(store.kept_ids("gmail"))])
+    if profile.get("historyId") and store.meta(SYNC_KEY) == sync_key:
+        return SyncResult(0, 0, 0, skipped=True)
+    count = changed = 0
+    failed = False
     thread_ids = list(client.list_thread_ids(settings["gmail_query"],
                                              int(settings["gmail_max_threads"])))
     # Threads the owner kept from a search sit outside the query: fetch them too, so new replies
@@ -92,15 +105,17 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
             item = thread_to_item(thread, account)
         except Exception as e:  # noqa: BLE001 - isolate per thread, report the type only
             log(f"  skipped thread {thread_id}: {type(e).__name__}")
+            failed = True
             continue
         if item is None:
             continue
         if inbox_only and "INBOX" not in item.labels and thread_id not in kept:
             stale.add(thread_id)
             continue
-        store.upsert_item(item)
+        changed += store.upsert_item(item)
         if "INBOX" in item.labels and store.hidden_reason(item.id) == "archived":
             store.unhide(item.id)          # moved back to the inbox since FrontDesk archived it
+            changed += 1
         count += 1
     keep = ({f"gmail:{t}" for t in thread_ids if t not in stale} | {f"gmail:{k}" for k in kept}
             | starred_archived(client, store))
@@ -109,4 +124,6 @@ def sync(store: Store, settings: dict, log=print, interactive: bool = True) -> S
     removed = store.prune("gmail", account, keep)
     if removed:
         log(f"  removed {removed} thread(s) no longer in '{settings['gmail_query']}'")
-    return SyncResult(count, removed)
+    # Only a complete run may let the next one skip: a thread that failed to fetch is retried.
+    store.set_meta(SYNC_KEY, "" if failed else sync_key)
+    return SyncResult(count, removed, changed)

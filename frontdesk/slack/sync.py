@@ -232,7 +232,7 @@ def sync(store: Store, settings: dict, token: str, log=print,
 
     candidates.sort(key=lambda c: c.newest, reverse=True)
     keep: set[str] = set()
-    count = 0
+    count = changed = 0
     for c in candidates[:cap]:
         keep.add(c.item_id)   # listed: kept even if the build below fails
         try:
@@ -254,7 +254,7 @@ def sync(store: Store, settings: dict, token: str, log=print,
         if item is None:
             continue
         _apply_local_marks(store, item, pos, c.newest)
-        store.upsert_item(item)
+        changed += store.upsert_item(item)
         count += 1
     if len(candidates) > cap:
         log(f"  kept the newest {cap} of {len(candidates)} Slack conversations (slack_max_items)")
@@ -273,7 +273,7 @@ def sync(store: Store, settings: dict, token: str, log=print,
             continue
         item, pos, newest = got
         _apply_local_marks(store, item, pos, newest)
-        store.upsert_item(item)
+        changed += store.upsert_item(item)
         count += 1
 
     if failed_channels:
@@ -286,4 +286,4 @@ def sync(store: Store, settings: dict, token: str, log=print,
     linked = store.link_slack_names()
     if linked["linked"]:
         log(f"  linked {len(linked['linked'])} Slack name(s) in your notes to Slack users")
-    return SyncResult(count, removed)
+    return SyncResult(count, removed, changed)

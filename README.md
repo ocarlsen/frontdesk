@@ -55,8 +55,11 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   as editable text; change it or leave it, and **Ask** sends what is in the box (the model picker
   chooses the model). **Second opinion** has the review model check the answer; **Polish draft**
   tightens the reply. Each answer resets the box to the built-in question.
-- **Auto-sync** every 15 minutes (`auto_sync_minutes`); `Shift+N` (Gmail's update key) or the Sync
-  button syncs now. With an `in:inbox` query, a thread Gmail lists whose messages carry no INBOX
+- **Auto-sync** a few seconds after the server starts, then every 15 minutes (`auto_sync_minutes`);
+  `Shift+N` (Gmail's update key) or the Sync button syncs now. When Gmail's `historyId` (it moves
+  on any change in the mailbox), the query and the kept threads are as they were after the last
+  complete sync, Gmail sync is one call and fetches nothing. An open page reloads only after a
+  sync that changed something. With an `in:inbox` query, a thread Gmail lists whose messages carry no INBOX
   label (Gmail's listing can be stale for old mail) is left out, as Gmail's own inbox leaves it
   out. Gmail-style keyboard shortcuts (`?`):
   `j`/`k` move, `o` opens, `e`/`y` archive (or mark a Slack thread done), `[`/`]` archive and

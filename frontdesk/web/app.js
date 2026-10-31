@@ -2780,8 +2780,11 @@ async function pollStatus() {
     const res = await fetch("/api/status", { cache: "no-store" });
     if (!res.ok) return;
     const s = await res.json();
-    const changed = lastSyncSeen !== null && s.at && s.at !== lastSyncSeen;
-    lastSyncSeen = s.at || "";
+    // Reload only after a sync that changed something (or failed): an unchanged sync would just
+    // re-render every open page, on every device, every 15 minutes.
+    const mark = s.changed_at || "";
+    const changed = lastSyncSeen !== null && mark && mark !== lastSyncSeen;
+    lastSyncSeen = mark;
     slackSynced = s.slack === true;
     showSyncLine(s);
     if (changed) {
