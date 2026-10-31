@@ -21,7 +21,7 @@ from .store import Store
 from .web import server
 
 WEB = Path(__file__).parent / "web"
-ABOUT = "https://www.ocarlsen.com/frontdesk.html"
+ABOUT = "https://ocarlsen.ai/frontdesk.html"
 
 
 def _meta_csp(policy: str) -> str:
