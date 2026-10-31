@@ -31,10 +31,16 @@ def _error_message(resp) -> str:
 class GmailClient:
     def __init__(self, creds: Credentials, retries: int = 4, backoff: float = 1.0,
                  timeout: float = 30.0):
+        self.creds = creds
         self.session = AuthorizedSession(creds)
         self.retries = retries
         self.backoff = backoff
         self.timeout = timeout
+
+    def clone(self) -> GmailClient:
+        """A client with its own HTTP session on the same credentials, for one worker thread
+        (a requests session is not guaranteed safe to share across threads)."""
+        return GmailClient(self.creds, self.retries, self.backoff, self.timeout)
 
     def _get(self, endpoint: str, params: dict | None = None) -> dict:
         return self._request("GET", endpoint, params=params)
