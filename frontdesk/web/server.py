@@ -344,6 +344,29 @@ def gmail_draft(db_path: Path, settings: dict, item_id: str,
                                      "url": drafting.draft_url(item.account, d["message_id"])}}
 
 
+def search_gmail(settings: dict, query: str, client_factory=None) -> tuple[int, dict]:
+    """GET /api/search: all of Gmail (archived too) for `query`, read-only token, nothing stored
+    and nothing sent to a model. Never opens a consent flow."""
+    import requests
+
+    from ..gmail.auth import AuthError, credentials
+    from ..gmail.client import GmailClient, GmailError
+    from ..gmail.search import MAX_QUERY_CHARS, search
+    query = query.strip()
+    if not query or len(query) > MAX_QUERY_CHARS:
+        return HTTPStatus.BAD_REQUEST, {"error": "type a search of up to 500 characters"}
+    if settings.get("demo"):
+        return HTTPStatus.OK, {"results": [], "demo": True}
+    try:
+        gmail = (client_factory or (lambda: GmailClient(credentials(interactive=False))))()
+        return HTTPStatus.OK, {"results": search(gmail, query)}
+    except AuthError as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+    except (GmailError, requests.RequestException):
+        # Not str(e): a Gmail error can quote the response body.
+        return HTTPStatus.BAD_GATEWAY, {"error": "Gmail did not answer"}
+
+
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
@@ -681,6 +704,9 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 else:
                     self._send(HTTPStatus.OK, json.dumps(out).encode(),
                                "application/json; charset=utf-8")
+            elif path == "/api/search":
+                code, out = search_gmail(settings or {}, parse_qs(query).get("q", [""])[0])
+                self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
             elif path == "/api/gmail-draft":
                 code, out = gmail_draft(db_path, settings or {},
                                         parse_qs(query).get("item", [""])[0])

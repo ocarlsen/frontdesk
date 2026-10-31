@@ -42,6 +42,14 @@ body {
   color: var(--muted); font-size: 13px; }
 .counts b { color: var(--text); font-weight: 600; }
 main { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; }
+/* Search: its own full-width row under the header line. */
+.top .search { flex: 1 1 100%; box-sizing: border-box; height: 38px; padding: 0 12px; font: inherit;
+  font-size: 15px; color: var(--text); background: var(--card); border: 1px solid var(--line);
+  border-radius: 8px; }
+.top .search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.searchres h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .04em; margin: 18px 0 8px; }
+.card.result .dot { box-shadow: inset 0 0 0 1.5px var(--u1); background: transparent; }
 .status { color: var(--muted); }
 .status code { background: var(--card); padding: 2px 6px; border-radius: 4px; }
 section { margin-top: 22px; }
@@ -273,6 +281,7 @@ textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-
   .btn { padding: 10px 12px; }
   .syncbar .btn { white-space: nowrap; }
   .syncbar .kbdhint { display: none; }   /* no keyboard on a phone */
+  .top .search { height: 44px; font-size: 16px; }   /* 16px: iOS zooms into smaller inputs */
 }
 
 /* Move to: the section drop-down in the reply actions. */

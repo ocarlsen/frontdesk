@@ -103,6 +103,10 @@ with the model you choose.</p>
   memory records who wrote it and when, and anything you did not write yourself is marked
   unconfirmed, to you and to the model. The Memory page shows everything FrontDesk remembers in
   one place: edit, confirm, delete or merge people there, or download it all.</li>
+  <li><b>Search.</b> Press <code>/</code> and type: the list narrows to matching threads as you
+  type. Press Enter to search all of your Gmail too, archived mail included, with Gmail's own
+  operators (<code>from:</code>, <code>before:</code>, <code>has:attachment</code>); matches FrontDesk
+  has not synced are listed below, unranked, and open in Gmail. Esc brings the inbox back.</li>
   <li><b>Act.</b> Edit the reply (it ends with your own sign-off), then save it as a Gmail draft
   or send it: you see the exact message and recipients, confirm, and have 30 seconds to undo.
   A draft you saved, or started in Gmail, opens in the reply box, read from Gmail each time, and
@@ -181,7 +185,9 @@ server.</p>
 
 <h3>What it reads from Google</h3>
 <p>With the read-only permission, FrontDesk reads the Gmail threads that match a search you set
-(by default, your inbox from the last seven days). If you grant the separate actions permission,
+(by default, your inbox from the last seven days). When you search all of Gmail from the search
+box, it sends that search to Google and reads the senders, subjects and dates of up to 20 matching
+threads to list them; it does not store them, and no model sees them. If you grant the separate actions permission,
 it can also archive a thread, move it back to your inbox, create drafts, and send a reply. It
 sends only when you click Send, see the exact message and its recipients, and confirm; the reply
 then waits 30 seconds, during which you can undo it. It never sends on its own, and the model
