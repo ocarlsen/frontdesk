@@ -43,7 +43,7 @@ vm.createContext(ctx);
 const src = process.argv[2] || new URL("../frontdesk/web/app.js", import.meta.url);
 vm.runInContext(readFileSync(src, "utf8"), ctx);
 
-const item = { id: "gmail:t1", subject: "Lunch", url: "https://mail.google.com/mail/#all/t1",
+const item = { id: "gmail:t1", subject: "Lunch", url: "https://mail.google.com/mail/#all/t1", labels: ["INBOX"],
   updated_at: "2026-10-28T16:00:00Z",
   messages: [{ sender: "Ann <ann@example.com>", sent_at: "2026-10-28T16:00:00Z", body: "Lunch?",
                is_mine: false, has_html: false }] };
@@ -194,6 +194,9 @@ const gd = rowGroups(fn("buildDetail")(item, triage));
 sameRow(gd.row.children.map(n => n.className), ["replygroup", "threadgroup"], "row holds the two groups");
 sameRow(gd.reply, ["Save as Gmail draft", "Send...", "Copy"], "Gmail reply group");
 sameRow(gd.thread, ["moveto", "\u2606 Star", "icon:Mark unread (Shift+U)", "Archive", "link:Open in Gmail"], "Gmail thread group");
+// A Gmail thread outside the inbox (kept from a search) offers Move to inbox instead of Archive.
+const outside = rowGroups(fn("buildDetail")({ ...item, labels: [], kept: true }, triage));
+sameRow(outside.thread, ["moveto", "\u2606 Star", "icon:Mark unread (Shift+U)", "Move to inbox", "link:Open in Gmail"], "kept thread group");
 const gLink = gd.threadNodes.at(-1);
 if (gLink.className !== "openlink" || (gLink.className || "").split(" ").includes("btn")) throw new Error("Open in Gmail must be a link, not a .btn");
 const gPick = all(gd.row).find(n => n.tagName === "SELECT");
@@ -545,7 +548,7 @@ console.log("search ok");
   for (const want of ["Old lunch plan.", "Keep in FrontDesk", "Open in Gmail"])
     if (!tx.includes(want)) throw new Error("preview lacks " + want + ": " + tx.join("|"));
   if (all(card).some(n => n.tagName === "IFRAME")) throw new Error("a preview must never frame sender HTML");
-  const rowsK = [{ item: { ...item, id: "gmail:k1", subject: "Kept one", kept: true }, triage }, { item, triage }];
+  const rowsK = [{ item: { ...item, id: "gmail:k1", subject: "Kept one", kept: true, labels: [] }, triage }, { item, triage }];
   const fakeMain = new Node("main"), fakeCounts = new Node("ul");
   ctx.document.getElementById = id => id === "main" ? fakeMain : id === "counts" ? fakeCounts : new Node("div");
   fn("render")(rowsK);

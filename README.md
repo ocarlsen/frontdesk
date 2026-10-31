@@ -69,7 +69,8 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   FrontDesk has not synced, unranked and unstored, plus matching Slack messages when Slack is
   connected (`search.messages`; needs the `search:read` user scope), each opening in Slack. Open one to read it in place (plain text,
   still unstored); **Keep in FrontDesk** stores it, ranks it once, and lists it under From search
-  with every action until it is archived or marked done (sync keeps it current). Esc clears it.
+  with every action until it is archived or marked done (sync keeps it current); **Move to inbox**
+  (thread or selection) puts an archived one back in Gmail's inbox. Esc clears it.
 - **Star** a thread from its row, its detail view or with `s`. On Gmail it is Gmail's own star
   (the `STARRED` label, through the actions permission), so it shows in Gmail too. The star count
   in the header opens a **Starred** view; a starred Gmail thread you archive or mark done stays

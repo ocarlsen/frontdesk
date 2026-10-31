@@ -523,7 +523,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     if kind == "profile":
         item_id = key = ""
     elif kind not in ("archive", "unarchive", "draft", "relabel", "send_prepare", "done",
-                      "undone", "read", "unread", "ask", "star", "unstar") \
+                      "undone", "read", "unread", "ask", "star", "unstar", "inbox") \
             or not isinstance(item_id, str) or not isinstance(key, str):
         return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, item_id, key}"}
     if kind == "profile":   # the owner's own words for the model; local settings only
@@ -676,6 +676,8 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                      str(req.get("seen_updated_at", "")),
                                                      gmail, key,
                                                      reply_all=req.get("reply_all") is True)
+        if kind == "inbox":
+            return HTTPStatus.OK, actions.move_to_inbox(store, item_id, gmail, key)
         return HTTPStatus.OK, actions.set_archived(store, item_id, kind == "archive", gmail, key)
     except actions.ActionError as e:
         return HTTPStatus.CONFLICT, {"error": str(e)}

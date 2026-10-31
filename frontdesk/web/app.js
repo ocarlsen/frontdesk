@@ -264,7 +264,15 @@ function buildDetail(item, triage) {
     back.type = "button";
     back.addEventListener("click", () => restore(item, back));
     threadGroup.append(back);
-  } else if (isGmail) threadGroup.append(arch);
+  } else if (isGmail) {
+    if (!inInbox(item)) {
+      const ib = el("button", "btn btn-inbox", "Move to inbox");
+      ib.type = "button";
+      ib.title = "Put it back in Gmail's inbox";
+      ib.addEventListener("click", () => moveToInbox(item, ib));
+      threadGroup.append(ib);
+    } else threadGroup.append(arch);
+  }
   else {
     const doneBtn = el("button", "btn btn-archive", "Done");
     doneBtn.type = "button";
@@ -398,6 +406,11 @@ async function postAction(kind, itemId, extra) {
     if (kind === "star" || kind === "unstar") {   // this tab only: nothing reaches Gmail or Slack
       staticStars.set(itemId, kind === "star");
       return { status: "done", kind, starred: kind === "star", demo: true };
+    }
+    if (kind === "inbox") {
+      const it = (window.__items || []).find(r => r.item.id === itemId);
+      if (it && !(it.item.labels || []).includes("INBOX")) it.item.labels = [...(it.item.labels || []), "INBOX"];
+      return { status: "done", demo: true };
     }
     if (kind === "read" || kind === "unread") { staticUnread.set(itemId, kind === "unread"); return { status: "done" }; }
     if (kind === "relabel") staticLabels.set(itemId, extra.bucket);
@@ -628,6 +641,31 @@ function iconButton(cls, symbol, label) {
 }
 
 function isUnread(item) { return (item.labels || []).includes("UNREAD"); }
+// A Gmail thread outside the inbox (kept from a search, archived in Gmail): Move to inbox applies.
+function inInbox(item) { return item.source === "slack" || (item.labels || []).includes("INBOX"); }
+
+async function moveToInbox(item, btn) {
+  if (btn) btn.disabled = true;
+  toast("Moving to the inbox\u2026");
+  try {
+    await postAction("inbox", item.id);
+    await load();
+    toast("Moved to the inbox: " + (item.subject || "(no subject)"), "Undo", async () => {
+      try { await postAction("archive", item.id); await load(); toast("Archived again."); }
+      catch (e) { toast("Undo failed: " + e.message); }
+    });
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    toast("Move to inbox failed: " + e.message);
+  }
+}
+
+function bulkInbox() {
+  const items = selectedItems().filter(it => !inInbox(it) && !it.hidden);
+  if (!items.length) { toast("Already in the inbox."); return; }
+  runBulk(items, it => postAction("inbox", it.id), it => postAction("archive", it.id),
+          n => "Moved to the inbox: " + plural(n, "thread", "threads") + ".", true, "Moving to the inbox");
+}
 
 function paintRead(item) {
   // Every control for this thread follows its read state: the row's weight and its icons.
@@ -1027,6 +1065,8 @@ function renderSelBar() {
     btn("Read", "Mark read (Shift+I)", () => bulkRead(true), "i-read"),
     btn("Unread", "Mark unread (Shift+U)", () => bulkRead(false), "i-unread"),
     btn("Archive", "Archive, or Done for Slack (e)", bulkArchive, "i-archive"),
+    ...(selectedItems().some(it => !inInbox(it) && !it.hidden)
+      ? [btn("Inbox", "Move to inbox", bulkInbox, "i-inbox")] : []),
     btn("Star", "Star or unstar (s)", bulkStar, "i-star"),
     move,
     btn("Clear", "Clear the selection (Esc)", clearSelection, "i-clear"));
@@ -1568,7 +1608,7 @@ function render(rows) {
 
   const groups = Object.fromEntries(SECTIONS.map(s => [s.key, []]));
   for (const r of rows) {
-    const key = r.item.kept ? "kept"
+    const key = r.item.kept && !inInbox(r.item) ? "kept"
       : r.triage && groups[r.triage.bucket] ? r.triage.bucket : "untriaged";
     groups[key].push(r);
   }

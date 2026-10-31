@@ -25,6 +25,70 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+# Search fixtures (synthetic, no network): a Gmail thread kept from a search and archived in
+# Gmail, and fake answers for the search routes, so the browser tests can drive Move to inbox,
+# the search tabs, open-in-place and Keep through the real server and page.
+KEPT_ID = "gmail:e2e0000000000a01"
+FOUND = [("e2e0000000000b01", "Old invoice from Harbor Supply", "Pat <pat@harbor.example.com>"),
+         ("e2e0000000000b02", "Lunch next month?", "Kim <kim@example.org>")]
+
+
+def seed_search(st, server) -> None:
+    from http import HTTPStatus
+
+    from frontdesk.items import Item, Message
+    old = "2025-03-01T10:00:00Z"
+    st.keep(Item(id=KEPT_ID, source="gmail", account="alex@example.com",
+                 subject="Kept: 2025 vendor contract", participants=["dana@example.com"],
+                 updated_at=old, labels=["CATEGORY_PERSONAL"],
+                 messages=[Message("Dana <dana@example.com>", old, "The signed contract is attached.")]))
+
+    def item_for(tid: str, subject: str, sender: str) -> Item:
+        return Item(id=f"gmail:{tid}", source="gmail", account="alex@example.com", subject=subject,
+                    participants=[sender.split("<")[1].rstrip(">")], updated_at=old,
+                    labels=["CATEGORY_PERSONAL"],
+                    messages=[Message(sender, old, f"Synthetic body of: {subject}.")])
+
+    def run_search(settings, query, client_factory=None, slack_factory=None, db_path=None):
+        q = (query or "").strip()
+        if not q:
+            return HTTPStatus.BAD_REQUEST, {"error": "type a search of up to 500 characters"}
+        rows = [{"id": f"gmail:{t}", "subject": s, "sender": f, "from_me": False,
+                 "updated_at": old, "messages": 1, "in_inbox": False, "unread": False,
+                 "url": f"https://mail.google.com/mail/?authuser=alex@example.com#all/{t}"}
+                for t, s, f in FOUND]
+        slack = [{"id": "slack:C0E2E0001:1740000000.000100", "kind": "channel", "where": "#ops",
+                  "sender": "riley", "text": "The invoice question is answered in the thread.",
+                  "updated_at": old, "url": "https://acme.slack.com/archives/C0E2E0001/p1740000000000100"},
+                 {"id": "slack:C0E2E0001:1740000000.000100", "kind": "channel", "where": "#ops",
+                  "sender": "sam", "text": "A second match in the same thread.", "updated_at": old,
+                  "url": ""}]
+        return HTTPStatus.OK, {"results": rows, "gmail_error": "", "slack": slack, "slack_error": ""}
+
+    def search_thread(settings, item_id, client_factory=None):
+        for t, s, f in FOUND:
+            if item_id == f"gmail:{t}":
+                d = item_for(t, s, f).to_dict()
+                for m in d["messages"]:
+                    m["has_html"] = False
+                return HTTPStatus.OK, {"item": d}
+        return HTTPStatus.NOT_FOUND, {"error": "not found"}
+
+    def keep_result(db_path, settings, item_id, client_factory=None, provider_factory=None):
+        from frontdesk.store import Store
+        for t, s, f in FOUND:
+            if item_id == f"gmail:{t}":
+                store = Store(db_path)
+                try:
+                    store.keep(item_for(t, s, f))
+                finally:
+                    store.db.close()
+                return HTTPStatus.OK, {"status": "done", "kind": "keep", "ranked": False}
+        return HTTPStatus.NOT_FOUND, {"error": "not found"}
+
+    server.run_search, server.search_thread, server.keep_result = run_search, search_thread, keep_result
+
+
 def main() -> int:
     work = Path(tempfile.mkdtemp(prefix="fd-e2e-live-"))
     home = work / "home"
@@ -46,6 +110,7 @@ def main() -> int:
     db = work / "e2e.db"
     st = Store(db)
     load_demo(st, now=datetime.now(UTC))
+    seed_search(st, server)
     st.db.close()
     app = server.make_server(Store(db), "127.0.0.1", 0, settings={"demo": True})
     threading.Thread(target=app.serve_forever, daemon=True).start()
