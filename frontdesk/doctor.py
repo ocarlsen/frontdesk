@@ -66,8 +66,9 @@ def _key_check(what: str, env_var: str, service: str, source: str, required: boo
         return Check("ok", what, f"key from Keychain item '{service}'")
     if source == "locked":
         return Check("fail" if required else "warn", what,
-                     f"Keychain item '{service}' exists but is locked for this shell (SSH or a tmux "
-                     f"started outside the GUI login): run from a regular Terminal, or set {env_var}")
+                     f"Keychain item '{service}' exists but is locked for this shell (SSH or a "
+                     f"tmux started outside the GUI login): run from a regular Terminal, or set "
+                     f"{env_var}")
     hint = (f"set {env_var}" if source == "unavailable" else
             f"set {env_var}, or: security add-generic-password -U -s {service} -a $USER -w")
     return Check("fail" if required else "warn", what, f"no key: {hint}")
@@ -82,8 +83,8 @@ def _token_check(path: Path, scopes: list[str], what: str, fix: str, required: b
         return Check("warn", what, f"unreadable token file {path}: {fix} again")
     stored = stored.split() if isinstance(stored, str) else stored
     if sorted(stored or []) != sorted(scopes):
-        return Check("warn", what, f"token has other permissions than FrontDesk asks for, so it will "
-                                   f"be discarded: {fix} again")
+        return Check("warn", what, f"token has other permissions than FrontDesk asks for, so it "
+                                   f"will be discarded: {fix} again")
     return Check("ok", what, "token present")
 
 
@@ -100,8 +101,9 @@ def checks(environ=os.environ, probe=None, online: bool = False,
 
     try:
         s = config.settings()
-        n = len(json.loads(config.SETTINGS_PATH.read_text())) if config.SETTINGS_PATH.exists() else 0
-        out.append(Check("ok", "Settings", f"{n} set in {config.SETTINGS_PATH}" if n else
+        path = config.SETTINGS_PATH
+        n = len(json.loads(path.read_text())) if path.exists() else 0
+        out.append(Check("ok", "Settings", f"{n} set in {path}" if n else
                          "defaults (no settings.json)"))
     except ValueError as e:
         out.append(Check("fail", "Settings", str(e)))
@@ -117,7 +119,8 @@ def checks(environ=os.environ, probe=None, online: bool = False,
         except (OSError, ValueError):
             desktop = False
         out.append(Check("ok", "Gmail OAuth client", "Desktop app client") if desktop else
-                   Check("fail", "Gmail OAuth client", f"{secret} is not a Desktop app client JSON"))
+                   Check("fail", "Gmail OAuth client",
+                         f"{secret} is not a Desktop app client JSON"))
     out.append(_token_check(config.GMAIL_TOKEN, SCOPES, "Gmail read access",
                             "run frontdesk sync", required=False))
     out.append(_token_check(config.GMAIL_ACTIONS_TOKEN, ACTION_SCOPES,
@@ -126,7 +129,8 @@ def checks(environ=os.environ, probe=None, online: bool = False,
 
     name = s["provider"]
     if name not in VENDORS:
-        out.append(Check("fail", "Model", f"unknown provider '{name}' (known: {', '.join(VENDORS)})"))
+        out.append(Check("fail", "Model",
+                         f"unknown provider '{name}' (known: {', '.join(VENDORS)})"))
     else:
         env_var, kc, _ = VENDORS[name]
         module, extra = EXTRAS[name]
@@ -155,7 +159,8 @@ def checks(environ=os.environ, probe=None, online: bool = False,
 
     src = secret_source("SLACK_USER_TOKEN", s["slack_keychain_service"], environ, probe)
     if src in ("env", "found"):
-        where = "SLACK_USER_TOKEN" if src == "env" else f"Keychain item '{s['slack_keychain_service']}'"
+        item = s["slack_keychain_service"]
+        where = "SLACK_USER_TOKEN" if src == "env" else f"Keychain item '{item}'"
         c = Check("ok", "Slack", f"token from {where}; channel messages: "
                   f"{s['slack_channel_messages']}")
         if online:
@@ -166,9 +171,9 @@ def checks(environ=os.environ, probe=None, online: bool = False,
                 c = Check("fail", "Slack", f"token rejected or unreachable ({type(e).__name__})")
         out.append(c)
     elif src == "locked":
-        out.append(Check("warn", "Slack", f"Keychain item '{s['slack_keychain_service']}' is locked "
-                         "for this shell, so sync skips Slack here: run from a regular Terminal, or "
-                         "set SLACK_USER_TOKEN"))
+        out.append(Check("warn", "Slack", f"Keychain item '{s['slack_keychain_service']}' is "
+                         "locked for this shell, so sync skips Slack here: run from a regular "
+                         "Terminal, or set SLACK_USER_TOKEN"))
     else:
         out.append(Check("warn", "Slack", "not set up (optional): see the README's Slack step"))
     return out
