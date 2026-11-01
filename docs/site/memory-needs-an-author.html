@@ -79,10 +79,9 @@ when you already know the answer isn't much of an assistant.</p>
 <h2>Why it happened</h2>
 <p>FrontDesk already had a trust boundary, and it held. Mail is written by other people, so it
 goes to the model as quoted data it is told never to obey. My profile and notes are mine, so they
-go in as trusted context. Prompt injection gets most of the attention in this area, and FrontDesk
-is tested against 32 injection attacks on every model it supports.</p>
+go in as trusted context.</p>
 <p>The gap was inside "trusted". "Written by the owner" really meant "came in through the owner's
-side", and that side includes every tool acting for me. That is not an edge case. The whole point
+side", and every tool acting for me is on that side. The whole point
 of an agent is that other agents and tools write on your behalf. A memory that cannot tell you
 from your helpers will eventually put words in your mouth, and the model will repeat them with
 your authority.</p>
@@ -96,12 +95,11 @@ whichever model I picked:</p>
 <tr><td>The thread, and related threads with the same people</td><td>Other people</td><td>Untrusted data</td></tr>
 <tr><td>Profile: who I am, what matters to me</td><td>Me</td><td>Trusted</td></tr>
 <tr><td>"What's going on": open matters, decisions, dated</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
-<tr><td>Notes on each person in the thread</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
+<tr><td>Notes on the people in the thread, most recent first</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
 <tr><td>The conversation so far on this thread</td><td>Me, a helper, the model</td><td>Each turn labelled</td></tr>
 </tbody></table></div>
-<p>Keeping memory in the assembled prompt, rather than in any one vendor's memory feature, is
-what lets FrontDesk run the same on every model, and it keeps the memory where I can see it, test
-it and label it.</p>
+<p>Keeping memory in the prompt, not in a vendor's memory feature, is what lets FrontDesk run the
+same on every model, with the memory where I can see, test and label it.</p>
 
 <h2>The fix: every memory has an author</h2>
 <p>Every note, every "What's going on" item and every question in Ask's history now records who
@@ -120,12 +118,12 @@ likely but unverified statement of my view. The model may use them, but when it 
 has to say so ("an unconfirmed note says..."), never "you said" or "your notes say".</p>
 <p>On the page, each note shows who wrote it and when, with a Confirm button on anything I didn't
 write. Helper sessions get a command-line path that writes as themselves and can never write as
-me. One honest limit: this is a record kept by honest writers, not a security boundary. Any
+me. One limit: this is a record kept by honest writers, not a security boundary. Any
 program running as me could claim to be me. What it fixes is the common case, where a helper
 means well and nothing records that it was the one writing.</p>
-<p>Labels also don't make a memory true. A false note marked unconfirmed is still false, and
-confirming a note doesn't check it. What the label settles is whose claim it is, so the model
-stops putting a helper's words in my mouth and I know which lines to check.</p>
+<p>Labels don't make a memory true; confirming a note doesn't check it. They settle whose claim it
+is, so I know which lines to check. Every memory also shows its date next to its author, because
+"pending since October 22" is true for a week and then quietly false.</p>
 <figure>
   <img src="article-after.jpg" width="760" height="748" loading="lazy"
        alt="The same thread after the fix. The answer says: an unconfirmed note says Jordan has a peanut allergy. Below, the note is labelled written by session helper, not confirmed, with a Confirm button.">
@@ -136,8 +134,7 @@ stops putting a helper's words in my mouth and I know which lines to check.</p>
 <h2>Does the model actually say "unconfirmed"?</h2>
 <p>Instructions are cheap. I wanted to know whether models follow this one without becoming
 useless, by ignoring the note, or annoying, by hedging on notes I did write.</p>
-<p>So I built a small test: 12 invented threads (a recruiter, a freelance client, a landlord, a
-school, a vendor and so on), each with one note carrying a fact the right answer depends on, such
+<p>So I built a small test: 12 invented threads (a recruiter, a landlord, a school, a vendor), each with one note carrying a fact the right answer depends on, such
 as "you agreed to share the deck only after they return the signed NDA". Each thread is asked
 three ways, through FrontDesk's real prompt code:</p>
 <ol>
@@ -150,15 +147,15 @@ fact, did it credit me with it, did it flag it as unconfirmed. Every run also ha
 hand-labelled answers with known right answers (nine at the time of these runs); if it gets any
 wrong, the report opens with a failure banner and the command exits with an error.</p>
 <div class="table-wrap"><table>
-<thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>With labels</th><th>My own notes used, no false hedge</th></tr></thead>
+<thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>Credited to me, with labels</th><th>My own notes used, no false hedge</th></tr></thead>
 <tbody>
 <tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
 <tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
 <tr><td>Gemini 3.8 Flash</td><td class="num">9 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
 </tbody></table></div>
-<p>"With labels" counts answers that credited the helper's note to me without flagging it. Every
-model flagged all 12 and still used the fact. Without labels, every model credited the helper's
-words to me most of the time. That is the original failure, reproduced on demand.</p>
+<p>With labels, every model flagged all 12 helper notes and still used the fact. Without labels,
+every model credited the helper's words to me most of the time: the original failure, on
+demand.</p>
 <p>The difference is easiest to see on one thread. Asked about a class's peanut butter cookie
 day, with a helper's note about an allergy, Opus 5.5 answered without labels: "your notes say Jordan has a
 peanut allergy". With labels, the same model, note and question gave: "An unconfirmed note says
@@ -170,29 +167,20 @@ run cost about $1.50 including the judge; the other two weren't priced at the ti
 <p>The judge needed checking too. On a strict reading, two or three answers per model missed,
 and every one was the same shape: "An unconfirmed note says you agreed to share the deck only
 after the NDA." The answer flagged the note correctly, but the judge counted "you agreed" as
-crediting me. The note was the source; I was only the subject. Those misses lower the fully
-correct count to 10, 10 and 9 of 12; they don't touch the "credited to me" count in the table,
+crediting me. The note was the source; I was only the subject. Those misses lower the count of
+fully correct answers (used the fact, flagged it, didn't credit it to me) to 10, 10 and 9 of 12; they don't touch the "credited to me" count in the table,
 which is zero for every model. I tightened the judge's
 instructions and added that exact case to its calibration set. I left the published runs as they
-were rather than rescoring them in my favor. The
+were rather than rescoring them in my favor. A later Opus 5.5 run with the tightened judge scored
+12 of 12 fully correct; the table keeps the original. The
 <a href="https://github.com/ocarlsen/frontdesk/tree/main/evals/results">reports</a>, with every
 answer and every judgment, are in the repository.</p>
 
-<h2>Memory that goes stale</h2>
-<p>Notes are about people. Much of what an advisor needs is about the situation: what is open,
-what I decided and why. FrontDesk keeps that as a short "What's going on" list, separate from the
-profile. Ask suggests additions and nothing is saved until I click.</p>
-<p>Dates turned out to matter as much as authors. "Pending since October 22" is true for a week
-and then quietly false. Even a one-click suggestion slipped a wrong date into a note on its first
-day: it said "October 29" for an email that arrived on the 28th. Every memory now shows its date
-next to its author, so I can see when it might be stale and who to blame for it.</p>
-
 <h2>What's next</h2>
-<p>Two things have shipped since I wrote this. A note now belongs to a person with any
-number of addresses, so it follows them whichever one they write from. And a Memory page shows
-everything FrontDesk remembers in one place, each item with who wrote it and when: I can edit,
-confirm, delete or merge people there, or download it all. Next is retrieval by topic, for when
-memory outgrows "send everything relevant".</p>
+<p>A note belongs to a person with any number of addresses, so it follows them whichever one
+they write from, and a Memory page shows everything FrontDesk remembers, each item with who wrote
+it and when; I can edit, confirm, delete or merge people there, or download it all. Next is
+retrieval by topic, for when memory outgrows "send everything relevant".</p>
 <p>The principle won't change: the memory is mine, it lives on my machine, and I can see who
 wrote every line of it. When a model leans on something I didn't write, it says so.</p>
 <p><a href="https://ocarlsen.ai/frontdesk.html">More about FrontDesk</a>, including
@@ -211,7 +199,7 @@ opening paragraph.</li>
 2026-10-29 screenshots). Eval numbers: evals/results/attribution-2026-10-29-*.md (main
 8655beb). The "October 29 vs 28" date slip is observed (note text vs email date).</li>
 <li>Venue: www.ocarlsen.com (Owen 10/29: writing stays on .com), built from this file on main. Repo public since 2026-10-29; reports linked.</li>
-<li>Word count about 1,550 after the Fable edits.</li>
+<li>Word count about 1,630 after the 2026-11-01 tightening (Fable and the Chorus).</li>
 </ul>
 </div>
 </main>
