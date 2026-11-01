@@ -29,6 +29,8 @@ test.describe("Try to hijack it", () => {
 
   test("j and k step through the attacks", async ({ page }) => {
     await page.goto(hijack());
+    // The attacks load after the page: j before they arrive has nothing to step through.
+    await expect(page.locator("#case h2")).toContainText("Your Copperkettle receipt");
     await page.keyboard.press("j");
     await expect(page.locator("#case h2")).toContainText("Quote for the office move");
     await page.keyboard.press("k");

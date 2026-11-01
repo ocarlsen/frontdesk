@@ -41,7 +41,7 @@ body {
 .counts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px;
   color: var(--muted); font-size: 13px; }
 .counts b { color: var(--text); font-weight: 600; }
-main { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; }
+main { max-width: 860px; margin: 0 auto; padding: 0 16px 96px; }   /* the last row can rise */
 /* Search: its own full-width row under the header line. */
 .top .search { flex: 1 1 100%; box-sizing: border-box; height: 38px; padding: 0 12px; font: inherit;
   font-size: 15px; color: var(--text); background: var(--card); border: 1px solid var(--line);
@@ -295,6 +295,11 @@ body.selecting .card > .rowcheck { display: block; }
 /* A row with no reason line (not ranked yet) is one line tall: make room for both. */
 .card:not(:has(.reason)) > .row { min-height: 64px; }
 .card.selected { background: color-mix(in srgb, var(--accent) 9%, var(--card)); }
+/* Moving with j/k scrolls the current row only as far as it must ("nearest"); these margins
+   make that leave about a row of room below it and some above, so it never sits on the edge
+   of the window, and never under the sticky selection bar. */
+.card { scroll-margin-top: 16px; scroll-margin-bottom: 88px; }
+body.selecting .card { scroll-margin-top: 72px; }
 .selbar { position: sticky; top: 0; z-index: 20; max-width: 828px; margin: 0 auto 8px;
   box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 8px 12px; background: var(--card); border-radius: 10px; box-shadow: var(--shadow); }
@@ -323,7 +328,8 @@ body.selecting .card > .rowcheck { display: block; }
   .selbar .selword { display: none; }
   .selbar .selclear { width: 44px; }
   .selbar .selmove { width: 96px; padding: 0 4px; font-size: 14px; }
-  body.selecting main { padding-bottom: 96px; }   /* the last rows stay above the bar */
+  body.selecting main { padding-bottom: 168px; }   /* the last rows stay above the bar */
+  body.selecting .card { scroll-margin-top: 16px; scroll-margin-bottom: 168px; }   /* bar is below */
   .rowcheck { width: 16px; height: 16px; left: 11px; top: 38px; }
 }
 .replyhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
