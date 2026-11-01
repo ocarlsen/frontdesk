@@ -35,6 +35,9 @@ DEFAULTS = {
     "slack_days": 7,
     "slack_max_items": 100,   # the newest conversations kept, like gmail_max_threads
     "slack_unread_days": 90,  # unread DMs and mentions come in from this far back
+    # "mentions": channel messages that mention you, threads you replied in or started.
+    # "all": every channel message (for a workspace that is yours, e.g. agents posting to you).
+    "slack_channel_messages": "mentions",
     "serve_host": "127.0.0.1",
     "serve_port": 8765,
     "auto_sync_minutes": 15,    # the server syncs and ranks on its own; 0 turns it off

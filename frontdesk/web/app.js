@@ -791,7 +791,7 @@ async function restore(item, btn) {
 const STAR_SLACK_NOTE = "Starred in FrontDesk only: Slack has no supported API for saving a " +
   "message for later, so nothing changes in Slack";
 const starButtons = new Map();   // item id -> its star buttons (row and detail)
-let view = "all";                // "all" | "starred"
+let view = "all";                // "all" | "starred" | "unread"
 // Search: `query` filters the synced threads as you type; Enter also asks Gmail (all mail,
 // archived too) through GET /api/search. gmailSearch holds that answer for one query:
 // {q, loading} | {q, results, demo} | {q, error}. Results live in this tab only.
@@ -1649,16 +1649,20 @@ function expandAllButton(ul) {
   return b;
 }
 
-function starredToggle(n) {
+// The views beside the section counts: Starred and Unread, each a toggle back to all threads.
+function viewToggle(kind, n) {
   const c = el("li");
-  const b = el("button", "linkbtn starview", view === "starred" ? "Show all threads" :
-    "\u2605 " + n + " Starred");
+  const label = kind === "starred" ? "\u2605 " + n + " Starred" : "\u25CF " + n + " Unread";
+  const b = el("button", "linkbtn " + (kind === "starred" ? "starview" : "unreadview"),
+               view === kind ? "Show all threads" : label);
   b.type = "button";
-  b.setAttribute("aria-pressed", String(view === "starred"));
-  b.addEventListener("click", () => { view = view === "starred" ? "all" : "starred"; render(window.__items || []); });
+  b.setAttribute("aria-pressed", String(view === kind));
+  b.addEventListener("click", () => { view = view === kind ? "all" : kind; render(window.__items || []); });
   c.append(b);
   return c;
 }
+
+function starredToggle(n) { return viewToggle("starred", n); }
 
 function render(rows) {
   const main = document.getElementById("main");
@@ -1668,10 +1672,27 @@ function render(rows) {
   starButtons.clear();
   if (query) { renderSearch(rows, main, counts); return; }
   const starred = rows.filter(r => r.item.starred);
+  const unread = rows.filter(r => !r.item.hidden && isUnread(r.item));
+
+  if (view === "unread") {
+    // One list, in ranked order: every unread thread, Gmail and Slack, whatever its section.
+    counts.append(starredToggle(starred.length), viewToggle("unread", unread.length));
+    const sec = el("section");
+    sec.setAttribute("aria-label", "Unread");
+    const head = el("div", "sechead");
+    head.append(el("h2", null, "Unread (" + unread.length + ")"));
+    sec.append(head);
+    if (!unread.length) sec.append(el("p", "status", "Nothing unread."));
+    const ul = el("ul", "list");
+    for (const r of unread) ul.append(buildCard(r.item, r.triage));
+    sec.append(ul);
+    main.append(sec);
+    return;
+  }
 
   if (view === "starred") {
     // One list, in ranked order; archived or done Gmail threads stay while Gmail keeps the star.
-    counts.append(starredToggle(starred.length));
+    counts.append(starredToggle(starred.length), viewToggle("unread", unread.length));
     const sec = el("section");
     sec.setAttribute("aria-label", "Starred");
     const head = el("div", "sechead");
@@ -1730,7 +1751,7 @@ function render(rows) {
     }
     main.append(sec);
   }
-  counts.append(starredToggle(starred.length));
+  counts.append(starredToggle(starred.length), viewToggle("unread", unread.length));
 }
 
 // ---- Search ----
@@ -2126,7 +2147,9 @@ async function load() {
   }
 }
 
-async function syncNow() {
+// auto: started by opening the page, not by the owner, so a refusal (a sync already running,
+// demo mode) stays quiet; the next status poll shows the result either way.
+async function syncNow(auto = false) {
   const btn = document.getElementById("sync");
   const note = document.getElementById("syncnote");
   if (STATIC) {
@@ -2146,7 +2169,7 @@ async function syncNow() {
     note.textContent = msg;
     await load();
   } catch (e) {
-    note.textContent = "Sync failed: " + e.message;
+    note.textContent = auto ? "" : "Sync failed: " + e.message;
   } finally {
     btn.disabled = false;
     btn.textContent = "Sync";
@@ -2521,7 +2544,7 @@ const SHORTCUTS = [
   ["* then a / n / r / u", "Select all / none / read / unread"],
   ["Esc", "Clear the selection, leave the reply box, or close this list"],
   ["a", "Reply all (Gmail)"],
-  ["g then i / g then s", "Go to the inbox / the Starred view"],
+  ["g then i / s / u", "Go to the inbox / the Starred view / the Unread view"],
   ["s", "Star or unstar (Gmail: in Gmail too; Slack: in FrontDesk only)"],
   ["r", "Reply (jump to the reply box)"],
   ["v", "Move to another section"],
@@ -2642,8 +2665,8 @@ function onKey(e) {
   // Gmail's two-key "go to": g, then i (inbox) or s (starred) within a second and a half.
   if (gPending) {
     gPending = false;
-    if (e.key === "i" || e.key === "s") {
-      view = e.key === "s" ? "starred" : "all";
+    if (e.key === "i" || e.key === "s" || e.key === "u") {
+      view = { i: "all", s: "starred", u: "unread" }[e.key];
       if (query) clearSearch(); else render(window.__items || []);
       e.preventDefault();
       return;
@@ -2774,8 +2797,20 @@ function showSyncLine(s) {
     (s.auto_sync_minutes ? ", auto every " + s.auto_sync_minutes + " min" : "");
 }
 
+// Opening the page syncs when the last sync is older than this, so it never shows stale mail
+// for long (an unchanged Gmail mailbox costs one call; only new messages are ranked).
+const SYNC_ON_OPEN_AFTER_MS = 2 * 60 * 1000;
+
+function syncIfStale(s) {
+  if (STATIC || !s) return;
+  const at = Date.parse(s.at || "");
+  if (at && Date.now() - at < SYNC_ON_OPEN_AFTER_MS) return;
+  const b = document.getElementById("sync");
+  if (b && !b.disabled) syncNow(true);
+}
+
 async function pollStatus() {
-  if (STATIC) return;
+  if (STATIC) return null;
   try {
     const res = await fetch("/api/status", { cache: "no-store" });
     if (!res.ok) return;
@@ -2798,17 +2833,18 @@ async function pollStatus() {
         note.append(" ", r);
       }
     }
-  } catch (e) { /* the next poll will try again */ }
+    return s;
+  } catch (e) { return null; /* the next poll will try again */ }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("sync").addEventListener("click", syncNow);
+  document.getElementById("sync").addEventListener("click", () => syncNow());
   document.getElementById("profile").addEventListener("click", openProfile);
   document.getElementById("memory").addEventListener("click", openMemory);
   buildHelp();
   setupSearch();
   document.addEventListener("keydown", onKey);
   load();
-  pollStatus();
+  pollStatus().then(syncIfStale);
   setInterval(pollStatus, 60000);
 });

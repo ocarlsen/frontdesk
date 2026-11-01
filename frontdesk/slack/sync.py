@@ -159,10 +159,12 @@ def _apply_local_marks(store: Store, item, pos: float | None, newest: float) -> 
 
 
 def _candidates(conv: dict, history: list[dict], owner: str, window: float,
-                last_read: float | None) -> list[_Candidate]:
+                last_read: float | None, everything: bool = False) -> list[_Candidate]:
     """history runs back to the window's start, or further when the read position is older.
     What came in only because it is unread must be unread: someone else's DM message, or a
-    channel message that mentions the owner, after last_read."""
+    channel message that mentions the owner (any channel message, with `everything`), after
+    last_read. `everything` is slack_channel_messages = "all": every top-level channel message
+    comes in, not only the ones that involve the owner."""
     channel = conv["id"]
     real = [m for m in history if m.get("ts") and not is_system(m)]
 
@@ -182,13 +184,14 @@ def _candidates(conv: dict, history: list[dict], owner: str, window: float,
             continue
         replied = owner in (m.get("reply_users") or [])
         started = m.get("user") == owner and bool(m.get("reply_count"))
-        if not (replied or started or mentions(m, owner)):
+        if not (everything or replied or started or mentions(m, owner)):
             continue
-        if float(m["ts"]) < window and not (mentions(m, owner) and unread(m)):
+        if float(m["ts"]) < window and not ((everything or mentions(m, owner)) and unread(m)):
             continue
         newest = max(float(m["ts"]), float(m.get("latest_reply") or 0))
         out.append(_Candidate(conv, newest, f"slack:{channel}:{m['ts']}", [m],
-                              fetch_replies=bool(m.get("reply_count"))))
+                              fetch_replies=bool(m.get("reply_count")), unread=unread(m),
+                              last_read=last_read))
     return out
 
 
@@ -216,6 +219,10 @@ def sync(store: Store, settings: dict, token: str, log=print,
     # How far back unread may reach: a conversation never read would otherwise mean its whole
     # history.
     floor = time.time() - float(settings.get("slack_unread_days", 90)) * 86400
+    mode = settings.get("slack_channel_messages", "mentions")
+    if mode not in ("mentions", "all"):
+        raise ValueError(f"slack_channel_messages={mode!r}: expected \"mentions\" or \"all\"")
+    everything = mode == "all"
     name_of = _name_lookup(client, log)
 
     candidates: list[_Candidate] = []
@@ -225,7 +232,7 @@ def sync(store: Store, settings: dict, token: str, log=print,
             last_read = _last_read(client, conv)
             since = window if last_read is None else max(floor, min(window, last_read))
             candidates.extend(_candidates(conv, client.history(conv["id"], f"{since:.6f}"), owner,
-                                          window, last_read))
+                                          window, last_read, everything))
         except Exception as e:  # noqa: BLE001 - isolate per conversation, report the type only
             log(f"  skipped conversation {conv.get('id', '?')}: {type(e).__name__}")
             failed_channels.add(conv.get("id", ""))
@@ -246,7 +253,13 @@ def sync(store: Store, settings: dict, token: str, log=print,
                        if c.fetch_replies else c.messages)
                 item = thread_to_item(c.conv, raw, owner, host, name_of, team)
                 pos = _thread_last_read(raw)
-                if item is not None and _thread_unread(raw, pos, owner):
+                if pos is None:
+                    # Not a followed thread: the channel's read position says whether the
+                    # message itself is unread (a reply's read state is the thread's alone).
+                    pos = c.last_read
+                    if item is not None and c.unread:
+                        item.labels.append("UNREAD")
+                elif item is not None and _thread_unread(raw, pos, owner):
                     item.labels.append("UNREAD")
         except Exception as e:  # noqa: BLE001 - isolate per item, report the type only
             log(f"  skipped {c.item_id}: {type(e).__name__}")
