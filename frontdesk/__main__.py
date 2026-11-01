@@ -18,6 +18,10 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--limit", type=int, help="triage at most N threads")
     sub.add_parser("serve", help="serve the ranked page")
     sub.add_parser("status", help="counts per bucket")
+    doc = sub.add_parser("doctor", help="what is set up and what is missing (offline; never "
+                                        "prints a key)")
+    doc.add_argument("--online", action="store_true",
+                     help="also check the Slack token with one auth.test call")
     sub.add_parser("smoke", help="one live model call on a synthetic thread (no real mail)")
     dr = sub.add_parser("draft", help="create a Gmail DRAFT with links kept exactly (never sends)")
     who = dr.add_mutually_exclusive_group(required=True)
@@ -103,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "demo":
         return demo_main(args.port)
+    if args.cmd == "doctor":
+        from .doctor import main as doctor_main
+        return doctor_main(online=args.online)
     if args.cmd == "eval-attribution" and args.dry_run:
         return eval_attribution_main(args, None)
     if args.cmd == "scoreboard":
