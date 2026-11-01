@@ -288,7 +288,8 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
         newest = (store.slack_read(item_id) or {}).get("newest") or f"{time.time():.6f}"
         store.set_local_read(item_id, newest)
         store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
-        return {"status": "done", "here_only": True}
+        moved = _follow_in_slack(store, slack, item_id.split(":", 2)[1]) if slack else None
+        return {"status": "done", "here_only": moved is None, "slack_marked": moved}
     if item_id in store.local_unread_ids():
         # Marked unread in FrontDesk only (Slack): reading it here clears that mark, whether or
         # not Slack itself can be told.
@@ -318,6 +319,22 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
     store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
     store.set_local_unread(item_id, False)
     return {"status": "done"}
+
+
+def _follow_in_slack(store: Store, slack, channel: str) -> str | None:
+    """Move the channel's Slack read position over what the owner has now handled here (see
+    slack.sync.advance_channel_mark: it stops at the first message not read or done in
+    FrontDesk). Best effort: a missing scope or a failed call leaves it to the next sync."""
+    from .slack.sync import advance_channel_mark
+    try:
+        owner = slack.auth_test()["user_id"]
+        last_read = slack.info(channel).get("last_read")
+        if last_read in (None, ""):
+            return None
+        return advance_channel_mark(store, slack, channel, owner, float(last_read),
+                                    slack.history(channel, str(last_read)))
+    except Exception:  # noqa: BLE001 - Slack stays as it was; the page says "read here"
+        return None
 
 
 def mark_unread(store: Store, item_id: str, gmail: GmailClient | None) -> dict:

@@ -9,14 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # Each Slack Web API method the client calls, and the user scopes it needs (Slack's method docs).
-# conversations.list/info over im, mpim, private and public channels; mark only for DMs.
+# conversations.list/info over im, mpim, private and public channels; mark for all four.
 METHOD_SCOPES = {
     "auth.test": set(),
     "conversations.list": {"channels:read", "groups:read", "im:read", "mpim:read"},
     "conversations.info": {"channels:read", "groups:read", "im:read", "mpim:read"},
     "conversations.history": {"channels:history", "groups:history", "im:history", "mpim:history"},
     "conversations.replies": {"channels:history", "groups:history", "im:history", "mpim:history"},
-    "conversations.mark": {"im:write", "mpim:write"},
+    "conversations.mark": {"im:write", "mpim:write", "channels:write", "groups:write"},
     "users.info": {"users:read"},
     "chat.postMessage": {"chat:write"},
     "search.messages": {"search:read"},

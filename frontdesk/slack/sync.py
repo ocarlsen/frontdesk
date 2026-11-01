@@ -141,6 +141,32 @@ def fetch_one(client, ws: Workspace, item_id: str, floor: float):
     return item, pos, max(float(x.get("ts", 0)) for x in raw)
 
 
+def advance_channel_mark(store: Store, client, channel: str, owner: str, last_read: float,
+                         history: list[dict]) -> str | None:
+    """Move Slack's read position in a channel forward over what the owner has handled in
+    FrontDesk, and no further: walking the messages after `last_read` oldest first, every
+    message from someone else must be a stored item that is read here or done (a thread reply
+    shown in the channel counts as its thread). The first one that is not, or that FrontDesk
+    never stored, stops it, so nothing the owner has not seen is marked read in Slack.
+    `history` must cover everything after last_read. Returns the new position, or None."""
+    upto, handled = None, False
+    for m in sorted((m for m in history if m.get("ts") and float(m["ts"]) > last_read),
+                    key=lambda m: float(m["ts"])):
+        if m.get("user") != owner and not is_system(m):
+            root = m["thread_ts"] if m.get("thread_ts") and m["thread_ts"] != m["ts"] else m["ts"]
+            item_id = f"slack:{channel}:{root}"
+            if store.get_item(item_id) is None:
+                break
+            if not (store.hidden_reason(item_id) or store.local_read(item_id) is not None):
+                break
+            handled = True
+        upto = m["ts"]
+    if upto is None or not handled:   # nothing the owner handled here: leave Slack alone
+        return None
+    client.mark(channel, upto)       # channels:write / groups:write
+    return upto
+
+
 def _apply_local_marks(store: Store, item, pos: float | None, newest: float) -> None:
     """Record Slack's view, then let the owner's FrontDesk marks win until Slack moves on:
     marked unread here stays unread until Slack's read position passes where it was then;
@@ -227,12 +253,18 @@ def sync(store: Store, settings: dict, token: str, log=print,
 
     candidates: list[_Candidate] = []
     failed_channels: set[str] = set()
+    # Channels whose history this run covers back to the read position: the ones whose Slack
+    # marker can follow what the owner handled in FrontDesk (advance_channel_mark).
+    covered: dict[str, tuple[float, list[dict]]] = {}
     for conv in client.list_conversations():
         try:
             last_read = _last_read(client, conv)
             since = window if last_read is None else max(floor, min(window, last_read))
-            candidates.extend(_candidates(conv, client.history(conv["id"], f"{since:.6f}"), owner,
-                                          window, last_read, everything))
+            history = client.history(conv["id"], f"{since:.6f}")
+            candidates.extend(_candidates(conv, history, owner, window, last_read, everything))
+            if (last_read is not None and since <= last_read
+                    and not (conv.get("is_im") or conv.get("is_mpim"))):
+                covered[conv["id"]] = (last_read, history)
         except Exception as e:  # noqa: BLE001 - isolate per conversation, report the type only
             log(f"  skipped conversation {conv.get('id', '?')}: {type(e).__name__}")
             failed_channels.add(conv.get("id", ""))
@@ -271,6 +303,18 @@ def sync(store: Store, settings: dict, token: str, log=print,
         count += 1
     if len(candidates) > cap:
         log(f"  kept the newest {cap} of {len(candidates)} Slack conversations (slack_max_items)")
+
+    # Follow the owner's handling in FrontDesk into Slack's channel read positions. One channel
+    # failing (e.g. the app lacks channels:write) never fails the sync.
+    for channel, (last_read, history) in covered.items():
+        try:
+            moved = advance_channel_mark(store, client, channel, owner, last_read, history)
+        except Exception as e:  # noqa: BLE001 - report the type only
+            why = e.error if isinstance(e, SlackError) else type(e).__name__
+            log(f"  could not mark {channel} read in Slack: {why}")
+            continue
+        if moved:
+            log(f"  marked {channel} read in Slack up to {moved}")
 
     # Conversations the owner kept from a search sit outside the window: fetch them too, so new
     # replies show, and keep them through prune until they are marked done.

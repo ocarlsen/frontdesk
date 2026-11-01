@@ -694,3 +694,110 @@ def test_read_here_holds_for_an_unread_channel_message(tmp_path):
     sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None, client=client)
     assert "UNREAD" not in store.get_item(item_id).labels     # Slack still says unread
 
+
+
+# ---- Slack's channel read position follows what the owner handled in FrontDesk -----------
+
+class MarkClient(ReadClient):
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.marks: list[tuple[str, str]] = []
+
+    def mark(self, channel, ts):
+        self.marks.append((channel, ts))
+        self.last_read[channel] = ts
+        return {"ok": True}
+
+
+def _bot_channel(now, n=3):
+    """A channel with n unread bot posts (oldest first), read up to an hour before the first."""
+    at = lambda ago: f"{now - ago:.6f}"   # noqa: E731
+    posts = [{"ts": at(3600 * (n - i)), "bot_id": "B0", "text": f"post {i}"} for i in range(n)]
+    return [CHAN], {"C0ENG": list(reversed(posts))}, {"C0ENG": at(3600 * n + 60)}, posts
+
+
+def _all_sync(store, client):
+    from frontdesk.slack.sync import sync
+    return sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None, client=client)
+
+
+def test_reading_the_oldest_first_moves_slack_up_to_what_is_read(tmp_path):
+    from frontdesk import actions
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, posts = _bot_channel(time.time())
+    client = MarkClient(convs, hist, {}, last_read=last_read)
+    _all_sync(store, client)
+    ids = [f"slack:C0ENG:{p['ts']}" for p in posts]
+    assert all("UNREAD" in store.get_item(i).labels for i in ids)
+    actions.mark_read(store, ids[0], None)          # read here (no Slack client in this call)
+    _all_sync(store, client)
+    assert client.marks == [("C0ENG", posts[0]["ts"])]   # only up to the one read
+
+
+def test_a_newer_one_read_first_waits_for_the_older_one(tmp_path):
+    from frontdesk import actions
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, posts = _bot_channel(time.time())
+    client = MarkClient(convs, hist, {}, last_read=last_read)
+    _all_sync(store, client)
+    ids = [f"slack:C0ENG:{p['ts']}" for p in posts]
+    actions.mark_read(store, ids[2], None)          # the newest, while older ones are unread
+    _all_sync(store, client)
+    assert client.marks == []                         # Slack keeps the older ones unread
+    actions.set_done(store, ids[0], True)             # done counts as handled
+    actions.mark_read(store, ids[1], None)
+    _all_sync(store, client)
+    assert client.marks == [("C0ENG", posts[2]["ts"])]   # now all three: up to the newest
+
+
+def test_a_message_frontdesk_never_stored_stops_it(tmp_path):
+    from frontdesk import actions
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, posts = _bot_channel(time.time())
+    client = MarkClient(convs, hist, {}, last_read=last_read)
+    from frontdesk.slack.sync import sync
+    sync(store, {}, TOKEN, log=lambda s: None, client=client)    # mentions mode: none stored
+    assert store.db.execute("SELECT count(*) FROM items").fetchone()[0] == 0
+    store2 = Store(tmp_path / "t.db")
+    _all_sync(store2, client)
+    ids = [f"slack:C0ENG:{p['ts']}" for p in posts]
+    with store2.tx() as db:                                       # forget the oldest
+        db.execute("DELETE FROM items WHERE id=?", (ids[0],))
+    for i in ids[1:]:
+        actions.mark_read(store2, i, None)
+    from frontdesk.slack.sync import advance_channel_mark
+    assert advance_channel_mark(store2, client, "C0ENG", OWNER, float(last_read["C0ENG"]),
+                                hist["C0ENG"]) is None
+    assert client.marks == []
+
+
+def test_marking_read_in_frontdesk_moves_slack_right_away(tmp_path):
+    from frontdesk import actions
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, posts = _bot_channel(time.time(), n=1)
+    client = MarkClient(convs, hist, {}, last_read=last_read)
+    _all_sync(store, client)
+    out = actions.mark_read(store, f"slack:C0ENG:{posts[0]['ts']}", None, client)
+    assert out == {"status": "done", "here_only": False, "slack_marked": posts[0]["ts"]}
+    assert client.marks == [("C0ENG", posts[0]["ts"])]
+
+
+def test_a_missing_write_scope_is_logged_and_the_sync_goes_on(tmp_path):
+    from frontdesk import actions
+    from frontdesk.slack.sync import sync
+
+    class NoScope(MarkClient):
+        def mark(self, channel, ts):
+            raise SlackError("conversations.mark", "missing_scope")
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, posts = _bot_channel(time.time(), n=1)
+    client = NoScope(convs, hist, {}, last_read=last_read)
+    _all_sync(store, client)
+    item_id = f"slack:C0ENG:{posts[0]['ts']}"
+    out = actions.mark_read(store, item_id, None, client)
+    assert out["here_only"] is True and out["slack_marked"] is None
+    logs: list[str] = []
+    res = sync(store, {"slack_channel_messages": "all"}, TOKEN, log=logs.append, client=client)
+    assert res.synced == 1
+    assert any("could not mark C0ENG read in Slack: missing_scope" in line for line in logs)
+    assert "UNREAD" not in store.get_item(item_id).labels          # still read here
