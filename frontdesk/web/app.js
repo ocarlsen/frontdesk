@@ -706,11 +706,12 @@ async function setRead(item, read, li) {
   try {
     const out = await postAction(read ? "read" : "unread", item.id, read ? { explicit: true } : undefined);
     if (out.here_only) {
-      toast("Marked read here. Slack keeps its own read state for threads.", "Undo",
-            () => setRead(item, false, li));
+      toast("Marked read here. Slack follows once every older message in that channel is " +
+            "read or done here.", "Undo", () => setRead(item, false, li));
       return;
     }
-    toast(read ? "Marked read." : "Marked unread.", "Undo", () => setRead(item, !read, li));
+    toast(out.slack_marked ? "Marked read, in Slack too." : read ? "Marked read." : "Marked unread.",
+          "Undo", () => setRead(item, !read, li));
   } catch (e) {
     item.labels = before;
     paintRead(item);

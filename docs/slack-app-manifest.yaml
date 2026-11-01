@@ -7,7 +7,8 @@
 #   users:read users.info (display names)
 #   chat:write chat.postMessage (a reply you confirmed)
 #   search:read search.messages (the search box)
-#   im:write, mpim:write  conversations.mark (marking a DM or group DM read)
+#   *:write    conversations.mark (moving your read position in a DM, group DM or channel
+#              when you read it in FrontDesk)
 display_information:
   name: FrontDesk
   description: Your own copy of FrontDesk reads your Slack for your local inbox.
@@ -27,6 +28,8 @@ oauth_config:
       - search:read
       - im:write
       - mpim:write
+      - channels:write
+      - groups:write
 settings:
   org_deploy_enabled: false
   socket_mode_enabled: false

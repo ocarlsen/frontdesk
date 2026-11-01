@@ -46,9 +46,12 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   or bots posting to you), with unread ones back to `slack_unread_days`. The newest 100
   conversations are kept
   (`slack_max_items`, like `gmail_max_threads`). DMs and threads you follow show unread from
-  Slack's own read position. Marking a channel thread read or unread in FrontDesk stays in
-  FrontDesk (no public Slack API moves a thread's read position), and holds through syncs until
-  you read it in Slack or a new reply comes. **Done** hides one until someone posts again, and
+  Slack's own read position. Reading a channel message in FrontDesk (or marking it done) moves
+  Slack's read position for that channel too, but only up to the newest message such that every
+  older unread one there is read or done in FrontDesk, so nothing you have not seen is marked
+  read in Slack (needs the `channels:write`/`groups:write` scopes in the manifest; reinstall an
+  older app to add them). A thread's own read state stays in FrontDesk (no public Slack API moves
+  it), and a mark you made holds through syncs until you read it in Slack or a new reply comes. **Done** hides one until someone posts again, and
   **Send** replies in the thread with the same confirm-and-undo flow.
   A star on a Slack thread is kept in FrontDesk only: Slack has no supported API for saving a
   message for later (`stars.add` still answers, but since 2023 it has no effect anyone can see in
@@ -272,7 +275,7 @@ frontdesk serve               # prints the page URL; syncs on start and every 15
 Google permission (`gmail.modify`), kept in its own token file: `frontdesk authorize-actions`.
 Without it, FrontDesk reads and ranks but never changes your mail.
 
-**5. Slack (optional).** [Create the Slack app](https://api.slack.com/apps?new_app=1&manifest_yaml=display_information%3A%0A%20%20name%3A%20FrontDesk%0A%20%20description%3A%20Your%20own%20copy%20of%20FrontDesk%20reads%20your%20Slack%20for%20your%20local%20inbox.%0Aoauth_config%3A%0A%20%20scopes%3A%0A%20%20%20%20user%3A%0A%20%20%20%20%20%20-%20channels%3Aread%0A%20%20%20%20%20%20-%20groups%3Aread%0A%20%20%20%20%20%20-%20im%3Aread%0A%20%20%20%20%20%20-%20mpim%3Aread%0A%20%20%20%20%20%20-%20channels%3Ahistory%0A%20%20%20%20%20%20-%20groups%3Ahistory%0A%20%20%20%20%20%20-%20im%3Ahistory%0A%20%20%20%20%20%20-%20mpim%3Ahistory%0A%20%20%20%20%20%20-%20users%3Aread%0A%20%20%20%20%20%20-%20chat%3Awrite%0A%20%20%20%20%20%20-%20search%3Aread%0A%20%20%20%20%20%20-%20im%3Awrite%0A%20%20%20%20%20%20-%20mpim%3Awrite%0Asettings%3A%0A%20%20org_deploy_enabled%3A%20false%0A%20%20socket_mode_enabled%3A%20false%0A%20%20token_rotation_enabled%3A%20false): this opens Slack's "Create from a
+**5. Slack (optional).** [Create the Slack app](https://api.slack.com/apps?new_app=1&manifest_yaml=display_information%3A%0A%20%20name%3A%20FrontDesk%0A%20%20description%3A%20Your%20own%20copy%20of%20FrontDesk%20reads%20your%20Slack%20for%20your%20local%20inbox.%0Aoauth_config%3A%0A%20%20scopes%3A%0A%20%20%20%20user%3A%0A%20%20%20%20%20%20-%20channels%3Aread%0A%20%20%20%20%20%20-%20groups%3Aread%0A%20%20%20%20%20%20-%20im%3Aread%0A%20%20%20%20%20%20-%20mpim%3Aread%0A%20%20%20%20%20%20-%20channels%3Ahistory%0A%20%20%20%20%20%20-%20groups%3Ahistory%0A%20%20%20%20%20%20-%20im%3Ahistory%0A%20%20%20%20%20%20-%20mpim%3Ahistory%0A%20%20%20%20%20%20-%20users%3Aread%0A%20%20%20%20%20%20-%20chat%3Awrite%0A%20%20%20%20%20%20-%20search%3Aread%0A%20%20%20%20%20%20-%20im%3Awrite%0A%20%20%20%20%20%20-%20mpim%3Awrite%0A%20%20%20%20%20%20-%20channels%3Awrite%0A%20%20%20%20%20%20-%20groups%3Awrite%0Asettings%3A%0A%20%20org_deploy_enabled%3A%20false%0A%20%20socket_mode_enabled%3A%20false%0A%20%20token_rotation_enabled%3A%20false): this opens Slack's "Create from a
 manifest" dialog already filled in from [`docs/slack-app-manifest.yaml`](docs/slack-app-manifest.yaml)
 (or paste that file at [api.slack.com/apps](https://api.slack.com/apps): Create New App, From a
 manifest). Pick your workspace, then **Next** and **Create and Install**. It asks only for

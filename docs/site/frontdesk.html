@@ -275,7 +275,8 @@ messages, group messages and the channel threads that mention you, that you repl
 started, from the last seven days, plus direct messages and mentions you have not read yet, from
 up to 90 days back. If you turn on one setting (for a workspace that is yours, where agents or
 bots post to you), it reads every message in the channels you are in instead. To know what is unread it reads your read position in each conversation and
-in each thread you follow. It posts a reply only through the same Send flow: you see the exact message and
+in each thread you follow. When you read or finish messages in FrontDesk, it moves that read
+position forward in Slack too, never past a message you have not seen there. It posts a reply only through the same Send flow: you see the exact message and
 where it goes, confirm, and have 30 seconds to undo. The token stays on your computer.</p>
 
 <h3>Unanswered email, if you set it up</h3>
@@ -353,7 +354,9 @@ exception types. No other HTTP client in the package.</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
 (frontdesk/gmail/auth.py).</li>
 <li>Slack: frontdesk/slack (reads conversations.list/history/replies, users.info; posts only
-chat.postMessage from sending.py; conversations.mark only for DMs you read here). Window
+chat.postMessage from sending.py; conversations.mark moves your read position in a DM you read
+here, and in a channel up to the newest message whose older unread ones are all read or done
+here: frontdesk/slack/sync.py advance_channel_mark). Window
 slack_days = 7, unread back to slack_unread_days = 90, cap slack_max_items = 100. Token from SLACK_USER_TOKEN or the
 Keychain item frontdesk-slack (frontdesk/sources.py).</li>
 <li>Sends only on confirm: frontdesk/sending.py is the only caller of GmailClient.send_message and

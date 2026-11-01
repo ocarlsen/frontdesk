@@ -237,7 +237,7 @@ def test_mark_read_on_a_slack_channel_thread_is_here_only(tmp_path):
                 "https://example-team.slack.com/archives/C1/p1730000000000001")
     sl = FakeSlackMark()
     out = actions.mark_read(store, "slack:C1:1730000000.000001", None, sl)
-    assert out == {"status": "done", "here_only": True}
+    assert out == {"status": "done", "here_only": True, "slack_marked": None}
     assert sl.marked == []
     assert store.local_read("slack:C1:1730000000.000001") is not None
     assert "UNREAD" not in store.get_item("slack:C1:1730000000.000001").labels
