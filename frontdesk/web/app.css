@@ -340,7 +340,7 @@ svg.icons { position: absolute; width: 0; height: 0; overflow: hidden; }
 .btn.btn-star.on::first-letter { color: var(--u3); }
 .tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; font-size: .9em;
   background: var(--field); border: 1px solid var(--line); }
-.counts .starview { font-size: inherit; }
+.counts .starview, .counts .unreadview { font-size: inherit; }
 .swipe-reveal { display: none; grid-row: 1; grid-column: 1 / -1; align-items: center;
   justify-content: flex-end; padding: 0 18px; border-radius: 10px; font-weight: 600;
   background: color-mix(in srgb, var(--accent) 22%, var(--card)); color: var(--text); }

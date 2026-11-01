@@ -385,9 +385,9 @@ def test_unread_dms_and_mentions_come_in_however_old(tmp_path):
     assert res.synced == 3
     assert "UNREAD" in store.get_item("slack:D0OLDUN:dm").labels
     assert "UNREAD" in store.get_item("slack:G0GROUP:dm").labels
-    # Channel threads are never marked unread: Slack keeps one read position per channel, so
-    # FrontDesk could never clear it.
-    assert "UNREAD" not in store.get_item(f"slack:C0ENG:{t_ask}").labels
+    # The mention is after the channel's read position, so it is unread. Marking it read in
+    # FrontDesk holds through syncs (local_read) until a newer message, so it can be cleared.
+    assert "UNREAD" in store.get_item(f"slack:C0ENG:{t_ask}").labels
     # History reaches back to the read position, but no further than slack_unread_days (90).
     now = time.time()
     assert abs(fake.asked["D0OLDUN"] - (now - 41 * DAY)) < 60
@@ -621,3 +621,76 @@ def test_keep_slack_is_refused_in_demo_mode(tmp_path):
     code, _ = server.keep_slack(tmp_path / "s.db", {"demo": True}, "slack:C0ENG:1740000000.000100",
                                 slack_factory=lambda: None)
     assert code == 409
+
+
+# ---- slack_channel_messages = "all" --------------------------------------------------------
+
+def _agents_world(now):
+    """A channel where a bot posts to the owner: no mentions, no replies."""
+    at = lambda ago: f"{now - ago:.6f}"   # noqa: E731
+    hist = {"C0ENG": [
+        {"ts": at(600), "bot_id": "B0AGENT", "text": "nightly run finished: 3 failures"},     # unread
+        {"ts": at(3 * DAY), "bot_id": "B0AGENT", "text": "weekly digest ready"},              # read
+        {"ts": at(20 * DAY), "bot_id": "B0AGENT", "text": "old but never read"},              # unread
+        {"ts": at(40 * DAY), "bot_id": "B0AGENT", "text": "old and read"},
+    ]}
+    return [CHAN], hist, {"C0ENG": at(25 * DAY)}, at
+
+
+def test_all_brings_in_every_channel_message_and_marks_the_unread(tmp_path):
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    convs, hist, _, at = _agents_world(now)
+    # Read up to 2 days ago: the 10-minute-old post is unread, the 3-day-old digest is read.
+    last_read = {"C0ENG": at(2 * DAY)}
+    sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None,
+         client=ReadClient(convs, hist, {}, last_read=last_read))
+    items = {r["id"]: store.get_item(r["id"]) for r in store.db.execute("SELECT id FROM items")}
+    assert set(items) == {f"slack:C0ENG:{at(600)}", f"slack:C0ENG:{at(3 * DAY)}"}
+    assert "UNREAD" in items[f"slack:C0ENG:{at(600)}"].labels
+    assert "UNREAD" not in items[f"slack:C0ENG:{at(3 * DAY)}"].labels
+
+
+def test_all_reaches_back_for_unread_channel_messages(tmp_path):
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    convs, hist, _, at = _agents_world(now)
+    last_read = {"C0ENG": at(25 * DAY)}                    # the 20-day-old post is unread
+    sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None,
+         client=ReadClient(convs, hist, {}, last_read=last_read))
+    ids = {r["id"] for r in store.db.execute("SELECT id FROM items")}
+    assert f"slack:C0ENG:{at(20 * DAY)}" in ids               # unread, outside the window
+    assert f"slack:C0ENG:{at(40 * DAY)}" not in ids           # read, outside the window
+    assert "UNREAD" in store.get_item(f"slack:C0ENG:{at(20 * DAY)}").labels
+
+
+def test_mentions_mode_leaves_a_bots_channel_post_out(tmp_path):
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    convs, hist, last_read, at = _agents_world(now)
+    sync(store, {}, TOKEN, log=lambda s: None, client=ReadClient(convs, hist, {}, last_read=last_read))
+    assert store.db.execute("SELECT count(*) FROM items").fetchone()[0] == 0
+
+
+def test_a_bad_channel_messages_setting_fails_loudly(tmp_path):
+    store = Store(tmp_path / "s.db")
+    convs, hist, last_read, _ = _agents_world(time.time())
+    with pytest.raises(ValueError, match="slack_channel_messages='everything'"):
+        sync(store, {"slack_channel_messages": "everything"}, TOKEN, log=lambda s: None,
+             client=ReadClient(convs, hist, {}, last_read=last_read))
+
+
+def test_read_here_holds_for_an_unread_channel_message(tmp_path):
+    from frontdesk import actions
+    store = Store(tmp_path / "s.db")
+    now = time.time()
+    convs, hist, _, at = _agents_world(now)
+    last_read = {"C0ENG": at(2 * DAY)}
+    client = ReadClient(convs, hist, {}, last_read=last_read)
+    sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None, client=client)
+    item_id = f"slack:C0ENG:{at(600)}"
+    assert "UNREAD" in store.get_item(item_id).labels
+    actions.mark_read(store, item_id, None)
+    sync(store, {"slack_channel_messages": "all"}, TOKEN, log=lambda s: None, client=client)
+    assert "UNREAD" not in store.get_item(item_id).labels     # Slack still says unread
+

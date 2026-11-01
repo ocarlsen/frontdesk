@@ -41,7 +41,10 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
   that mention you, that you replied in or that you started become threads on the same page, from
   the last 7 days (`slack_days`), plus anything still unread however old (back to
   `slack_unread_days`, 90): DMs with someone else's message after your read position, and
-  channel messages that mention you after it. The newest 100 conversations are kept
+  channel messages that mention you after it. With `slack_channel_messages: "all"` (default
+  `"mentions"`), every message in your channels comes in, for a workspace that is yours (agents
+  or bots posting to you), with unread ones back to `slack_unread_days`. The newest 100
+  conversations are kept
   (`slack_max_items`, like `gmail_max_threads`). DMs and threads you follow show unread from
   Slack's own read position. Marking a channel thread read or unread in FrontDesk stays in
   FrontDesk (no public Slack API moves a thread's read position), and holds through syncs until
@@ -58,14 +61,15 @@ three prompt-injection attempts (one in Slack) so you can see how they are handl
 - **Auto-sync** a few seconds after the server starts, then every 15 minutes (`auto_sync_minutes`);
   `Shift+N` (Gmail's update key) or the Sync button syncs now. When Gmail's `historyId` (it moves
   on any change in the mailbox), the query and the kept threads are as they were after the last
-  complete sync, Gmail sync is one call and fetches nothing. An open page reloads only after a
-  sync that changed something. With an `in:inbox` query, a thread Gmail lists whose messages carry no INBOX
+  complete sync, Gmail sync is one call and fetches nothing. Opening the page syncs when the last
+  sync is more than 2 minutes old. An open page reloads only after a sync that changed something. With an `in:inbox` query, a thread Gmail lists whose messages carry no INBOX
   label (Gmail's listing can be stale for old mail) is left out, as Gmail's own inbox leaves it
   out. Gmail-style keyboard shortcuts (`?`):
   `j`/`k` move, `o` opens, `e`/`y` archive (or mark a Slack thread done), `[`/`]` archive and
   open the next thread, `s` stars, `r` replies, `a` replies all, `Shift+I`/`Shift+U` mark read
-  and unread (Gmail too; on Slack, unread is kept in FrontDesk), `z` undoes, `g i`/`g s` go to the
-  inbox or Starred. Each action that changes mail also has a control: row icons on hover, the
+  and unread (Gmail too; on Slack, unread is kept in FrontDesk), `z` undoes, `g i`/`g s`/`g u` go to the
+  inbox, Starred or Unread (both views are toggles beside the section counts, Unread listing
+  every unread thread from Gmail and Slack). Each action that changes mail also has a control: row icons on hover, the
   thread's buttons, and the toast's Undo.
 - **Bulk:** select with the row checkbox, `x`, Shift-click for a range, or `*` then `a`/`n`/`r`/`u`
   (all, none, read, unread); on a phone, long-press a row, then tap more. A bar then marks the
