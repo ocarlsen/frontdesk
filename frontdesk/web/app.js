@@ -341,7 +341,7 @@ function buildCard(item, triage) {
   row.append(dot, meta, when);
 
   let detail = null;
-  row.addEventListener("focus", () => { if (currentId !== item.id) setCurrent(li); });
+  row.addEventListener("focus", () => { if (currentId !== item.id) setCurrent(li, false); });
   row.addEventListener("click", () => {
     if (li.dataset.swiped) { delete li.dataset.swiped; return; }   // the end of a swipe or long press
     if (selected.size && TOUCH.matches) { toggleSelect(li, false); return; }   // selecting: a tap picks
@@ -1784,7 +1784,7 @@ function buildResultCard(r) {
   row.append(dot, meta, when);
   row.setAttribute("aria-expanded", "false");
   let detail = null;
-  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li); });
+  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li, false); });
   row.addEventListener("click", () => {
     setCurrent(li);
     const open = row.getAttribute("aria-expanded") === "true";
@@ -2035,7 +2035,7 @@ function buildSlackResult(r) {
   const when = el("span", "when", relTime(r.updated_at));
   when.title = absTime(r.updated_at);
   row.append(dot, meta, when);
-  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li); });
+  row.addEventListener("focus", () => { if (currentId !== r.id) setCurrent(li, false); });
   row.addEventListener("click", () => {
     setCurrent(li);
     const u = safeOpenUrl(r.url);
@@ -2576,13 +2576,16 @@ function centerTools(li) {
   tools.style.right = Math.round(c.right - (w.left + w.width / 2) - width / 2) + "px";
 }
 
-function setCurrent(li) {
+// scroll: bring the row into view with room around it (the cards' scroll-margin). Off when
+// focus moved because of a click: the row is already on screen, and scrolling between mousedown
+// and mouseup would make the click land on nothing.
+function setCurrent(li, scroll = true) {
   for (const c of document.querySelectorAll("li.card.current")) c.classList.remove("current");
   if (!li) { currentId = null; return; }
   li.classList.add("current");
   currentId = li.dataset.id;
   if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => centerTools(li));
-  li.scrollIntoView({ block: "nearest" });
+  if (scroll) li.scrollIntoView({ block: "nearest" });
   // Keep one selection on screen: if a row button holds focus (after a click), move focus to the
   // new current row so its focus ring does not stay behind on the old one.
   const a = document.activeElement;
