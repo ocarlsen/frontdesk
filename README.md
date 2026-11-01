@@ -258,9 +258,11 @@ To store a key in the Keychain: `security add-generic-password -U -s frontdesk-a
 (it prompts for the key, so it never lands in your shell history). Ask's model picker offers every
 vendor in `ask_models` that has a key.
 
-**3. Run it.**
+**3. Run it.** `frontdesk doctor` first lists what is set up and what is missing, each with the
+step that fixes it (offline; it never prints a key; `--online` also checks the Slack token).
 
 ```
+frontdesk doctor
 frontdesk sync                # first run opens Google consent (read-only)
 frontdesk triage --limit 20
 frontdesk serve               # prints the page URL; syncs on start and every 15 minutes
