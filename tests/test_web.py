@@ -157,9 +157,17 @@ def test_sync_post_guards(tmp_path, monkeypatch):
         assert post("/api/sync", {"X-FrontDesk": "sync",
                                   "Origin": "http://evil.example"}) == 403   # cross-site
         assert post("/api/other", {"X-FrontDesk": "sync"}) == 403
+        host = base.removeprefix("http://")
+        assert post("/api/sync", {"X-FrontDesk": "sync",
+                                  "Origin": "https://evil.example"}) == 403   # https cross-site
+        assert post("/api/sync", {"X-FrontDesk": "sync",
+                                  "Origin": f"http://{host}.evil.example"}) == 403
         assert calls == []
         assert post("/api/sync", {"X-FrontDesk": "sync"}) == 200
-        assert calls == [1]
+        # The same page behind an https proxy (Tailscale Serve): same host, https scheme.
+        assert post("/api/sync", {"X-FrontDesk": "sync", "Origin": f"https://{host}"}) == 200
+        assert post("/api/sync", {"X-FrontDesk": "sync", "Origin": f"http://{host}"}) == 200
+        assert calls == [1, 1, 1]
     finally:
         httpd.shutdown()
 

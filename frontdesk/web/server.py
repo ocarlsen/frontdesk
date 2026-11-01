@@ -1008,13 +1008,16 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             if not self._gate():
                 return
             # CSRF: a cross-site page can't send a custom header without a CORS preflight,
-            # which this server never answers, and a browser always sends Origin on POST.
+            # which this server never answers, and a browser always sends Origin on POST. The
+            # page may be served over https by a proxy in front (Tailscale Serve), so either
+            # scheme counts as same-origin; the Host itself already passed the allowlist.
             host = self.headers.get("Host", "")
             origin = self.headers.get("Origin")
             routes = {"/api/sync": "sync", "/api/action": "action"}
             if (routes.get(self.path) is None
                     or self.headers.get("X-FrontDesk") != routes[self.path]
-                    or (origin is not None and origin != f"http://{host}")):
+                    or (origin is not None and origin not in (f"http://{host}",
+                                                               f"https://{host}"))):
                 self._send(HTTPStatus.FORBIDDEN, b"Forbidden\n", TEXT)
                 return
             # Re-read settings per request (except the demo's fixed ones), so an edit to
