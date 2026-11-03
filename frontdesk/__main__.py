@@ -80,12 +80,18 @@ def main(argv: list[str] | None = None) -> int:
     nt.add_argument("text", metavar="TEXT")
     nt.add_argument("--append", action="store_true", help="add TEXT to the existing note")
     nt.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
-    si = sub.add_parser("situation", help="What's going on: list, or add an item as a session")
+    si = sub.add_parser("situation",
+                        help="What's going on: list, or add or sync items as a session")
     ss = si.add_subparsers(dest="situation_cmd", required=True)
     ss.add_parser("list")
     sa = ss.add_parser("add")
     sa.add_argument("text", metavar="TEXT")
     sa.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
+    sy = ss.add_parser("sync", help="replace this session's items with its current list, one "
+                                    "item per line on stdin (lines it no longer lists go)")
+    sy.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
+    sy.add_argument("--clear", action="store_true",
+                    help="allow an empty list, removing every item this session wrote")
     un = sub.add_parser("unanswered",
                         help="threads whose newest message is from a person, not you "
                              "(optional; read-only IMAP, headers only, no model)")
@@ -299,6 +305,17 @@ def memory_main(args, store: Store) -> int:
             store.save_note(args.who, args.text, f"session:{args.by}", append=args.append)
             print(f"note on {args.who.strip().lower()} saved as session:{args.by} "
                   "(not confirmed until the owner confirms it)")
+        elif args.situation_cmd == "sync":
+            texts = [ln.strip() for ln in sys.stdin.read().splitlines() if ln.strip()]
+            if not texts and not args.clear:
+                # an empty pipe (a failed upstream command) must not wipe the session's items
+                raise InvalidMemory("no items on stdin; pass --clear to remove all of this "
+                                    "session's items")
+            if texts and args.clear:
+                raise InvalidMemory("--clear takes no items on stdin")
+            kept, added, removed = store.sync_situation(f"session:{args.by}", texts)
+            print(f"session:{args.by}: kept {kept}, added {added}, removed {removed} "
+                  "(added items are not confirmed until the owner confirms them)")
         elif args.situation_cmd == "add":
             n = store.add_situation(args.text, f"session:{args.by}")
             print(f"added #{n} as session:{args.by} (not confirmed until the owner confirms it)")

@@ -189,9 +189,12 @@ def test_system_prompt_says_unconfirmed_context_is_not_the_owner_speaking():
     assert "situation_suggestions" in sys_
 
 
-def test_triage_prompt_is_unchanged_by_memory():
+def test_triage_policy_and_version_are_unchanged_by_memory():
+    # What's going on is appended per run (test_triage covers it); the bare policy evals measure,
+    # and the version that decides re-ranking, never carry it.
     from frontdesk import triage
     assert "owner_situation" not in triage.SYSTEM
+    assert triage.system_prompt("", "") == triage.SYSTEM
 
 
 # ---------- situation limits ----------
@@ -271,6 +274,62 @@ def test_cli_note_and_situation_write_as_session(capsys):
         cli.main(["note", FAB, "x"])                                       # --by is required
     with pytest.raises(SystemExit):
         cli.main(["situation", "add", "x"])
+
+
+def test_sync_replaces_only_the_sessions_own_items(tmp_path):
+    s = Store(tmp_path / "s.db")
+    s.add_situation("Decided to decline Acme.", "owner")
+    s.add_situation("Waiting on Bo's contract.", "session:other")
+    assert s.sync_situation("session:a", ["Waiting on Fab.", "Invoice due Friday."]) == (0, 2, 0)
+    confirmed = next(r["id"] for r in s.situation() if r["text"] == "Invoice due Friday.")
+    s.confirm_situation(confirmed)
+    # Fab is restated, the confirmed invoice is the owner's now, a text another author has is
+    # not duplicated, and a new item is added
+    got = s.sync_situation("session:a", ["Waiting on Fab.", "Waiting on Fab.",
+                                         "Decided to decline Acme.", "Call Dee back."])
+    assert got == (1, 1, 0)
+    by = {r["text"]: r["author"] for r in s.situation()}
+    assert by == {"Decided to decline Acme.": "owner", "Waiting on Bo's contract.": "session:other",
+                  "Waiting on Fab.": "session:a", "Invoice due Friday.": "owner",
+                  "Call Dee back.": "session:a"}
+    # dropping an item removes it; other authors' rows survive an empty list
+    assert s.sync_situation("session:a", ["Call Dee back."]) == (1, 0, 1)
+    assert s.sync_situation("session:a", []) == (0, 0, 1)
+    assert {r["author"] for r in s.situation()} == {"owner", "session:other"}
+
+
+def test_sync_refuses_owner_bad_text_and_the_cap(tmp_path, monkeypatch):
+    s = Store(tmp_path / "s.db")
+    for bad in (("owner", ["x"]), ("unrecorded", ["x"]), ("session:a", [" "]),
+                ("session:a", ["y" * 501])):
+        with pytest.raises(InvalidMemory):
+            s.sync_situation(*bad)
+    monkeypatch.setattr(store_mod, "SITUATION_MAX_ITEMS", 3)
+    s.add_situation("one", "owner")
+    s.sync_situation("session:a", ["two", "three"])
+    with pytest.raises(InvalidMemory, match="at most 3"):
+        s.sync_situation("session:a", ["two", "three", "four"])
+    assert s.sync_situation("session:a", ["two", "four"]) == (1, 1, 1)   # a swap fits
+    assert [r["text"] for r in s.situation()] == ["one", "two", "four"]
+
+
+def test_cli_situation_sync(capsys, monkeypatch):
+    import io
+
+    def run(stdin, *extra):
+        monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
+        return cli.main(["situation", "sync", "--by", "frontdesk", *extra])
+
+    assert run("Waiting on Fab.\n\n  Invoice due Friday.  \n") == 0
+    assert "kept 0, added 2, removed 0" in capsys.readouterr().out
+    assert run("Waiting on Fab.\n") == 0
+    assert "kept 1, added 0, removed 1" in capsys.readouterr().out
+    assert run("") == 2                        # an empty pipe never wipes the session's items
+    assert run("\n  \n") == 2
+    assert [r["text"] for r in Store().situation()] == ["Waiting on Fab."]
+    assert run("x\n", "--clear") == 2
+    assert run("", "--clear") == 0
+    assert Store().situation() == []
 
 
 def test_cli_cannot_write_as_owner():

@@ -834,6 +834,36 @@ class Store:
             return db.execute("INSERT INTO situation (text, author, created_at, updated_at) "
                               "VALUES (?,?,?,?)", (text, author, t, t)).lastrowid
 
+    def sync_situation(self, author: str, texts: list[str]) -> tuple[int, int, int]:
+        """Replace one session's What's going on items with `texts`, its complete current list:
+        its items not in the list are removed, ones it already has are kept (updated_at marks
+        them restated) and the rest are added. Only rows `author` wrote are touched, so the
+        owner's items and other sessions' stay, and an item the owner confirmed is the owner's
+        now. A text another author already lists is not added again. Returns (kept, added,
+        removed); an empty list removes every item `author` wrote."""
+        author = check_author(author)
+        if author == OWNER:
+            raise InvalidMemory("sync is for sessions; the owner edits What's going on in the page")
+        want = list(dict.fromkeys(self._situation_text(t) for t in texts))
+        with self.tx() as db:
+            mine = {r["text"]: r["id"] for r in db.execute(
+                "SELECT id, text FROM situation WHERE author=?", (author,))}
+            others = {r["text"] for r in db.execute(
+                "SELECT text FROM situation WHERE author!=?", (author,))}
+            add = [x for x in want if x not in mine and x not in others]
+            kept = [mine[x] for x in want if x in mine]
+            gone = [i for x, i in mine.items() if x not in want]
+            total = db.execute("SELECT COUNT(*) FROM situation").fetchone()[0]
+            if total - len(gone) + len(add) > SITUATION_MAX_ITEMS:
+                raise InvalidMemory(f"What's going on holds at most {SITUATION_MAX_ITEMS} items; "
+                                    "this sync would go over")
+            t = now()
+            db.executemany("DELETE FROM situation WHERE id=?", [(i,) for i in gone])
+            db.executemany("UPDATE situation SET updated_at=? WHERE id=?", [(t, i) for i in kept])
+            db.executemany("INSERT INTO situation (text, author, created_at, updated_at) "
+                           "VALUES (?,?,?,?)", [(x, author, t, t) for x in add])
+        return len(kept), len(add), len(gone)
+
     def _situation_write(self, sql: str, args: tuple) -> None:
         with self.tx() as db:
             if db.execute(sql, args).rowcount == 0:

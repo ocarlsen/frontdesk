@@ -541,7 +541,9 @@ def _keep_and_rank(db_path: Path, settings: dict, item, source: str,
         version = triage.prompt_version(profile)
         try:
             provider = (provider_factory or (lambda: get_provider(settings)))()
-            store.save_triage(triage.triage_item(provider, item, profile=profile))
+            store.save_triage(triage.triage_item(
+                provider, item, profile=profile,
+                situation=triage.situation_block(store.situation())))
             ranked = True
         except ProviderRefusal as e:
             store.record_failure(item, version, "refusal", str(e))

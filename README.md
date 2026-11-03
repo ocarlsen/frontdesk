@@ -162,12 +162,27 @@ Ask ("Ask FrontDesk about this thread") works from four kinds of owner-side memo
 what is live for you now: decisions, open matters), a **note** on each person, and the **Ask
 history** of each thread. All of it is local SQLite (the profile is local settings), assembled
 into every call; the model keeps no state between calls, so any vendor's model gets the same
-context. Triage does not use What's going on or notes.
+context.
+
+Ranking reads your profile and What's going on too, never notes. It reads your own items first,
+then everyone else's, newest first, whole items only, up to 2,500 characters
+(`SITUATION_RANK_CHARS` in `frontdesk/triage.py`), so the cost of a ranking has a ceiling however
+many items or sessions there are. Changing What's going on does not re-rank threads already
+ranked: sessions restate it often, and re-ranking the whole inbox each time would re-bill every
+thread. It applies to new and changed threads, and to all of them when the profile changes.
+
+**Keeping it current.** A session that tracks what you are waiting on restates its full list
+with `frontdesk situation sync --by NAME`, one item per line on stdin. Its items not in the new
+list are removed, ones still there are kept, and new ones are added, so a closed matter drops out
+when the session next syncs. A sync touches only items that session wrote: yours, other
+sessions', and any you confirmed stay. An empty list is refused unless you pass `--clear`, so a
+failed command piped into it cannot wipe the list.
 
 Every note, What's going on item and Ask question records its author: `owner` when you typed or
 clicked it in the page (a model's suggestion counts as yours once you click it), `session:<name>`
 when a tool or agent session wrote it on your behalf (`frontdesk note WHO TEXT --by NAME`,
-`frontdesk situation add TEXT --by NAME`; this path can never write `owner`), or `unrecorded` for
+`frontdesk situation add TEXT --by NAME`, `frontdesk situation sync --by NAME`; this path can
+never write `owner`), or `unrecorded` for
 rows from before authors were recorded. Only `owner` counts as confirmed: the prompt labels every
 other line "not confirmed", and the model is told to say so when it relies on one instead of
 writing "you said". The page shows who wrote each item, and **Confirm** (or editing and saving)
@@ -205,6 +220,22 @@ table stays read-only for one release.
 This is a record for honest writers, not a security boundary: any process on your machine can
 open the database or call the local API and claim any author.
 
+### Cost
+
+You pay the model vendor directly; FrontDesk has no server. On my own inbox with Claude Opus 5.5,
+a ranking costs about 1.5¢ per thread and an Ask about 3¢. The [Results](#results) table gives the
+cost per 1,000 threads for each model. `frontdesk stats` shows what yours cost, by model, and each
+ranking's "Why this ranking" panel shows its own tokens and cost. Prices are list prices in
+`frontdesk/pricing.py`, with their sources and dates; a model not listed there shows no cost
+rather than a guess.
+
+Context added to a ranking is paid on every thread, so it is bounded: What's going on is capped
+at 2,500 characters per ranking (about 600 input tokens; at most about 0.25¢ more per thread with
+Opus 5.5 at the full budget), and notes are never sent to ranking. Prompt caching is off for
+Anthropic today: the part of the prompt shared across threads is below the minimum size Anthropic
+caches, so every call paid the cache-write premium and none read it back. It will be re-measured
+as the shared part grows.
+
 ## Threat model
 
 The design assumes **inbound mail is hostile**: anyone can email you, and the text is read by a model.
@@ -230,7 +261,9 @@ forged quote placed at the very top of a message survives quote stripping.
   `frontdesk stats`: counts and model costs only (rankings, Ask answers, drafts saved, replies
   sent and whether each went out as FrontDesk wrote it, searches, keeps), no mail text, addresses
   or thread ids.
-- **Sent off the machine:** the text of each thread, to the model vendor you configure; and the
+- **Sent off the machine:** the text of each thread, with your profile and up to 2,500 characters
+  of What's going on, to the model vendor you configure (Ask also sends your notes on that
+  thread's people, your other threads with them and the Ask conversation); and the
   searches you run against all of Gmail, to Google (results are shown, never stored or sent to a
   model). Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
 - The model API key is read at call time from the vendor's environment variable

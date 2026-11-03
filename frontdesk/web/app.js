@@ -2247,13 +2247,14 @@ async function openProfile() {
   ta.focus();
 }
 
-// ---- What's going on: what is live for you right now, sent to Ask with each question.
+// ---- What's going on: what is live for you right now, sent to Ask and to each ranking.
 // items: [{id, text, author, created_at, updated_at}]. Anything you add, edit or confirm here
 // is recorded as written by you.
 function renderSituation(box, items, demo, reload) {
   box.replaceChildren(el("h3", null, "What's going on"));
   box.append(el("p", "kbdhint", "Decisions, open matters and anything else live for you now. " +
-    "Ask reads these with every question; lines you did not write are marked unconfirmed."));
+    "Ask reads these with every question, and ranking with every new or changed thread; " +
+    "lines you did not write are marked unconfirmed."));
   const act = async (kind, extra, failMsg) => {
     try { await postAction(kind, "", Object.assign({ author: "owner" }, extra)); reload(); }
     catch (e) { toast(failMsg + ": " + e.message); }

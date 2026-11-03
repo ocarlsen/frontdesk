@@ -584,7 +584,7 @@ def test_keep_slack_stores_ranks_and_sync_keeps_it_current(tmp_path, monkeypatch
     class Provider:
         calls = 0
     monkeypatch.setattr("frontdesk.triage.triage_item",
-                        lambda p, item, profile="": (_ for _ in ()).throw(
+                        lambda p, item, profile="", situation="": (_ for _ in ()).throw(
                             __import__("frontdesk.providers", fromlist=["ProviderError"]).ProviderError("offline")))
     code, out = server.keep_slack(db, {}, f"slack:C0ENG:{old}", slack_factory=lambda: fake,
                                   provider_factory=lambda: Provider())
