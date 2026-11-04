@@ -9,6 +9,7 @@ HOME = Path(os.environ.get("FRONTDESK_HOME", Path.home() / ".frontdesk"))
 DB_PATH = HOME / "frontdesk.db"
 SETTINGS_PATH = HOME / "settings.json"
 GMAIL_CLIENT_SECRET = HOME / "client_secret.json"
+GMAIL_WEB_CLIENT_SECRET = HOME / "client_secret_web.json"   # optional: Connect Gmail from https
 GMAIL_TOKEN = HOME / "gmail_token.json"
 GMAIL_ACTIONS_TOKEN = HOME / "gmail_actions_token.json"   # gmail.modify; only actions load it
 

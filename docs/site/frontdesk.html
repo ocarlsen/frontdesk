@@ -99,7 +99,8 @@ choose.</p>
 1.5&cent; per ranked thread and 3&cent; per Ask with Claude Opus 5.5. What a ranking reads
 from memory has a fixed size, so that cost stays bounded as memory grows.</p>
 
-<p>To run it on your own mail you need a Google Cloud project for Gmail, a key from Anthropic,
+<p>To run it on your own mail you need a Google Cloud project for Gmail (you then connect it
+from the page), a key from Anthropic,
 OpenAI or Google, and, if you want Slack, a Slack app made from the included manifest:
 <a href="https://github.com/ocarlsen/frontdesk#set-it-up-on-your-own-mail">setup steps</a>.</p>
 
@@ -360,7 +361,9 @@ upsert_item, hide and prune.</li>
 (frontdesk/assist.py build_prompt); HTML mail reaches the model as text with link addresses
 (frontdesk/gmail/normalize.py html_to_text).</li>
 <li>Read scope gmail.readonly; actions scope gmail.modify in a separate token file
-(frontdesk/gmail/auth.py).</li>
+(frontdesk/gmail/auth.py). Connecting from the page: frontdesk/gmail/connect.py (single-use
+state, PKCE, exact-scope and refresh-token checks); /oauth/callback is the only route that skips
+the cookie (frontdesk/web/server.py do_GET).</li>
 <li>Slack: frontdesk/slack (reads conversations.list/history/replies, users.info; posts only
 chat.postMessage from sending.py; conversations.mark moves your read position in a DM you read
 here, and in a channel up to the newest message whose older unread ones are all read or done

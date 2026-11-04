@@ -72,7 +72,8 @@ def _run_flow(secret: Path, scopes: list[str] = SCOPES) -> Credentials:
 
 def credentials(token_path: Path | None = None, secret_path: Path | None = None,
                 interactive: bool = True, scopes: list[str] = SCOPES,
-                how_to_consent: str = "Run 'bin/frontdesk sync' in a Terminal once."
+                how_to_consent: str = "Connect Gmail in FrontDesk's Profile, or run "
+                                      "'bin/frontdesk sync' in a Terminal once."
                 ) -> Credentials:
     token_path = token_path or config.GMAIL_TOKEN
     secret_path = secret_path or config.GMAIL_CLIENT_SECRET
@@ -96,4 +97,5 @@ def credentials(token_path: Path | None = None, secret_path: Path | None = None,
 
 def action_credentials(interactive: bool = False) -> Credentials:
     return credentials(config.GMAIL_ACTIONS_TOKEN, interactive=interactive, scopes=ACTION_SCOPES,
-                       how_to_consent="Run 'bin/frontdesk authorize-actions' in a Terminal once.")
+                       how_to_consent="Connect Gmail actions in FrontDesk's Profile, or run "
+                                      "'bin/frontdesk authorize-actions' in a Terminal once.")

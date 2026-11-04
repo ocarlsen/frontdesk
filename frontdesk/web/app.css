@@ -9,6 +9,7 @@
   --shadow: 0 1px 2px rgba(20, 25, 35, .06), 0 2px 8px rgba(20, 25, 35, .05);
   --field: #f6f7f9;
   --u5: #d1372b; --u4: #e07a1f; --u3: #c9a227; --u2: #6b8fc9; --u1: #a3abb5;
+  --err-bg: #fdecea; --err-text: #a12b20; --err-line: #f3c2bc;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -22,6 +23,7 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, .4);
     --field: #16181c;
     --u5: #ff6b5e; --u4: #ff9f4a; --u3: #e3c349; --u2: #86a8e0; --u1: #6c7480;
+    --err-bg: #3a1d1b; --err-text: #ffb4ab; --err-line: #6b2c27;
   }
 }
 * { box-sizing: border-box; }
@@ -141,7 +143,12 @@ section > details > summary { cursor: pointer; list-style-position: inside; }
 
 .syncbar { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .syncnote { color: var(--muted); font-size: .85em; }
+/* A failed sync stands out: its own red balloon, not muted header text. */
+.syncnote.err { background: var(--err-bg); color: var(--err-text); border: 1px solid var(--err-line);
+  border-radius: 10px; padding: 5px 10px; }
 .syncbar .btn[disabled] { opacity: .6; cursor: progress; }
+/* A long sync message wraps; the buttons beside it keep their size. */
+.syncbar > .btn, .syncnote .btn { white-space: nowrap; flex-shrink: 0; }
 
 .sechead { display: flex; align-items: baseline; justify-content: space-between; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent, #3b5bdb); cursor: pointer;
