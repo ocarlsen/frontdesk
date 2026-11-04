@@ -241,7 +241,7 @@ def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
 # Owner-side memory writes (people's notes, "What's going on"): local only, each names its author.
 MEMORY_KINDS = ("note", "note_suggestion", "note_confirm", "person_update", "person_confirm",
                 "person_delete", "person_merge", "situation_add", "situation_update",
-                "situation_confirm", "situation_delete")
+                "situation_confirm", "situation_delete", "situation_reopen")
 
 
 def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int, dict]:
@@ -275,6 +275,8 @@ def run_memory(db_path: Path, settings: dict, kind: str, req: dict) -> tuple[int
             out = actions.situation_update(store, req.get("id"), req.get("text"), a)
         elif kind == "situation_confirm":
             out = actions.situation_confirm(store, req.get("id"), a)
+        elif kind == "situation_reopen":
+            out = actions.situation_reopen(store, req.get("id"), a)
         else:
             out = actions.situation_delete(store, req.get("id"), a)
         return HTTPStatus.OK, out

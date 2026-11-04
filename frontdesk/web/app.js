@@ -2248,8 +2248,23 @@ async function openProfile() {
 }
 
 // ---- What's going on: what is live for you right now, sent to Ask and to each ranking.
-// items: [{id, text, author, created_at, updated_at}]. Anything you add, edit or confirm here
-// is recorded as written by you.
+// items: [{id, text, author, created_at, updated_at, thread_id, closed_at, closed_reason, stale,
+// thread_gone}]. Anything you add, edit or confirm here is recorded as written by you.
+
+// One line on an item's state, or "" when it is open and current.
+function situationState(it) {
+  const why = { reply: "a reply arrived", done: "the thread was marked done",
+                archived: "the thread was archived" };
+  if (it.closed_at) {
+    return "Closed on " + fmtDate(it.closed_at) + ": " + (why[it.closed_reason] || "resolved") +
+      ". Ask and ranking no longer read it.";
+  }
+  if (it.stale) return "Stale: not restated since " + fmtDate(it.updated_at) +
+    ". Ranking leaves it out; Confirm keeps it.";
+  if (it.thread_gone) return "Its thread is no longer synced, so it cannot close by itself.";
+  if (it.thread_id) return "Closes by itself when someone else replies in its thread.";
+  return "";
+}
 function renderSituation(box, items, demo, reload) {
   box.replaceChildren(el("h3", null, "What's going on"));
   box.append(el("p", "kbdhint", "Decisions, open matters and anything else live for you now. " +
@@ -2264,6 +2279,9 @@ function renderSituation(box, items, demo, reload) {
     const li = el("div", "situationitem");
     const text = el("p", "situationtext", it.text);
     const label = el("p", "kbdhint authorlabel", authorLabel(it.author, it.updated_at));
+    const stateText = situationState(it);
+    const state = stateText ? el("p", "kbdhint situationstate", stateText) : null;
+    if (it.closed_at) li.classList.add("closed");
     const row = el("div", "actions");
     if (!demo) {
       const edit = el("button", "btn small", "Edit");
@@ -2293,12 +2311,21 @@ function renderSituation(box, items, demo, reload) {
         ok.addEventListener("click", () => act("situation_confirm", { id: it.id }, "Confirm failed"));
         row.append(ok);
       }
+      if (it.closed_at) {
+        const re = el("button", "btn small", "Reopen");
+        re.type = "button";
+        re.title = "Still open: keep it for Ask and ranking";
+        re.addEventListener("click", () => act("situation_reopen", { id: it.id }, "Reopen failed"));
+        row.append(re);
+      }
       const del = el("button", "btn small", "Delete");
       del.type = "button";
       del.addEventListener("click", () => act("situation_delete", { id: it.id }, "Delete failed"));
       row.append(del);
     }
-    li.append(text, label, row);
+    li.append(text, label);
+    if (state) li.append(state);
+    li.append(row);
     box.append(li);
   }
   if (demo) {

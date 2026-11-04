@@ -87,8 +87,12 @@ def main(argv: list[str] | None = None) -> int:
     sa = ss.add_parser("add")
     sa.add_argument("text", metavar="TEXT")
     sa.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
+    sa.add_argument("--thread", default="", metavar="ID",
+                    help="link a stored thread (e.g. gmail:18f...): the item closes itself when "
+                         "someone else replies there, or the thread is archived or done")
     sy = ss.add_parser("sync", help="replace this session's items with its current list, one "
-                                    "item per line on stdin (lines it no longer lists go)")
+                                    "item per line on stdin (lines it no longer lists go); "
+                                    "start a line with 'thread:ID ' to link a thread")
     sy.add_argument("--by", required=True, metavar="NAME", help="the session writing this")
     sy.add_argument("--clear", action="store_true",
                     help="allow an empty list, removing every item this session wrote")
@@ -297,6 +301,15 @@ def inbox_buckets_main(args) -> int:
     return 0
 
 
+def _sync_line(line: str) -> tuple[str, str]:
+    """'thread:ID text' -> (text, ID); any other line -> (line, '')."""
+    line = line.strip()
+    if line.startswith("thread:"):
+        thread, _, text = line[len("thread:"):].partition(" ")
+        return text, thread
+    return line, ""
+
+
 def memory_main(args, store: Store) -> int:
     from .assist import provenance
     from .store import InvalidMemory
@@ -306,7 +319,7 @@ def memory_main(args, store: Store) -> int:
             print(f"note on {args.who.strip().lower()} saved as session:{args.by} "
                   "(not confirmed until the owner confirms it)")
         elif args.situation_cmd == "sync":
-            texts = [ln.strip() for ln in sys.stdin.read().splitlines() if ln.strip()]
+            texts = [_sync_line(ln) for ln in sys.stdin.read().splitlines() if ln.strip()]
             if not texts and not args.clear:
                 # an empty pipe (a failed upstream command) must not wipe the session's items
                 raise InvalidMemory("no items on stdin; pass --clear to remove all of this "
@@ -317,11 +330,15 @@ def memory_main(args, store: Store) -> int:
             print(f"session:{args.by}: kept {kept}, added {added}, removed {removed} "
                   "(added items are not confirmed until the owner confirms them)")
         elif args.situation_cmd == "add":
-            n = store.add_situation(args.text, f"session:{args.by}")
+            n = store.add_situation(args.text, f"session:{args.by}", args.thread)
             print(f"added #{n} as session:{args.by} (not confirmed until the owner confirms it)")
         else:
             for it in store.situation():
-                print(f"#{it['id']} {provenance(it['author'], it['updated_at'])} {it['text']}")
+                state = (f" [closed: {it['closed_reason']} {it['closed_at'][:10]}]"
+                         if it["closed_at"] else " [stale]" if it["stale"] else "")
+                link = f" [thread:{it['thread_id']}]" if it["thread_id"] else ""
+                print(f"#{it['id']} {provenance(it['author'], it['updated_at'])}{state}{link} "
+                      f"{it['text']}")
     except InvalidMemory as e:
         print(f"frontdesk: {e}", file=sys.stderr)
         return 2

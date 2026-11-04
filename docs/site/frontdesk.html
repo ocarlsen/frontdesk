@@ -145,7 +145,9 @@ OpenAI or Google, and, if you want Slack, a Slack app made from the included man
   to read or edit their note, and Ask suggests additions you save with a click. Every
   memory records who wrote it and when, and anything you did not write yourself is marked
   unconfirmed, to you and to the model. A session you run can keep "What's going on" current:
-  it restates its open items, and what closed drops out. Someone becomes a person in Memory only when a note is
+  it restates its open items, and what closed drops out. An item about one thread closes itself
+  when a reply arrives or you mark the thread done, and one nobody has restated in a week is
+  marked stale and left out of ranking. Someone becomes a person in Memory only when a note is
   saved on them, by you or a session you run; reading mail and Slack never adds anyone. The
   Memory page shows everything FrontDesk remembers in
   one place: edit, confirm, delete or merge people there, or download it all.</li>
@@ -351,7 +353,9 @@ providers, each only when configured with a key (frontdesk/providers/anthropic_p
 openai_provider.py, gemini_provider.py). actions.py and sending.py import requests only for its
 exception types. No other HTTP client in the package.</li>
 <li>Ranking's prompt carries the thread, profile and at most 2,500 characters of What's going
-on, never notes (frontdesk/triage.py system_prompt, situation_block).</li>
+on (open items that are not stale), never notes (frontdesk/triage.py system_prompt,
+situation_block). Linked items close in frontdesk/store.py _close_situation, called from
+upsert_item, hide and prune.</li>
 <li>Ask's prompt carries profile, What's going on, notes, related threads and Ask history
 (frontdesk/assist.py build_prompt); HTML mail reaches the model as text with link addresses
 (frontdesk/gmail/normalize.py html_to_text).</li>
