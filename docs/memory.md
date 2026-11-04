@@ -83,7 +83,9 @@ open the database or call the local API and claim any author.
 ## Cost
 
 You pay the model vendor directly; FrontDesk has no server. On my own inbox with Claude Opus 5.5,
-a ranking costs about 1.5¢ per thread and an Ask about 3¢. The [Results](../README.md#results) table gives the
+a ranking cost about 1.5¢ per thread and an Ask about 3¢. Ranking moved to Gemini 4 Argon on
+2026-11-04, which costs about a third as much on the eval set ($3.52 vs $9.87 per 1,000 threads);
+I haven't measured it on my own inbox yet. The [Results](../README.md#results) table gives the
 cost per 1,000 threads for each model. `frontdesk stats` shows what yours cost, by model, and each
 ranking's "Why this ranking" panel shows its own tokens and cost. Prices are list prices in
 `frontdesk/pricing.py`, with their sources and dates; a model not listed there shows no cost

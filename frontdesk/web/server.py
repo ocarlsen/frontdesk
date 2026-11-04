@@ -648,9 +648,11 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                  s["owner_profile"], author=author,
                                                  signoff=s["reply_signoff"],
                                                  label=m["label"])
+            # No model picked: Ask's own default, which need not be the ranking model.
+            s = {**s, "provider": s["ask_provider"], "model": s["ask_model"]}
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
                                              s["owner_profile"], author=author,
-                                                 signoff=s["reply_signoff"])
+                                             signoff=s["reply_signoff"])
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:
@@ -1049,6 +1051,13 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 from ..gmail import connect
                 demo = bool((settings or {}).get("demo"))
                 body = {"demo": True} if demo else {"demo": False, **connect.status()}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
+            elif path == "/api/defaults":
+                # What each "Default" in a model picker means: Ask and ranking can differ.
+                from ..evaluate import display_model
+                cfg = config.settings()
+                body = {"ask": display_model(cfg["ask_model"]), "rank": display_model(cfg["model"])}
                 self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/models":

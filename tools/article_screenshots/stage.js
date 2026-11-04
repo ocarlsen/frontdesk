@@ -1,5 +1,6 @@
 // Stage for tools/article_screenshots.py (run by tools/capture.mjs): opens the seeded thread and
-// its Ask panel, hides the rest of the page. ?notes=1 also opens "Your notes on these people".
+// its Ask panel, hides the rest of the page. ?notes=1 also opens the helper's note from its
+// "· note" chip in the People strip.
 // Each answer is cropped to its opening (the full text is in the eval report); the follow-up box
 // below it stays, as on the real page.
 const wait = ms => new Promise(ok => setTimeout(ok, ms));
@@ -12,7 +13,8 @@ if (!li) throw new Error("no seeded thread");
 li.querySelector(":scope > .row").click();
 const ask = await until(() => li.querySelector("details.ask"), "the Ask panel");
 ask.open = true;
-await until(() => li.querySelector(".answertext") && li.querySelector("details.notes"), "the Ask history");
+await until(() => li.querySelector(".answertext") && li.querySelector(".personchip.hasnote"),
+            "the Ask history and the note's chip");
 for (const n of document.querySelectorAll("header, .demo-banner, main h2, .sectionhead, .linkbtn")) {
   if (!li.contains(n)) n.style.display = "none";
 }
@@ -26,7 +28,15 @@ for (const n of li.querySelectorAll(".answertext")) {
   n.style.maxHeight = "8.6em"; n.style.overflow = "hidden";
   n.style.maskImage = "linear-gradient(to bottom, black 70%, transparent)";
 }
-if (location.search.includes("notes=1")) li.querySelector("details.notes").open = true;
+if (location.search.includes("notes=1")) {
+  li.querySelector(".personchip.hasnote").click();
+  await until(() => li.querySelector(".personslot textarea, .personslot .note"), "the open note");
+}
+// ?old=1: the page before authorship had no author line and no Confirm on a note.
+if (location.search.includes("old=1")) {
+  for (const n of li.querySelectorAll(".personslot .authorlabel")) n.style.display = "none";
+  for (const b of li.querySelectorAll(".personslot button")) if (b.textContent === "Confirm") b.style.display = "none";
+}
 document.getElementById("toast").hidden = true;
 li.classList.remove("current");
 if (document.activeElement) document.activeElement.blur();

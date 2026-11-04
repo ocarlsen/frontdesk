@@ -434,3 +434,23 @@ def test_autosync_runs_soon_after_start(tmp_path, monkeypatch):
     monkeypatch.setattr(srv, "run_sync", lambda db, s: ran.set())
     srv.start_autosync(tmp_path / "a.db", 15)
     assert ran.wait(2), "the first sync waited for the 15-minute interval"
+
+
+def test_defaults_endpoint_names_ask_and_ranking_separately(tmp_path):
+    import json
+    import threading
+    import urllib.request
+
+    from frontdesk import config
+    from frontdesk.evaluate import display_model
+    from frontdesk.store import Store
+    from frontdesk.web import server as srv
+    httpd = srv.make_server(Store(tmp_path / "s.db"), "127.0.0.1", 0, settings={})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        d = json.loads(urllib.request.urlopen(
+            f"http://127.0.0.1:{httpd.server_address[1]}/api/defaults").read())
+    finally:
+        httpd.shutdown()
+    assert d == {"ask": display_model(config.DEFAULTS["ask_model"]),
+                 "rank": display_model(config.DEFAULTS["model"])}

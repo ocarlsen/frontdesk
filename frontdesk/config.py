@@ -14,8 +14,12 @@ GMAIL_TOKEN = HOME / "gmail_token.json"
 GMAIL_ACTIONS_TOKEN = HOME / "gmail_actions_token.json"   # gmail.modify; only actions load it
 
 DEFAULTS = {
-    "provider": "anthropic",
-    "model": "claude-opus-5-5",   # picked by evals/results/SCOREBOARD.md
+    # Ranking: the cheapest model that clears every safety floor in evals/results/SCOREBOARD.md.
+    "provider": "gemini",
+    "model": "gemini-4-argon",
+    # Ask's default model, independent of ranking (Ask's picker can still choose any ask_models).
+    "ask_provider": "anthropic",
+    "ask_model": "claude-opus-5-5",
     "provider_options": {"anthropic": {"effort": "medium"}},   # per vendor
     "openai_keychain_service": "frontdesk-openai",    # or OPENAI_API_KEY
     "gemini_keychain_service": "frontdesk-gemini",    # or GEMINI_API_KEY
@@ -24,6 +28,7 @@ DEFAULTS = {
         {"provider": "anthropic", "model": "claude-opus-5-5", "label": "Opus 5.5"},
         {"provider": "anthropic", "model": "claude-fable-5-1", "label": "Fable 5.1"},
         {"provider": "openai", "model": "gpt-6.1-sol", "label": "GPT-6.1"},
+        {"provider": "gemini", "model": "gemini-4-argon", "label": "Gemini 4 Argon"},
         {"provider": "gemini", "model": "gemini-3.8-flash", "label": "Gemini 3.8 Flash"},
     ],
     "review_model": "claude-fable-5-1",   # Ask's Second opinion and Polish draft

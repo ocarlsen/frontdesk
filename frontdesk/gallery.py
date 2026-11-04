@@ -10,8 +10,10 @@ from pathlib import Path
 
 from .evaluate import display_model
 
-# Gallery order of models: the default first, then by the scoreboard's cost order.
-MODEL_ORDER = ("claude-opus-5-5", "claude-sonnet-5", "claude-opus-5", "claude-fable-5-1")
+# Gallery order of the recorded models: the ranking default first, then the 2026-10-30 Claude
+# recordings (Opus 5.5 is Ask's default).
+MODEL_ORDER = ("gemini-4-argon", "claude-opus-5-5", "claude-sonnet-5", "claude-opus-5",
+               "claude-fable-5-1")
 
 
 def _part_text(payload: dict) -> str:

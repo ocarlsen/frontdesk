@@ -11,13 +11,15 @@ app** OAuth client. Save its JSON as `~/.frontdesk/client_secret.json`. Then con
 page (**Profile**, **Google account**, **Connect**), or run `frontdesk sync` once, which opens
 Google's consent page for read-only access.
 
-**2. Pick a model.** Claude is the default; OpenAI and Gemini work the same way.
+**2. Pick a model.** Ranking and Ask use separate models. By default ranking uses Gemini 4
+Argon (the cheapest that clears every safety floor, see the README's Results) and Ask uses Claude
+Opus 5.5, so the defaults need a Google and an Anthropic key. Any vendor below works for either.
 
 | Vendor | `settings.json` | Key | Install |
 | --- | --- | --- | --- |
-| Anthropic (default) | `"provider": "anthropic", "model": "claude-opus-5-5"` | `ANTHROPIC_API_KEY`, or Keychain `frontdesk-anthropic` | included |
+| Anthropic (Ask default) | `"ask_provider": "anthropic", "ask_model": "claude-opus-5-5"` | `ANTHROPIC_API_KEY`, or Keychain `frontdesk-anthropic` | included |
 | OpenAI | `"provider": "openai", "model": "gpt-6.1-sol"` | `OPENAI_API_KEY`, or Keychain `frontdesk-openai` | `.venv/bin/pip install -e '.[openai]'` |
-| Gemini | `"provider": "gemini", "model": "gemini-3.8-flash"` | `GEMINI_API_KEY`, or Keychain `frontdesk-gemini` | `.venv/bin/pip install -e '.[gemini]'` |
+| Gemini (ranking default) | `"provider": "gemini", "model": "gemini-4-argon"` | `GEMINI_API_KEY`, or Keychain `frontdesk-gemini` | `.venv/bin/pip install -e '.[gemini]'` |
 
 To store a key in the Keychain: `security add-generic-password -U -s frontdesk-anthropic -a $USER -w`
 (it prompts for the key, so it never lands in your shell history). Ask's model picker offers every

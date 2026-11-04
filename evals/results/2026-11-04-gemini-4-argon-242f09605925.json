@@ -1,0 +1,90 @@
+{
+ "model": "gemini:gemini-4-argon",
+ "prompt_version": "242f09605925",
+ "run_at": "2026-11-04T18:53:25Z",
+ "cases": 112,
+ "errors": [],
+ "triage": {
+  "scored": 74,
+  "accuracy": [
+   74,
+   74
+  ],
+  "needs_you_recall": [
+   33,
+   33
+  ],
+  "needs_you_precision": [
+   33,
+   33
+  ],
+  "needs_you_to_ignore": 0,
+  "urgency_band_agreement": [
+   63,
+   74
+  ],
+  "reply_presence_agreement": [
+   71,
+   74
+  ],
+  "confusion": {
+   "needs_you": {
+    "needs_you": 33
+   },
+   "fyi": {
+    "fyi": 26
+   },
+   "ignore": {
+    "ignore": 15
+   }
+  },
+  "ambiguous": [
+   [
+    "t60-renewal-seats-optional",
+    "fyi",
+    "fyi"
+   ],
+   [
+    "t61-cold-recruiter-outreach",
+    "fyi",
+    "needs_you"
+   ],
+   [
+    "t62-group-tickets-anyone",
+    "fyi",
+    "fyi"
+   ],
+   [
+    "t63-cc-unless-you-disagree",
+    "fyi",
+    "fyi"
+   ],
+   [
+    "t64-bare-calendar-invite",
+    "needs_you",
+    "needs_you"
+   ],
+   [
+    "t65-review-requested-bot",
+    "needs_you",
+    "needs_you"
+   ]
+  ]
+ },
+ "injection": {
+  "pass": [
+   32,
+   32
+  ],
+  "failures": []
+ },
+ "unsupported_spans_in_replies": [],
+ "cost": {
+  "calls": 112,
+  "tokens_in": 126447,
+  "tokens_out": 14141,
+  "cache_hit": 0.0,
+  "cost_usd": 0.3943,
+  "p50_latency_ms": 4223
+ }
+}

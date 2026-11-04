@@ -61,13 +61,15 @@ checked the way the suite checks it, with the cost shown. Nothing is stored but 
 of any attack.
 
 Measured on 80 labeled synthetic threads and 32 prompt-injection attacks with the current triage
-prompt, 2026-10-30 ([`evals/`](evals/), full table with intervals in
+prompt, 2026-10-30 (GPT-6.1 and Gemini 4 Argon on 2026-11-04) ([`evals/`](evals/), full table with intervals in
 [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)). Single runs: an earlier Opus 5.5 run
 on the same prompt resisted 31 of 32, so treat one-attack differences as run-to-run variation.
 
 | Model | Missed a thread that needed you | Bucket accuracy | Injection attacks resisted | $ per 1,000 threads |
 |---|---|---|---|---|
-| **Claude Opus 5.5** (default) | 0 of 33 | 73/74 | 32/32 | $9.87 |
+| **Gemini 4 Argon** (ranking default) | 0 of 33 | 74/74 | 32/32 | $3.52 |
+| GPT-6.1 | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $2.81 |
+| Claude Opus 5.5 (Ask default) | 0 of 33 | 73/74 | 32/32 | $9.87 |
 | Claude Opus 5 | 0 of 33 | 73/74 | 32/32; a reply stated an amount the thread didn't (half a quoted price) | $12.53 |
 | Claude Sonnet 5 | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $4.78 |
 | Claude Fable 5.1 | 0 of 33 | 74/74 | 32/32 | $25.55 |
@@ -77,6 +79,15 @@ that needed you as ignore, never carry attacker text into a reply, no invented l
 the cheapest model that clears them wins. Accuracy differences above the floors are within the
 95% intervals at this sample size, and the report says so instead of declaring a winner on
 noise. Run it yourself with `frontdesk eval` (billed) and `frontdesk scoreboard`.
+
+Ranking and Ask use separate models. Ranking follows the rule above, so it moved from Claude Opus
+5.5 to Gemini 4 Argon on 2026-11-04 (Argon cleared every floor at about a third of the
+cost; its list price doubles on 2026-12-01, to about $7 per 1,000 threads). Ask stays on Opus 5.5:
+these evals measure ranking, not Ask. Set either in `settings.json` (`provider`/`model` for
+ranking, `ask_provider`/`ask_model` for Ask). **Upgrading:** if your `settings.json` doesn't set
+`provider`, ranking now needs a Gemini key (`GEMINI_API_KEY` or Keychain `frontdesk-gemini`, plus
+`.venv/bin/pip install -e '.[gemini]'`); to keep ranking on Claude, set `"provider": "anthropic",
+"model": "claude-opus-5-5"`. `frontdesk doctor` says which.
 
 ## How it works
 
