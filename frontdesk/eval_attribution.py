@@ -282,7 +282,9 @@ def rejudge(rep: dict, judge: Provider, root: Path, workers: int = 4) -> dict:
         ans = (Call(False, error=c["error"][len("model: "):]) if failed_answer
                else Call(True, {"answer": c["answer"]}))
         r = CaseResult(c["scenario"], c["condition"], ans)
-        if ans.ok:
+        if ans.ok and c["scenario"] not in facts:     # the scenario was removed since that run
+            r.judge = Call(False, error=f"scenario {c['scenario']} no longer in the dataset")
+        elif ans.ok:
             r.judge = _call(judge, JUDGE_SYSTEM, judge_prompt(facts[c["scenario"]], c["answer"]),
                             JUDGE_SCHEMA, validate_judge)
         return r

@@ -361,6 +361,10 @@ def eval_main(args, s: dict) -> int:
     from .providers import get_provider
     if args.model:
         s = {**s, "model": args.model}
+    if args.provider and not args.model:
+        print("frontdesk: --provider needs --model too (the configured model belongs to "
+              f"{s['provider']})", file=sys.stderr)
+        return 2
     if args.provider:
         s = {**s, "provider": args.provider}
     root = Path(args.dir)
@@ -420,6 +424,10 @@ def eval_attribution_main(args, s: dict | None) -> int:
         print(md_path.read_text())
         print(f"wrote {md_path} and .json")
         return 0 if rep["judge_calibration"]["ok"] else 1
+    if args.provider and not args.model:
+        print("frontdesk: --provider needs --model too (the configured model belongs to "
+              f"{s['provider']})", file=sys.stderr)
+        return 2
     s = {**s, "provider": args.provider or s["provider"], "model": args.model or s["model"]}
     provider = get_provider(s)
     judge = get_provider({**s, "provider": args.judge_provider, "model": judge_model})

@@ -96,7 +96,7 @@ choose.</p>
 </p>
 
 <p class="price">Free and open source. You pay your model provider directly: about 3&cent; per Ask
-with Claude Opus 5.5 on my own inbox, and ranking with Gemini 4 Argon costs about a third of what it
+with Claude Opus 5.5 on my own inbox, and on the eval set, ranking with Gemini 4 Argon costs about a third of what it
 did on Opus. What a ranking reads
 from memory has a fixed size, so that cost stays bounded as memory grows.</p>
 
@@ -250,6 +250,7 @@ hedging.</p>
   </tbody>
 </table>
 </div>
+<p class="note">Gemini 4 Argon ran this test twice on 2026-11-04: without labels it credited the helper's note to you 12 of 12 times in one run and 11 of 12 in the other. The table shows the run with recorded costs; with labels, both runs credited it 0 times.</p>
 <p class="note">Judged by a separate model that is checked against hand-labelled answers on
 every run. "With labels" counts answers that credited the note to you without flagging it as
 unconfirmed.</p>

@@ -77,7 +77,7 @@ def test_a_locked_keychain_is_named_not_reported_missing(home):
 def test_linux_without_a_keychain_points_at_the_environment_variable(home):
     ready(home)
     r = by_what(doctor.checks(environ={}, probe=probe_of({RANK_KC: "unavailable"})))
-    assert r["Model:"].detail == f"no key: set {RANK_ENV}"
+    assert r["Model:"].detail.startswith(f"no key: set {RANK_ENV}")   # + the default-move note
 
 
 def test_a_token_with_other_scopes_will_be_discarded(home):
@@ -155,3 +155,13 @@ def test_the_ask_default_is_checked_on_its_own(home):
     ask = [c for c in doctor.checks(environ={RANK_ENV: KEY}, probe=probe_of({}))
            if c.what.startswith("Ask default:")]
     assert len(ask) == 1 and ask[0].level != "ok" and config.DEFAULTS["ask_model"] in ask[0].what
+
+
+def test_a_missing_ranking_key_names_the_default_move(home):
+    """Upgrading with no "provider" in settings.json: the failure says why it needs a new key."""
+    ready(home)
+    r = by_what(doctor.checks(environ={}, probe=probe_of({})))
+    assert r["Model:"].level == "fail" and "moved to Gemini 4 Argon" in r["Model:"].detail
+    (home / "settings.json").write_text(json.dumps({"provider": config.DEFAULTS["provider"]}))
+    r = by_what(doctor.checks(environ={}, probe=probe_of({})))
+    assert "moved to" not in r["Model:"].detail          # chose it explicitly: no history lesson

@@ -188,3 +188,10 @@ def test_eval_never_overwrites_an_earlier_report(tmp_path, monkeypatch):
         assert cli.main(["eval", "--dir", str(tmp_path), "--limit", "0"]) == 0
     names = sorted(p.name for p in (tmp_path / "results").glob("*.json"))
     assert names == ["2026-11-04-fake-1-abc-2.json", "2026-11-04-fake-1-abc.json"]
+
+
+def test_provider_without_model_is_refused(capsys):
+    from frontdesk import __main__ as cli
+    assert cli.main(["eval", "--provider", "openai"]) == 2
+    assert cli.main(["eval-attribution", "--provider", "openai"]) == 2
+    assert "--provider needs --model" in capsys.readouterr().err

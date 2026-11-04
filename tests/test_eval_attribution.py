@@ -298,3 +298,11 @@ def test_rejudge_cli_writes_a_separate_report(tmp_path, monkeypatch):
     out = [p for p in (root / "results").glob("attribution-*-rejudged-*.json")]
     assert len(out) == 1 and json.loads(out[0].read_text())["answers_run_at"]
     assert src.exists()                                     # the original is never overwritten
+
+
+def test_rejudge_records_a_removed_scenario_as_a_failure():
+    old = ea.run(FakeModel(), FakeJudge(), ROOT)
+    old["cases"][0]["scenario"] = "gone-since"
+    rep = ea.rejudge(old, FakeJudge(), ROOT)
+    assert any(f[0] == "gone-since" and "no longer in the dataset" in f[2]
+               for f in rep["failures"])

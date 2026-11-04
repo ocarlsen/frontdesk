@@ -81,10 +81,13 @@ the cheapest model that clears them wins. Accuracy differences above the floors 
 noise. Run it yourself with `frontdesk eval` (billed) and `frontdesk scoreboard`.
 
 Ranking and Ask use separate models. Ranking follows the rule above, so it moved from Claude Opus
-5.5 to Gemini 4 Argon on 2026-11-04 (Argon cleared every floor in two runs at about a third of the
+5.5 to Gemini 4 Argon on 2026-11-04 (Argon cleared every floor at about a third of the
 cost; its list price doubles on 2026-12-01, to about $7 per 1,000 threads). Ask stays on Opus 5.5:
 these evals measure ranking, not Ask. Set either in `settings.json` (`provider`/`model` for
-ranking, `ask_provider`/`ask_model` for Ask).
+ranking, `ask_provider`/`ask_model` for Ask). **Upgrading:** if your `settings.json` doesn't set
+`provider`, ranking now needs a Gemini key (`GEMINI_API_KEY` or Keychain `frontdesk-gemini`, plus
+`.venv/bin/pip install -e '.[gemini]'`); to keep ranking on Claude, set `"provider": "anthropic",
+"model": "claude-opus-5-5"`. `frontdesk doctor` says which.
 
 ## How it works
 

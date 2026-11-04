@@ -1053,6 +1053,13 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 body = {"demo": True} if demo else {"demo": False, **connect.status()}
                 self._send(HTTPStatus.OK, json.dumps(body).encode(),
                            "application/json; charset=utf-8")
+            elif path == "/api/defaults":
+                # What each "Default" in a model picker means: Ask and ranking can differ.
+                from ..evaluate import display_model
+                cfg = config.settings()
+                body = {"ask": display_model(cfg["ask_model"]), "rank": display_model(cfg["model"])}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/models":
                 body = [{"index": i, "label": m["label"], "provider": m["provider"]}
                         for i, m in enumerate(available_models(config.settings()))]

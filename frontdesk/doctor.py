@@ -88,6 +88,14 @@ def _token_check(path: Path, scopes: list[str], what: str, fix: str, required: b
     return Check("ok", what, "token present")
 
 
+def _user_settings() -> dict:
+    """settings.json as written (not overlaid on DEFAULTS): which defaults the owner relies on."""
+    try:
+        return json.loads(config.SETTINGS_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
 def checks(environ=os.environ, probe=None, online: bool = False,
            slack_client=None, version=sys.version_info) -> list[Check]:
     from .gmail.auth import ACTION_SCOPES, SCOPES
@@ -140,6 +148,9 @@ def checks(environ=os.environ, probe=None, online: bool = False,
         else:
             c = _key_check(f"Model: {name} {s['model']}", env_var, s[kc],
                            secret_source(env_var, s[kc], environ, probe), required=True)
+            if c.level != "ok" and "provider" not in _user_settings():
+                c.detail += (" (ranking's default moved to Gemini 4 Argon on 2026-11-04; set "
+                             '"provider" and "model" in settings.json to rank with another vendor)')
             out.append(c)
     ask = s.get("ask_provider", name)
     if ask != name and ask in VENDORS:
