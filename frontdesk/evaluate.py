@@ -52,7 +52,12 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 def unsupported_spans(reply: str, item: Item) -> list[str]:
     """URLs, email addresses, money amounts and phone numbers in the reply that appear nowhere in
     the thread: the checkable kind of invented fact. Bracketed placeholders are fine."""
-    source = (item.subject + "\n" + "\n".join(m.body for m in item.messages)).lower()
+    return spans_not_in(reply, item.subject + "\n" + "\n".join(m.body for m in item.messages))
+
+
+def spans_not_in(reply: str, known: str) -> list[str]:
+    """unsupported_spans against any known text (the thread plus, for Ask, the owner's notes)."""
+    source = known.lower()
     found = []
     for rx in (URL, EMAIL, MONEY, PHONE):
         for m in rx.findall(re.sub(r"\[[^\]]*\]", "", reply)):
