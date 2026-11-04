@@ -175,7 +175,8 @@ def checks(environ=os.environ, probe=None, online: bool = False,
                          "locked for this shell, so sync skips Slack here: run from a regular "
                          "Terminal, or set SLACK_USER_TOKEN"))
     else:
-        out.append(Check("warn", "Slack", "not set up (optional): see the README's Slack step"))
+        out.append(Check("warn", "Slack",
+                         "not set up (optional): see the Slack step in docs/setup.md"))
     return out
 
 
