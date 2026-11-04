@@ -395,6 +395,9 @@ svg.icons { position: absolute; width: 0; height: 0; overflow: hidden; }
   .btn { padding: 10px 12px; }
   .syncbar .btn { white-space: nowrap; }
   .syncbar .kbdhint { display: none; }   /* no keyboard on a phone */
+  /* Four header buttons on one row at 375px even with wider fonts (Linux, Android). */
+  .syncbar { gap: 6px; }
+  .syncbar > .btn { padding: 10px 9px; }
   .top .search { height: 44px; font-size: 16px; }   /* 16px: iOS zooms into smaller inputs */
 }
 
