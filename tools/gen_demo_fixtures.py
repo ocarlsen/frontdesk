@@ -116,6 +116,7 @@ UPD_READ = ["INBOX", "CATEGORY_UPDATES"]
 PROMO = ["INBOX", "UNREAD", "CATEGORY_PROMOTIONS"]
 SENT = ["SENT"]
 
+DEMO_IMG = "https://frontdesk.ocarlsen.com/img"   # the demo's own web images (see 12.)
 STYLE_WRAP = ('<div style="font-family:Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;'
               'color:#1f2328;font-size:14px;line-height:1.55">')
 
@@ -276,11 +277,16 @@ thread("19a2f0c3b1d4000c", "The Weekly Diff #212: queues, backpressure, and a ti
      "labels": ["INBOX", "UNREAD", "CATEGORY_UPDATES"],
      "plain": ("THE WEEKLY DIFF #212\n\n1. Backpressure is a product decision\n2. Why your queue needs a dead-letter budget\n"
                "3. A 300-line parser, explained\n\nRead online: https://weeklydiff.example.org/212\n\nUnsubscribe: https://weeklydiff.example.org/u"),
-     "html": (STYLE_WRAP + '<h1 style="font-size:22px;border-bottom:3px solid #1f2328;padding-bottom:6px">The Weekly Diff <span style="color:#8c959f">#212</span></h1>'
+     # Web images, as most newsletters have: a banner and a 1x1 open pixel. Hosted on the demo
+     # site itself (frontdesk/demo_data/img/, exported to /img/), so Show images in the public
+     # demo never sends a visitor to a third party.
+     "html": (STYLE_WRAP + f'<img src="{DEMO_IMG}/weekly-diff-banner.svg" alt="The Weekly Diff" width="560" style="display:block;max-width:100%;border-radius:6px">'
+              '<h1 style="font-size:22px;border-bottom:3px solid #1f2328;padding-bottom:6px">The Weekly Diff <span style="color:#8c959f">#212</span></h1>'
               '<ol style="padding-left:20px"><li style="margin:8px 0"><a href="https://weeklydiff.example.org/212#1" style="color:#0969da">Backpressure is a product decision</a></li>'
               '<li style="margin:8px 0"><a href="https://weeklydiff.example.org/212#2" style="color:#0969da">Why your queue needs a dead-letter budget</a></li>'
               '<li style="margin:8px 0"><a href="https://weeklydiff.example.org/212#3" style="color:#0969da">A 300-line parser, explained</a></li></ol>'
-              '<p style="font-size:12px;color:#8c959f"><a href="https://weeklydiff.example.org/u" style="color:#8c959f">Unsubscribe</a></p></div>')},
+              '<p style="font-size:12px;color:#8c959f"><a href="https://weeklydiff.example.org/u" style="color:#8c959f">Unsubscribe</a></p>'
+              f'<img src="{DEMO_IMG}/open.gif?issue=212" width="1" height="1" alt=""></div>')},
 ], T("ignore", 1, "Newsletter: The Weekly Diff #212, nothing to act on."))
 
 # 13. Promo.

@@ -19,6 +19,7 @@ const EXPORTED = Date.parse(document.documentElement.dataset.exported || "");
 const staticHidden = new Map();   // item id -> "archived" | "done"
 const staticLabels = new Map();   // item id -> bucket the visitor moved it to
 const staticStars = new Map();    // item id -> starred, as the visitor left it
+const staticImageSenders = new Set();   // senders whose web images show, this tab only
 const staticUnread = new Map();   // item id -> unread, as the visitor left it
 
 function staticFile(itemId) {
@@ -72,6 +73,13 @@ function gmailTime(iso) {
   return clock + " (" + relTime(iso) + ")";
 }
 
+// One message's HTML: the server's /msg route, or the static demo's exported page (each HTML
+// message is exported twice, with and without web images allowed).
+function msgUrl(itemId, index, images) {
+  return STATIC ? "msg/" + staticFile(itemId) + "-" + index + (images ? "-images" : "") + ".html"
+    : "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index + (images ? "&images=1" : "");
+}
+
 function messageFrame(itemId, index, images) {
   // The email's own HTML, served by /msg under a no-script, no-remote-load CSP (images=true
   // allows https images, only when the owner asked). sandbox has no allow-scripts, so nothing
@@ -82,8 +90,7 @@ function messageFrame(itemId, index, images) {
   f.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
   f.setAttribute("referrerpolicy", "no-referrer");
   f.title = "Message";
-  f.src = STATIC ? "msg/" + staticFile(itemId) + "-" + index + ".html"
-    : "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index + (images ? "&images=1" : "");
+  f.src = msgUrl(itemId, index, images);
   f.addEventListener("load", () => {
     const doc = f.contentDocument;
     if (doc && doc.documentElement) f.style.height = (doc.documentElement.scrollHeight + 4) + "px";
@@ -137,18 +144,18 @@ function messageBox(itemId, m, i) {
     box.append(head, el("p", "body", m.body || ""));
     return box;
   }
-  const frame = messageFrame(itemId, i, !STATIC && !!m.images_always);
+  const always = !!m.images_always || (STATIC && staticImageSenders.has(who.addr.toLowerCase()));
+  if (always) m.images_always = true;
+  const frame = messageFrame(itemId, i, always);
   box.append(head, frame);
-  if (!STATIC) {
-    // The bar appears only once the loaded mail turns out to reference web images.
-    let bar = null;
-    frame.addEventListener("load", () => {
-      if (!bar && hasWebImages(frame.contentDocument)) {
-        bar = imageBar(itemId, i, m, who.addr, frame);
-        frame.before(bar);
-      }
-    });
-  }
+  // The bar appears only once the loaded mail turns out to reference web images.
+  let bar = null;
+  frame.addEventListener("load", () => {
+    if (!bar && hasWebImages(frame.contentDocument)) {
+      bar = imageBar(itemId, i, m, who.addr, frame);
+      frame.before(bar);
+    }
+  });
   return box;
 }
 
@@ -177,9 +184,7 @@ function hasWebImages(doc) {
 // pixels). "Show images" reloads this one message with them; "Always show" remembers the sender.
 function imageBar(itemId, i, m, addr, frame) {
   const bar = el("div", "imagebar");
-  const show = images => {
-    frame.src = "/msg?item=" + encodeURIComponent(itemId) + "&i=" + i + (images ? "&images=1" : "");
-  };
+  const show = images => { frame.src = msgUrl(itemId, i, images); };
   const button = (label, onClick) => {
     const b = el("button", "linkbtn", label);
     b.type = "button";
@@ -506,6 +511,11 @@ async function postAction(kind, itemId, extra) {
       const to = inbound.length ? parseSender(inbound[inbound.length - 1].sender).addr : "";
       return { action_id: 1, to: to ? [to] : [], cc: [], demo: true,
                subject: "Re: " + (it ? it.item.subject : ""), body: extra.body };
+    }
+    if (kind === "images_always") {   // this tab only, like stars
+      const a = String(extra.sender || "").toLowerCase();
+      if (extra.on) staticImageSenders.add(a); else staticImageSenders.delete(a);
+      return { status: "done", kind, sender: a, on: !!extra.on, demo: true };
     }
     if (kind === "send_confirm") return { status: "queued", demo: true, undo_seconds: 30 };
     if (kind === "send_cancel") return { status: "cancelled" };

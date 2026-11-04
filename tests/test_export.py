@@ -54,3 +54,19 @@ def test_static_file_names_match_the_page_script():
     js = (__import__("pathlib").Path(__file__).parents[1] / "frontdesk/web/app.js").read_text()
     assert 'itemId.replace(/[^A-Za-z0-9]/g, "-")' in js
     assert static_file("gmail:18c2f") == "gmail-18c2f"
+
+
+def test_export_shows_web_images_only_on_request_and_only_its_own(tmp_path):
+    out = tmp_path / "site"
+    export_demo(out)
+    plain = sorted(p for p in (out / "msg").glob("*.html") if not p.stem.endswith("-images"))
+    assert plain and all(p.with_name(p.stem + "-images.html").exists() for p in plain)
+    news = next(p for p in plain if "frontdesk.ocarlsen.com/img/" in p.read_text())
+    assert "img-src data:;" in news.read_text()
+    assert "img-src data: https:;" in news.with_name(news.stem + "-images.html").read_text()
+    # Every web image any demo mail points at is the demo's own, and is exported.
+    blob = "".join(p.read_text() for p in plain)
+    srcs = set(re.findall(r'src="(https?://[^"]+)"', blob))
+    assert srcs and all(s.startswith("https://frontdesk.ocarlsen.com/img/") for s in srcs), srcs
+    for s in srcs:
+        assert (out / "img" / s.split("/img/")[1].split("?")[0]).is_file(), s

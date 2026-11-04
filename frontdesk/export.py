@@ -6,7 +6,9 @@ people_payload, message_html) over the synthetic fixtures.
 
 A static host cannot send response headers, so the Content-Security-Policy travels as a <meta>
 tag in each page (frame-ancestors is header-only and is dropped; the iframe sandbox still
-applies). Actions run in the visitor's tab only."""
+applies). Each HTML message also gets a second page under the images CSP, for Show images; the
+web images the demo mail points at are the demo's own, copied to img/. Actions run in the
+visitor's tab only."""
 from __future__ import annotations
 
 import json
@@ -16,7 +18,7 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .demo import load_demo
+from .demo import DEMO_DIR, load_demo
 from .store import Store
 from .web import server
 
@@ -75,7 +77,7 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
             json.dumps({"profile": "", "signoff": "", "demo": True, "situation": []}))
         # Same shape as GET /api/memory in demo mode: the Memory page shows empty, read-only.
         (out / "api" / "memory.json").write_text(json.dumps(server.DEMO_MEMORY))
-        meta = _meta_csp(server.MSG_CSP)
+        meta, meta_images = _meta_csp(server.MSG_CSP), _meta_csp(server.MSG_CSP_IMAGES)
         for r in rows:
             # The People strip's data (the people half of GET /api/ask): read-only in the demo.
             item = store.get_item(r["item"]["id"])
@@ -84,8 +86,10 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
             for i, m in enumerate(r["item"]["messages"]):
                 if m["has_html"]:
                     doc = server.message_html(store, r["item"]["id"], i)
-                    doc = doc.replace('<meta charset="utf-8">', '<meta charset="utf-8">' + meta, 1)
-                    (out / "msg" / f"{static_file(r['item']['id'])}-{i}.html").write_text(doc)
+                    name = f"{static_file(r['item']['id'])}-{i}"
+                    for suffix, csp in (("", meta), ("-images", meta_images)):
+                        (out / "msg" / f"{name}{suffix}.html").write_text(doc.replace(
+                            '<meta charset="utf-8">', '<meta charset="utf-8">' + csp, 1))
         store.db.close()
     page = (WEB / "index.html").read_text()
     page = page.replace('<html lang="en">',
@@ -99,6 +103,7 @@ def export_demo(out: Path, cname: str | None = None, now: datetime | None = None
     (out / "index.html").write_text(page)
     for name in ("app.js", "app.css"):
         shutil.copy(WEB / name, out / name)
+    shutil.copytree(DEMO_DIR / "img", out / "img")
     _export_gallery(out)
     (out / ".nojekyll").write_text("")
     if cname:

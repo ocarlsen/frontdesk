@@ -33,7 +33,7 @@ include = ["frontdesk*"]
 [tool.setuptools.package-data]
 "frontdesk.web" = ["*.html", "*.js", "*.css"]
 "frontdesk" = ["demo_data/*.json", "demo_data/threads/*.json", "demo_data/slack/*.json",
-               "demo_data/slack/conversations/*.json"]
+               "demo_data/slack/conversations/*.json", "demo_data/img/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
