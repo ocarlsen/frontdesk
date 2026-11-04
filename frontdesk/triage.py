@@ -87,8 +87,10 @@ SITUATION_RANK_CHARS = 2500
 
 def situation_block(rows: list[dict], budget: int = SITUATION_RANK_CHARS) -> str:
     """The What's going on lines a ranking reads: the owner's items first, then everyone else's,
-    newest first within each, whole lines only while they fit `budget`. '' when there are none."""
+    newest first within each, whole lines only while they fit `budget`. Closed and stale items
+    are left out. '' when there are none."""
     from .assist import _owner_text, provenance
+    rows = [r for r in rows if not r.get("closed_at") and not r.get("stale")]
     def newest(rs):
         return sorted(rs, key=lambda r: r["updated_at"], reverse=True)
     lines, used = [], 0

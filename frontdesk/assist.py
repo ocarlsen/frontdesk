@@ -258,7 +258,7 @@ def build_prompt(store: Store, item: Item, question: str, profile: str, *, autho
     parts = [f"Today is {today}. The owner is {item.account}."]
     parts.append(f"<owner_profile>\n{profile.strip() or '(none)'}\n</owner_profile>")
     situation = [f"- {provenance(s['author'], s['updated_at'])}: {_owner_text(s['text'])}"
-                 for s in store.situation()]
+                 for s in store.situation(open_only=True)]
     parts.append("<owner_situation>\n" + ("\n".join(situation) or "(none)")
                  + "\n</owner_situation>")
     parts.append("<owner_notes>\n" + ("\n".join(notes) or "(none)") + "\n</owner_notes>")

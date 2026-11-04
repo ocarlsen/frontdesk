@@ -127,7 +127,14 @@ CREATE TABLE IF NOT EXISTS situation (
     text TEXT NOT NULL,
     author TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    -- An item about one thread ("waiting on Bo's quote") closes itself when someone else
+    -- replies there, or the owner marks it done or archives it in FrontDesk. thread_seen is the
+    -- thread's updated_at when linked; closed rows are kept (and can be reopened), not deleted.
+    thread_id TEXT NOT NULL DEFAULT '',
+    thread_seen TEXT NOT NULL DEFAULT '',
+    closed_at TEXT NOT NULL DEFAULT '',
+    closed_reason TEXT NOT NULL DEFAULT ''   -- 'reply' | 'done' | 'archived'
 );
 CREATE TABLE IF NOT EXISTS labels (
     -- The owner's correction of a ranking: private ground truth for `frontdesk eval --mine`.
@@ -202,7 +209,11 @@ TRIAGE_ADDED_COLUMNS = [
 ]
 # Columns added to owner-side memory tables, applied to older databases on open.
 MEMORY_ADDED_COLUMNS = [("notes", "author", "TEXT NOT NULL DEFAULT 'unrecorded'"),
-                        ("asks", "author", "TEXT NOT NULL DEFAULT 'unrecorded'")]
+                        ("asks", "author", "TEXT NOT NULL DEFAULT 'unrecorded'"),
+                        ("situation", "thread_id", "TEXT NOT NULL DEFAULT ''"),
+                        ("situation", "thread_seen", "TEXT NOT NULL DEFAULT ''"),
+                        ("situation", "closed_at", "TEXT NOT NULL DEFAULT ''"),
+                        ("situation", "closed_reason", "TEXT NOT NULL DEFAULT ''")]
 TRIAGE_FIELDS = ("item_id", "bucket", "urgency", "reason", "proposed_reply", "model",
                  "triaged_at", "item_updated_at", "prompt_version", "model_served", "tokens_in",
                  "tokens_out", "cache_read", "cache_write", "latency_ms", "cost_usd", "summary")
@@ -220,6 +231,9 @@ UNRECORDED = "unrecorded"
 _SESSION = re.compile(r"session:[a-z0-9._-]{1,40}")
 SITUATION_MAX_ITEMS = 50
 SITUATION_MAX_CHARS = 500
+# A session item not restated (or edited) for this long is stale: still listed, marked on the
+# page, and left out of ranking. The owner's own items never go stale.
+SITUATION_STALE_DAYS = 7
 NOTE_MAX_CHARS = 2000
 NAME_MAX_CHARS = 100
 PEOPLE_MARKER = "people_migrated"
@@ -456,6 +470,7 @@ class Store:
             db.execute("DELETE FROM message_html WHERE item_id=?", (item.id,))
             db.executemany("INSERT INTO message_html VALUES (?,?,?)",
                            [(item.id, i, h) for i, h in enumerate(html) if h])
+            self._close_situation(db, [item.id])
         return True
 
     def prune(self, source: str, account: str, keep_ids: set[str]) -> int:
@@ -465,6 +480,7 @@ class Store:
             "SELECT id, data FROM items WHERE source=?", (source,))
             if r["id"] not in keep_ids and json.loads(r["data"])["account"] == account]
         with self.tx() as db:
+            self._close_situation(db, stale)   # while their hidden state still exists
             for item_id in stale:
                 for table, col in (("triage", "item_id"), ("triage_failures", "item_id"),
                                    ("message_html", "item_id"), ("hidden", "item_id"),
@@ -810,10 +826,30 @@ class Store:
                                 str((extra or {}).get("model", "")),
                                 cost if isinstance(cost, (int, float)) else 0)
 
-    def situation(self) -> list[dict]:
-        """Oldest first: {"id", "text", "author", "created_at", "updated_at"}."""
-        return [dict(r) for r in self.db.execute(
-            "SELECT id, text, author, created_at, updated_at FROM situation ORDER BY id")]
+    def situation(self, open_only: bool = False) -> list[dict]:
+        """Oldest first: {"id", "text", "author", "created_at", "updated_at", "thread_id",
+        "closed_at", "closed_reason", "stale", "thread_gone"}. `stale`: a non-owner item not
+        restated for SITUATION_STALE_DAYS; `thread_gone`: linked to a thread no longer stored
+        (it aged out of sync or left the inbox outside FrontDesk), so it cannot close itself.
+        open_only leaves out closed items (what Ask and ranking read)."""
+        cutoff = datetime.fromtimestamp(datetime.now(UTC).timestamp()
+                                        - SITUATION_STALE_DAYS * 86400, UTC)
+        cutoff_s = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows = self.db.execute(
+            "SELECT s.id, s.text, s.author, s.created_at, s.updated_at, s.thread_id, "
+            "s.closed_at, s.closed_reason, (i.id IS NULL) AS gone FROM situation s "
+            "LEFT JOIN items i ON i.id = s.thread_id ORDER BY s.id")
+        out = []
+        for r in rows:
+            d = dict(r)
+            gone = bool(d.pop("gone"))
+            if open_only and d["closed_at"]:
+                continue
+            d["stale"] = (d["author"] != OWNER and not d["closed_at"]
+                          and d["updated_at"] < cutoff_s)
+            d["thread_gone"] = bool(d["thread_id"]) and gone
+            out.append(d)
+        return out
 
     @staticmethod
     def _situation_text(text) -> str:
@@ -823,34 +859,53 @@ class Store:
             raise InvalidMemory(f"a situation item is at most {SITUATION_MAX_CHARS} characters")
         return text.strip()
 
-    def add_situation(self, text: str, author: str) -> int:
+    def _thread_seen(self, db, thread_id) -> str:
+        """The linked thread's updated_at now; '' for no link. An unknown thread is refused:
+        without a stored thread there is nothing to watch for a reply."""
+        if not thread_id:
+            return ""
+        if not isinstance(thread_id, str):
+            raise InvalidMemory("a thread id must be text")
+        row = db.execute("SELECT updated_at FROM items WHERE id=?", (thread_id,)).fetchone()
+        if row is None:
+            raise InvalidMemory(f"no stored thread {thread_id!r}; link only a thread FrontDesk has")
+        return row["updated_at"]
+
+    def add_situation(self, text: str, author: str, thread_id: str = "") -> int:
         author, text = check_author(author), self._situation_text(text)
         with self.tx() as db:
+            seen = self._thread_seen(db, thread_id)
             n = db.execute("SELECT COUNT(*) FROM situation").fetchone()[0]
             if n >= SITUATION_MAX_ITEMS:
                 raise InvalidMemory(f"What's going on holds at most {SITUATION_MAX_ITEMS} items; "
                                     "delete one first")
             t = now()
-            return db.execute("INSERT INTO situation (text, author, created_at, updated_at) "
-                              "VALUES (?,?,?,?)", (text, author, t, t)).lastrowid
+            return db.execute("INSERT INTO situation (text, author, created_at, updated_at, "
+                              "thread_id, thread_seen) VALUES (?,?,?,?,?,?)",
+                              (text, author, t, t, thread_id or "", seen)).lastrowid
 
-    def sync_situation(self, author: str, texts: list[str]) -> tuple[int, int, int]:
-        """Replace one session's What's going on items with `texts`, its complete current list:
-        its items not in the list are removed, ones it already has are kept (updated_at marks
-        them restated) and the rest are added. Only rows `author` wrote are touched, so the
-        owner's items and other sessions' stay, and an item the owner confirmed is the owner's
-        now. A text another author already lists is not added again. Returns (kept, added,
-        removed); an empty list removes every item `author` wrote."""
+    def sync_situation(self, author: str, entries: list) -> tuple[int, int, int]:
+        """Replace one session's What's going on items with `entries`, its complete current list
+        (each a text, or a (text, thread_id) pair to link a thread): its items not in the list
+        are removed, ones it already has are kept (updated_at marks them restated; a link or a
+        closed state stays as it was) and the rest are added. Only rows `author` wrote are
+        touched, so the owner's items and other sessions' stay, and an item the owner confirmed
+        is the owner's now. A text another author already lists is not added again. Returns
+        (kept, added, removed); an empty list removes every item `author` wrote."""
         author = check_author(author)
         if author == OWNER:
             raise InvalidMemory("sync is for sessions; the owner edits What's going on in the page")
-        want = list(dict.fromkeys(self._situation_text(t) for t in texts))
+        want: dict[str, str] = {}
+        for e in entries:
+            text, thread = (e, "") if isinstance(e, str) else e
+            want.setdefault(self._situation_text(text), thread or "")
         with self.tx() as db:
             mine = {r["text"]: r["id"] for r in db.execute(
                 "SELECT id, text FROM situation WHERE author=?", (author,))}
             others = {r["text"] for r in db.execute(
                 "SELECT text FROM situation WHERE author!=?", (author,))}
             add = [x for x in want if x not in mine and x not in others]
+            seen = {x: self._thread_seen(db, want[x]) for x in add}
             kept = [mine[x] for x in want if x in mine]
             gone = [i for x, i in mine.items() if x not in want]
             total = db.execute("SELECT COUNT(*) FROM situation").fetchone()[0]
@@ -860,9 +915,50 @@ class Store:
             t = now()
             db.executemany("DELETE FROM situation WHERE id=?", [(i,) for i in gone])
             db.executemany("UPDATE situation SET updated_at=? WHERE id=?", [(t, i) for i in kept])
-            db.executemany("INSERT INTO situation (text, author, created_at, updated_at) "
-                           "VALUES (?,?,?,?)", [(x, author, t, t) for x in add])
+            db.executemany("INSERT INTO situation (text, author, created_at, updated_at, "
+                           "thread_id, thread_seen) VALUES (?,?,?,?,?,?)",
+                           [(x, author, t, t, want[x], seen[x]) for x in add])
         return len(kept), len(add), len(gone)
+
+    def _close_situation(self, db, item_ids: list[str]) -> None:
+        """Close the open items linked to these threads that are resolved now: someone other
+        than the owner wrote after the link (a reply the owner was waiting on), or the thread is
+        archived or marked done in FrontDesk. Runs inside the caller's transaction, at each
+        place a thread's state changes (upsert, hide, prune), so a closure is recorded before
+        prune forgets the thread. The owner's own reply does not close it."""
+        if not item_ids:
+            return
+        marks = ",".join("?" * len(item_ids))
+        rows = db.execute(f"SELECT id, thread_id, thread_seen FROM situation WHERE closed_at='' "
+                          f"AND thread_id IN ({marks})", item_ids).fetchall()
+        t = now()
+        for r in rows:
+            reason = ""
+            h = db.execute("SELECT h.reason FROM hidden h JOIN items i ON i.id = h.item_id "
+                           "WHERE h.item_id=? AND (h.reason='archived' OR "
+                           "h.item_updated_at = i.updated_at)", (r["thread_id"],)).fetchone()
+            if h is not None:
+                reason = h["reason"]
+            else:
+                it = db.execute("SELECT data FROM items WHERE id=?", (r["thread_id"],)).fetchone()
+                msgs = json.loads(it["data"]).get("messages", []) if it else []
+                if any(not m.get("is_mine") and m.get("sent_at", "") > r["thread_seen"]
+                       for m in msgs):
+                    reason = "reply"
+            if reason:
+                db.execute("UPDATE situation SET closed_at=?, closed_reason=? WHERE id=?",
+                           (t, reason, r["id"]))
+
+    def reopen_situation(self, item_id: int) -> None:
+        """Open a closed item again. A linked one now waits for a reply after this moment."""
+        with self.tx() as db:
+            row = db.execute("SELECT thread_id FROM situation WHERE id=?", (item_id,)).fetchone()
+            if row is None:
+                raise InvalidMemory("no such situation item")
+            it = db.execute("SELECT updated_at FROM items WHERE id=?",
+                            (row["thread_id"],)).fetchone()
+            db.execute("UPDATE situation SET closed_at='', closed_reason='', thread_seen=? "
+                       "WHERE id=?", (it["updated_at"] if it else "", item_id))
 
     def _situation_write(self, sql: str, args: tuple) -> None:
         with self.tx() as db:
@@ -991,6 +1087,7 @@ class Store:
         with self.tx() as db:
             db.execute("INSERT OR REPLACE INTO hidden (item_id, reason, at, item_updated_at) "
                        "VALUES (?,?,?,?)", (item_id, reason, now(), item_updated_at))
+            self._close_situation(db, [item_id])
 
     def is_hidden(self, item_id: str) -> bool:
         """Hidden right now: archived, or done and nothing new has arrived since."""
@@ -1018,8 +1115,13 @@ class Store:
         return row is not None
 
     def unhide(self, item_id: str) -> None:
+        """Undo archive/done; items that closed because of it open again (a reply since still
+        closes them)."""
         with self.tx() as db:
             db.execute("DELETE FROM hidden WHERE item_id=?", (item_id,))
+            db.execute("UPDATE situation SET closed_at='', closed_reason='' WHERE thread_id=? "
+                       "AND closed_reason IN ('archived', 'done')", (item_id,))
+            self._close_situation(db, [item_id])
 
     def hidden_reason(self, item_id: str) -> str:
         """'archived' or 'done' while that hides the item now, else ''."""

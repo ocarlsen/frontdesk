@@ -469,6 +469,11 @@ def situation_confirm(store: Store, item_id, author) -> dict:
     return _memory(store.confirm_situation, _situation_id(item_id))
 
 
+def situation_reopen(store: Store, item_id, author) -> dict:
+    _author(author)
+    return _memory(store.reopen_situation, _situation_id(item_id))
+
+
 def situation_delete(store: Store, item_id, author) -> dict:
     _author(author)
     return _memory(store.delete_situation, _situation_id(item_id))

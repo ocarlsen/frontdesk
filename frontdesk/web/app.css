@@ -235,6 +235,8 @@ li.card:not(.unread) .sender { font-weight: 500; }
 .situationitem { background: var(--field); border: 1px solid var(--line); border-radius: 8px;
   padding: 6px 10px; margin: 8px 0; }
 .situationtext { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.situationstate { margin: 2px 0; }
+.situationitem.closed .situationtext { color: var(--muted); }
 
 /* Text boxes size to their content (app.js fitText is the fallback); long ones scroll. */
 textarea { field-sizing: content; min-height: 2.6em; max-height: 70vh; overflow-y: auto; }

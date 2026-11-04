@@ -178,6 +178,20 @@ when the session next syncs. A sync touches only items that session wrote: yours
 sessions', and any you confirmed stay. An empty list is refused unless you pass `--clear`, so a
 failed command piped into it cannot wipe the list.
 
+**Items that close themselves.** An item about one thread can be linked to it:
+`frontdesk situation add TEXT --by NAME --thread ID`, or a sync line starting `thread:ID ` (the
+thread must be one FrontDesk has stored). It closes when someone other than you writes in that
+thread, or you mark the thread done or archive it in FrontDesk; your own reply leaves it open.
+Closed items are kept, marked on the page with the reason, and left out of Ask and ranking;
+**Reopen** puts one back, and it then waits for a newer reply. Undoing a done or an archive
+reopens what it closed. A thread that leaves FrontDesk another way (it ages out of the sync
+window, or you archive it in Gmail) cannot close its item, and the page says so.
+
+**Stale items.** A session's item not restated or edited for 7 days
+(`SITUATION_STALE_DAYS`) is marked stale on the page and left out of ranking; Ask still reads it,
+labelled unconfirmed. **Confirm** makes it yours, and your own items never go stale. A session
+that syncs regularly keeps its items fresh.
+
 Every note, What's going on item and Ask question records its author: `owner` when you typed or
 clicked it in the page (a model's suggestion counts as yours once you click it), `session:<name>`
 when a tool or agent session wrote it on your behalf (`frontdesk note WHO TEXT --by NAME`,
