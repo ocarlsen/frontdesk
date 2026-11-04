@@ -247,3 +247,15 @@ def test_api_needs_cookie_header_and_origin(live):
 def test_demo_refuses():
     assert srv.run_google({"demo": True}, {"op": "start", "kind": "read"}, "http://x")[0] == 409
     assert srv.oauth_callback({"demo": True}, "state=x")[0] == 409
+
+
+def test_callback_links_back_to_the_address_the_owner_started_from(live):
+    """Google returns to localhost (a Desktop client), where the page's cookie is not; the
+    callback links back to the page's own address instead (seen 2026-11-04)."""
+    st = state_of(connect.start("read", "https://box.tail1.ts.net", 8765))
+    code, page = call(f"{live}/oauth/callback?state={st}&code=c")
+    assert code == 200 and 'href="https://box.tail1.ts.net/index.html"' in page
+    assert 'href="/index.html"' not in page
+    # a failure has no trusted origin to offer: the relative link stays
+    code, page = call(f"{live}/oauth/callback?state=forged&code=c")
+    assert code == 400 and 'href="/index.html"' in page

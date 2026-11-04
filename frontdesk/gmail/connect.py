@@ -115,7 +115,7 @@ def start(kind, origin: str, serve_port: int) -> dict:
         _expire()
         if len(_pending) >= MAX_PENDING:
             raise ConnectError("too many sign-ins in progress; wait a few minutes")
-        _pending[state] = (kind, flow, redirect, time.monotonic())
+        _pending[state] = (kind, flow, redirect, time.monotonic(), f"{scheme}://{netloc}")
     return {"url": url, "mode": mode, "kind": kind}
 
 
@@ -128,6 +128,12 @@ def _expire() -> None:
 def finish(query_or_url: str) -> str:
     """Complete a flow from Google's redirect: the callback's query string, or the full address
     the owner pasted. Writes the token and returns the permission kind connected."""
+    return finish_with_origin(query_or_url)[0]
+
+
+def finish_with_origin(query_or_url: str) -> tuple[str, str]:
+    """finish(), plus the address of the page that started the flow (its Origin), so the
+    callback can link back there: Google returns to localhost, where the page's cookie is not."""
     global generation
     text = (query_or_url or "").strip()
     q = parse_qs(urlsplit(text).query if "?" in text else text)
@@ -137,7 +143,7 @@ def finish(query_or_url: str) -> str:
         pending = _pending.pop(state, None) if state else None   # single use, even on failure
     if pending is None:
         raise ConnectError("This sign-in link is unknown or expired. Start again from FrontDesk.")
-    kind, flow, _redirect, _ = pending
+    kind, flow, _redirect, _, origin = pending
     if q.get("error"):
         raise ConnectError("Google did not grant access (" + q["error"][0][:60] + ").")
     code = q.get("code", [""])[0]
@@ -163,7 +169,7 @@ def finish(query_or_url: str) -> str:
                            "again.")
     _write_token(_token_path(kind), creds)
     generation += 1
-    return kind
+    return kind, origin
 
 
 def disconnect(kind) -> None:
