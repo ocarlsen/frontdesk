@@ -829,6 +829,39 @@ def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
         "You can close this tab, or go back to FrontDesk.")
 
 
+def run_attack(db_path: Path, settings: dict, req: dict,
+               provider_factory=None) -> tuple[int, dict]:
+    """Test an attack: one model call on pasted mail, scored with the injection checks. Nothing
+    is stored but a usage row. `model` picks from the Ask list, like Ask's picker."""
+    from .. import attack
+    from ..providers import ProviderError, get_provider
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Test an attack needs your own model key: run "
+                                              "frontdesk serve on your copy."}
+    choice = req.get("model")
+    s = settings
+    if choice is not None:
+        models = available_models(settings)
+        if not isinstance(choice, int) or not 0 <= choice < len(models):
+            return HTTPStatus.BAD_REQUEST, {"error": "unknown model"}
+        s = {**settings, "provider": models[choice]["provider"], "model": models[choice]["model"]}
+    try:
+        provider = (provider_factory or (lambda: get_provider(s)))()
+        out = attack.run(provider, req)
+    except attack.AttackError as e:
+        return HTTPStatus.BAD_REQUEST, {"error": str(e)}
+    except ProviderError as e:
+        return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+    store = Store(db_path)
+    try:
+        store.log_usage("test", source="attack", model=out["model"],
+                        cost_usd=out["cost_usd"] or 0, tokens_in=out["tokens_in"],
+                        tokens_out=out["tokens_out"])
+    finally:
+        store.db.close()
+    return HTTPStatus.OK, out
+
+
 def run_google(settings: dict, req: dict, origin: str) -> tuple[int, dict]:
     """The page's Connect, paste-back and Disconnect: {"op": "start" | "finish" |
     "disconnect", "kind": "read" | "actions", "url": the pasted address}."""
@@ -1004,6 +1037,14 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 code, out = gmail_draft(db_path, settings or {},
                                         parse_qs(query).get("item", [""])[0])
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
+            elif path == "/api/attack/examples":
+                from .. import attack
+                # The demo has no model, so it shows the suite's recorded runs instead.
+                demo = bool((settings or {}).get("demo"))
+                body = {"demo": demo,
+                        "examples": attack.recorded_examples() if demo else attack.examples()}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/google":
                 from ..gmail import connect
                 demo = bool((settings or {}).get("demo"))
@@ -1082,7 +1123,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             # scheme counts as same-origin; the Host itself already passed the allowlist.
             host = self.headers.get("Host", "")
             origin = self.headers.get("Origin")
-            routes = {"/api/sync": "sync", "/api/action": "action", "/api/google": "google"}
+            routes = {"/api/sync": "sync", "/api/action": "action", "/api/google": "google",
+                      "/api/attack": "attack"}
             if (routes.get(self.path) is None
                     or self.headers.get("X-FrontDesk") != routes[self.path]
                     or (origin is not None and origin not in (f"http://{host}",
@@ -1108,6 +1150,8 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 req = req if isinstance(req, dict) else {}
                 if self.path == "/api/google":
                     status, out = run_google(s, req, origin or "")
+                elif self.path == "/api/attack":
+                    status, out = run_attack(db_path, s, req)
                 else:
                     status, out = run_action(db_path, s, req)
             self._send(status, json.dumps(out).encode(), "application/json; charset=utf-8")

@@ -141,14 +141,15 @@ section > details > summary { cursor: pointer; list-style-position: inside; }
   .msg-head .at { display: none; }
 }
 
-.syncbar { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.syncbar { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  justify-content: flex-end; }
 .syncnote { color: var(--muted); font-size: .85em; }
 /* A failed sync stands out: its own red balloon, not muted header text. */
-.syncnote.err { background: var(--err-bg); color: var(--err-text); border: 1px solid var(--err-line);
+.syncnote.err { flex: 1 1 260px; background: var(--err-bg); color: var(--err-text); border: 1px solid var(--err-line);
   border-radius: 10px; padding: 5px 10px; }
 .syncbar .btn[disabled] { opacity: .6; cursor: progress; }
 /* A long sync message wraps; the buttons beside it keep their size. */
-.syncbar > .btn, .syncnote .btn { white-space: nowrap; flex-shrink: 0; }
+.syncbar > .btn, .syncnote .btn, .syncbar > .kbdhint { white-space: nowrap; flex-shrink: 0; }
 
 .sechead { display: flex; align-items: baseline; justify-content: space-between; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--accent, #3b5bdb); cursor: pointer;
@@ -186,6 +187,24 @@ li.card.current { box-shadow: inset 4px 0 0 var(--accent); }
   box-sizing: border-box; max-height: calc(100vh - 32px); overflow-y: auto; }
 /* The shortcut list outgrew a short window: wider, so most lines fit on one, and it scrolls. */
 .helpbox.keysbox { max-width: 640px; }
+/* Test an attack: a form and its result, so wider than the other panels. */
+.helpbox.attackbox { max-width: 720px; }
+.attackbox label { display: block; margin: 10px 0 4px; font-size: .9em; color: var(--muted); }
+.attackbox input[type=text], .attackbox select, .attackbox textarea { width: 100%;
+  box-sizing: border-box; font: inherit; }
+.attackbox .buckets label { display: inline-flex; gap: 4px; margin: 0 14px 0 0; color: var(--text); }
+.attackverdict { font-weight: 650; border-radius: 8px; padding: 6px 10px; margin: 14px 0 8px; }
+.attackverdict.fooled { background: var(--err-bg); color: var(--err-text); border: 1px solid var(--err-line); }
+.attackverdict.resisted { background: var(--field); border: 1px solid var(--line); }
+.attackverdict.invented { background: var(--field); border: 1px solid var(--u4); }
+.attackmail { margin: 8px 0; }
+.attackmail summary { cursor: pointer; color: var(--accent); }
+.attackmail mark { background: var(--err-bg); color: var(--err-text); border-radius: 3px; }
+.attackchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.attackchecks { margin: 0 0 10px; padding-left: 18px; }
+.attackchecks .fail { color: var(--err-text); }
+.attackreply { white-space: pre-wrap; background: var(--field); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
 .helpbox h2 { margin: 0 0 10px; font-size: 1rem; }
 .helpbox dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
 .helpbox dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
@@ -376,6 +395,9 @@ svg.icons { position: absolute; width: 0; height: 0; overflow: hidden; }
   .btn { padding: 10px 12px; }
   .syncbar .btn { white-space: nowrap; }
   .syncbar .kbdhint { display: none; }   /* no keyboard on a phone */
+  /* Four header buttons on one row at 375px even with wider fonts (Linux, Android). */
+  .syncbar { gap: 6px; }
+  .syncbar > .btn { padding: 10px 9px; }
   .top .search { height: 44px; font-size: 16px; }   /* 16px: iOS zooms into smaller inputs */
 }
 

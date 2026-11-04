@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS usage (
     -- and sends whether the text went out as FrontDesk wrote it.
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     at TEXT NOT NULL,
-    kind TEXT NOT NULL,          -- rank | ask | draft | send | search | keep
+    kind TEXT NOT NULL,          -- rank | ask | draft | send | search | keep | test
     source TEXT NOT NULL DEFAULT '',
     model TEXT NOT NULL DEFAULT '',
     cost_usd REAL NOT NULL DEFAULT 0,
@@ -238,7 +238,7 @@ NOTE_MAX_CHARS = 2000
 NAME_MAX_CHARS = 100
 PEOPLE_MARKER = "people_migrated"
 USAGE_MARKER = "usage_backfilled"
-USAGE_KINDS = ("rank", "ask", "draft", "send", "search", "keep")
+USAGE_KINDS = ("rank", "ask", "draft", "send", "search", "keep", "test")
 ORIGINS = ("proposed", "ask_draft", "edited", "written")
 _TOMBSTONE = ("CREATE TRIGGER IF NOT EXISTS notes_retired_{op} BEFORE {op} ON notes BEGIN "
               "SELECT RAISE(ABORT, 'notes is retired: write to people and addresses'); END")
