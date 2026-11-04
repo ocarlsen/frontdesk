@@ -129,6 +129,9 @@ def test_already_replied_thread_ends_with_owner(loaded):
     assert it.messages[-1].is_mine and tri.bucket == "fyi"
 
 
+DEMO_IMAGE_HOST = "frontdesk.ocarlsen.com"
+
+
 def test_fixtures_use_only_reserved_domains():
     text = _all_fixture_text()
     addrs = re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", text)
@@ -136,7 +139,12 @@ def test_fixtures_use_only_reserved_domains():
     bad = {a for a in addrs if not re.search(r"\bexample\.(com|org|net)$", a.lower())}
     assert not bad
     hosts = re.findall(r"https?://([\w.-]+)", text)
-    assert hosts and all(re.search(r"(^|\.)example\.(com|org|net)$", h) for h in hosts)
+    assert hosts and all(re.search(r"(^|\.)example\.(com|org|net)$", h)
+                         or h == DEMO_IMAGE_HOST for h in hosts)
+    # The one real host: the demo's own web images (frontdesk/demo_data/img/, served by the
+    # public demo), so Show images never sends a visitor to a third party. Images only.
+    own = re.findall(r"https?://" + re.escape(DEMO_IMAGE_HOST) + r"(/[^\"'\s]*)", text)
+    assert own and all(u.startswith("/img/") for u in own), own
 
 
 def test_every_fixture_has_a_recording(tmp_path):
