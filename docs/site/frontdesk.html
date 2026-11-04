@@ -131,7 +131,8 @@ OpenAI or Google, and, if you want Slack, a Slack app made from the included man
 <ol class="steps">
   <li><b>Sync.</b> A read-only Gmail token pulls recent threads and normalizes them: charset
   fixes, quoted history stripped, inline images embedded for display, and the real address
-  behind every link. If you connect Slack, your direct and group messages, and channel threads
+  behind every link. Images hosted on the web stay off until you click Show images, since loading
+  one tells the sender you opened the mail. If you connect Slack, your direct and group messages, and channel threads
   that mention you or that you replied in, come in the same way.</li>
   <li><b>Triage.</b> Each thread goes to the model as quoted data it cannot break out of, and
   comes back in a fixed format that the code validates again. The model also reads your profile
@@ -262,7 +263,7 @@ the attack suite measures how often one still sways a ranking or a draft.</p></d
 
 <section id="privacy" aria-labelledby="privacy-title">
 <h2 id="privacy-title">Privacy policy</h2>
-<p class="updated">Last updated <time datetime="2026-10-29">October 29, 2026</time></p>
+<p class="updated">Last updated <time datetime="2026-11-04">November 4, 2026</time></p>
 
 <h3>What FrontDesk is</h3>
 <p>FrontDesk is software you run on your own computer. There is no FrontDesk server, no
@@ -315,6 +316,11 @@ typed), your other threads with them, and the
 conversation so far, sent to the one model that answers the question: the one you picked, or
 the review model for Second opinion and Polish. Each
 provider's own data terms apply to what it receives.</p>
+<p>Images in an email that are hosted on the web are not loaded unless you ask: when you click
+Show images on a message, or choose to always show images from a sender, your browser fetches
+those images from wherever the email points, which can tell the sender that you opened it, when,
+and from which IP address. The addresses you chose to always show images from are kept in
+FrontDesk's settings on your computer, and Stop showing them removes one.</p>
 
 <h3>What it never does</h3>
 <p>FrontDesk does not sell, share or advertise with your data, does not use it to train models,

@@ -72,17 +72,18 @@ function gmailTime(iso) {
   return clock + " (" + relTime(iso) + ")";
 }
 
-function messageFrame(itemId, index) {
-  // The email's own HTML, served by /msg under a no-script, no-remote-load CSP. sandbox has no
-  // allow-scripts, so nothing in the mail can run; allow-same-origin only lets this page read
-  // the frame's height, and allow-popups lets links open in a new tab.
+function messageFrame(itemId, index, images) {
+  // The email's own HTML, served by /msg under a no-script, no-remote-load CSP (images=true
+  // allows https images, only when the owner asked). sandbox has no allow-scripts, so nothing
+  // in the mail can run; allow-same-origin only lets this page read the frame's height, and
+  // allow-popups lets links open in a new tab.
   const f = document.createElement("iframe");
   f.className = "mailframe";
   f.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
   f.setAttribute("referrerpolicy", "no-referrer");
   f.title = "Message";
   f.src = STATIC ? "msg/" + staticFile(itemId) + "-" + index + ".html"
-    : "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index;
+    : "/msg?item=" + encodeURIComponent(itemId) + "&i=" + index + (images ? "&images=1" : "");
   f.addEventListener("load", () => {
     const doc = f.contentDocument;
     if (doc && doc.documentElement) f.style.height = (doc.documentElement.scrollHeight + 4) + "px";
@@ -132,8 +133,85 @@ function messageBox(itemId, m, i) {
   if (who.addr && who.addr !== who.name) line.append(el("span", "addr", "<" + who.addr + ">"));
   ident.append(line);
   head.append(avatar, ident, el("span", "at", gmailTime(m.sent_at)));
-  box.append(head, m.has_html ? messageFrame(itemId, i) : el("p", "body", m.body || ""));
+  if (!m.has_html) {
+    box.append(head, el("p", "body", m.body || ""));
+    return box;
+  }
+  const frame = messageFrame(itemId, i, !STATIC && !!m.images_always);
+  box.append(head, frame);
+  if (!STATIC) {
+    // The bar appears only once the loaded mail turns out to reference web images.
+    let bar = null;
+    frame.addEventListener("load", () => {
+      if (!bar && hasWebImages(frame.contentDocument)) {
+        bar = imageBar(itemId, i, m, who.addr, frame);
+        frame.before(bar);
+      }
+    });
+  }
   return box;
+}
+
+const WEB_URL = /^\s*https?:\/\//i;
+const CSS_WEB_URL = /url\(\s*["']?\s*https?:\/\//i;
+
+// Whether a message's document references images on the web (blocked or not): an img/source
+// src or srcset, a background attribute, or a CSS url() in a style attribute or <style>.
+function hasWebImages(doc) {
+  if (!doc || !doc.documentElement) return false;
+  for (const e of doc.querySelectorAll("img[src], img[srcset], source[srcset], [background]")) {
+    for (const a of ["src", "srcset", "background"]) {
+      if (WEB_URL.test(e.getAttribute(a) || "")) return true;
+    }
+  }
+  for (const e of doc.querySelectorAll("[style]")) {
+    if (CSS_WEB_URL.test(e.getAttribute("style"))) return true;
+  }
+  for (const e of doc.querySelectorAll("style")) {
+    if (CSS_WEB_URL.test(e.textContent)) return true;
+  }
+  return false;
+}
+
+// Web images stay off until asked: loading one tells the sender you opened the mail (tracking
+// pixels). "Show images" reloads this one message with them; "Always show" remembers the sender.
+function imageBar(itemId, i, m, addr, frame) {
+  const bar = el("div", "imagebar");
+  const show = images => {
+    frame.src = "/msg?item=" + encodeURIComponent(itemId) + "&i=" + i + (images ? "&images=1" : "");
+  };
+  const button = (label, onClick) => {
+    const b = el("button", "linkbtn", label);
+    b.type = "button";
+    b.addEventListener("click", onClick);
+    return b;
+  };
+  const always = on => async () => {
+    try {
+      await postAction("images_always", "", { sender: addr, on });
+    } catch (e) {
+      toast("Couldn't save that: " + e.message);
+      return;
+    }
+    m.images_always = on;
+    show(on);
+    render();
+  };
+  const render = shownOnce => {
+    if (m.images_always) {
+      bar.replaceChildren(el("span", null, "Images from " + addr + " always show."),
+        button("Stop showing them", always(false)));
+    } else if (shownOnce) {
+      bar.replaceChildren(el("span", null, "Images shown for this message."),
+        ...(addr ? [button("Always show from " + addr, always(true))] : []));
+    } else {
+      bar.replaceChildren(el("span", null, "Images are hidden."),
+        button("Show images", () => { show(true); render(true); }),
+        ...(addr ? [button("Always show from " + addr, always(true))] : []));
+    }
+  };
+  render(false);
+  return bar;
 }
 
 function buildDetail(item, triage) {

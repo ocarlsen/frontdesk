@@ -454,3 +454,64 @@ def test_defaults_endpoint_names_ask_and_ranking_separately(tmp_path):
         httpd.shutdown()
     assert d == {"ask": display_model(config.DEFAULTS["ask_model"]),
                  "rank": display_model(config.DEFAULTS["model"])}
+
+
+def test_remote_images_off_until_asked(tmp_path):
+    import json as _json
+    import urllib.request
+
+    from frontdesk import config
+    from frontdesk.items import Item, Message
+    from frontdesk.web.server import make_server, ranked_payload
+    store = Store(tmp_path / "img.db")
+    html = '<p>Hi</p><img src="https://track.example.com/p.gif"><img src="data:image/png;base64,AA">'
+    store.upsert_item(Item(id="gmail:i1", source="gmail", account="o@example.com", subject="News",
+                           participants=[], updated_at="2026-10-28T16:00:00Z",
+                           messages=[Message("Pat <Pat@Example.com>", "2026-10-28T16:00:00Z",
+                                             "text", html=html),
+                                     Message("Kim <kim@example.com>", "2026-10-28T17:00:00Z",
+                                             "text", html="<b>no web images</b>")]))
+    msgs = ranked_payload(store)[0]["item"]["messages"]
+    assert "images_always" not in msgs[0]
+    msgs = ranked_payload(store, image_senders=["pat@example.com"])[0]["item"]["messages"]
+    assert msgs[0]["images_always"] is True and "images_always" not in msgs[1]
+
+    httpd = make_server(store, "127.0.0.1", 0, settings={})
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
+    def post(body):
+        req = urllib.request.Request(base + "/api/action", data=_json.dumps(body).encode(),
+                                     method="POST", headers={"X-FrontDesk": "action",
+                                                             "Content-Type": "application/json"})
+        try:
+            r = urllib.request.urlopen(req)
+            return r.status, _json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, {}
+    try:
+        csp = urllib.request.urlopen(base + "/msg?item=gmail%3Ai1&i=0").headers[
+            "Content-Security-Policy"]
+        assert "img-src data:;" in csp and "https:" not in csp
+        r = urllib.request.urlopen(base + "/msg?item=gmail%3Ai1&i=0&images=1")
+        assert "img-src data: https:;" in r.headers["Content-Security-Policy"]
+        assert "script-src 'none'" in r.headers["Content-Security-Policy"]
+        assert r.headers["Referrer-Policy"] == "no-referrer"
+
+        assert post({"kind": "images_always", "sender": "Pat <Pat@Example.com>", "on": True}) == \
+            (200, {"status": "done", "kind": "images_always", "sender": "pat@example.com",
+                   "on": True})
+        assert config.settings()["image_senders"] == ["pat@example.com"]
+        got = _json.loads(urllib.request.urlopen(base + "/api/items").read())
+        assert got[0]["item"]["messages"][0]["images_always"] is True
+        assert post({"kind": "images_always", "sender": "pat@example.com", "on": False})[0] == 200
+        assert config.settings()["image_senders"] == []
+        assert post({"kind": "images_always", "sender": "not an address", "on": True})[0] == 400
+        assert post({"kind": "images_always", "sender": "pat@example.com", "on": "yes"})[0] == 400
+    finally:
+        httpd.shutdown()
+
+
+def test_images_always_refused_in_demo(tmp_path):
+    from frontdesk.web.server import images_always
+    assert images_always({"demo": True}, {"sender": "a@b.c", "on": True})[0] == 409

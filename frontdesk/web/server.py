@@ -13,11 +13,13 @@ Access control, in order, on every request:
 3. POST additionally requires a custom header and a same-host Origin (CSRF).
 
 Email content is untrusted. The list is sent as JSON and rendered with textContent only. A
-message's HTML is served from /msg under its own CSP (no script, no remote load, no forms) with
+message's HTML is served from /msg under its own CSP (no script, no forms, and no remote load
+except https images once the owner asks for them, per message or per sender) with
 <meta http-equiv> removed (CSP does not govern a meta refresh), and the page frames it in a
 sandboxed iframe without allow-scripts."""
 from __future__ import annotations
 
+import email.utils
 import ipaddress
 import json
 import os
@@ -50,6 +52,9 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self';
 # (tracking pixels), no fonts, no forms; framable only by our own page.
 MSG_CSP = ("default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; "
            "form-action 'none'; base-uri 'none'; frame-ancestors 'self'")
+# The same with https images allowed, only when the owner asks (Show images, or a sender they
+# chose to always show). Loading them tells the sender the mail was opened, from which IP.
+MSG_CSP_IMAGES = MSG_CSP.replace("img-src data:", "img-src data: https:")
 MSG_HEAD = ('<!doctype html><meta charset="utf-8"><base target="_blank">'
             '<style>html,body{margin:0;background:#fff;color:#202124;'
             'font:14px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}'
@@ -60,13 +65,17 @@ LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 TEXT = "text/plain; charset=utf-8"
 
 
-def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
+def ranked_payload(store: Store, signoff: str = "",
+                   image_senders: list[str] | tuple = ()) -> list[dict]:
     """HTML bodies stay out of the list payload (fetched per message from /msg); each
-    message carries has_html instead. A proposed email reply gets the owner's sign-off.
+    message carries has_html instead, plus images_always when its sender is one the owner chose
+    to always show web images from (the page itself finds whether the HTML has any). A proposed
+    email reply gets the owner's sign-off.
     Each item carries `starred`, and `hidden` ('archived' or 'done', else ''): a hidden item is
     listed only when starred, for the Starred view, after every visible one."""
     from ..assist import with_signoff
     with_html = store.html_indexes()
+    always = {a.lower() for a in image_senders}
     unread_here = store.local_unread_ids()
     out = []
     rows = [(i, t, "") for i, t in store.ranked()]
@@ -84,6 +93,8 @@ def ranked_payload(store: Store, signoff: str = "") -> list[dict]:
             if not m.get("sender_key"):   # Gmail has none; its key is the address in sender
                 m.pop("sender_key", None)
             m["has_html"] = i in with_html.get(item.id, set())
+            if m["has_html"] and always and sender_address(m["sender"]) in always:
+                m["images_always"] = True
         t = asdict(tri) if tri else None
         if t and item.source == "gmail":
             t["proposed_reply"] = with_signoff(t["proposed_reply"], signoff)
@@ -146,6 +157,11 @@ def address_label(addr: str, slack_names: dict[str, str]) -> str:
     if is_legacy_slack_name(addr):
         return addr
     return ""
+
+
+def sender_address(sender: str) -> str:
+    """The lowercased address in a From value ('Ann <ann@example.com>' -> 'ann@example.com')."""
+    return email.utils.parseaddr(sender)[1].lower()
 
 
 def message_html(store: Store, item_id: str, index: int) -> str | None:
@@ -558,6 +574,21 @@ def _keep_and_rank(db_path: Path, settings: dict, item, source: str,
     return HTTPStatus.OK, {"status": "done", "kind": "keep", "ranked": ranked}
 
 
+def images_always(settings: dict, req: dict) -> tuple[int, dict]:
+    """Always show (on) or stop showing (off) web images in mail from one sender address."""
+    addr, on = req.get("sender"), req.get("on")
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Demo mode: settings can't be changed."}
+    if not isinstance(addr, str) or not isinstance(on, bool):
+        return HTTPStatus.BAD_REQUEST, {"error": "expected {kind, sender, on}"}
+    addr = sender_address(addr)
+    if "@" not in addr or len(addr) > 320:
+        return HTTPStatus.BAD_REQUEST, {"error": "sender must be an email address"}
+    current = [a for a in settings["image_senders"] if a.lower() != addr]
+    config.save_setting("image_senders", sorted(current + [addr]) if on else current)
+    return HTTPStatus.OK, {"status": "done", "kind": "images_always", "sender": addr, "on": on}
+
+
 def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
@@ -578,6 +609,8 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             store.db.close()
     if kind in MEMORY_KINDS:
         return run_memory(db_path, settings, kind, req)
+    if kind == "images_always":
+        return images_always(settings, req)
     if kind == "keep":
         return keep_result(db_path, settings, item_id if isinstance(item_id, str) else "")
     if kind == "result":
@@ -1102,9 +1135,10 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 store = Store(db_path)
                 try:
                     # Read per request so a sign-off edited in the profile applies at once.
-                    sign = "" if (settings or {}).get("demo") else \
-                        config.settings()["reply_signoff"]
-                    body = json.dumps(ranked_payload(store, sign)).encode()
+                    live = None if (settings or {}).get("demo") else config.settings()
+                    body = json.dumps(ranked_payload(
+                        store, live["reply_signoff"] if live else "",
+                        live["image_senders"] if live else ())).encode()
                 finally:
                     store.db.close()
                 self._send(HTTPStatus.OK, body, "application/json; charset=utf-8")
@@ -1120,8 +1154,9 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 if doc is None:
                     self._send(HTTPStatus.NOT_FOUND, b"Not found\n", TEXT)
                 else:
+                    images = q.get("images", [""])[0] == "1"
                     self._send(HTTPStatus.OK, doc.encode(), "text/html; charset=utf-8",
-                               csp=MSG_CSP)
+                               csp=MSG_CSP_IMAGES if images else MSG_CSP)
             else:
                 self._send(HTTPStatus.NOT_FOUND, b"Not found\n", TEXT)
 
