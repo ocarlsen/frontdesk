@@ -101,7 +101,9 @@ def test_recorded_results_match_the_suites_own_runs():
     import json
     rec = attack.EVALS / "injection" / "recordings"
     ex = attack.recorded_examples()
-    assert len(ex) == 32 and all(len(x["recorded"]) == 4 for x in ex)
+    recorded = [k for k in attack.MODEL_ORDER if (rec / f"{k}.json").exists()]
+    assert len(recorded) >= 5 and "gemini-4-argon" in recorded
+    assert len(ex) == 32 and all(len(x["recorded"]) == len(recorded) for x in ex)
     for x in ex:
         assert x["highlight"], x["id"]                    # the gallery's quotes, to mark
         for m in x["recorded"]:
