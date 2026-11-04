@@ -70,7 +70,9 @@ def main() -> None:
     config.SETTINGS_PATH.write_text(
         json.dumps({"mark_read_on_open": False, "auto_sync_minutes": 0}))
     server.available_models = lambda _settings: []   # no Keychain lookups for Ask's model list
-    shots = [("before", "baseline_session", ""), ("after", "session", "?notes=1")]
+    # Both open the note, so a reader sees the helper's text the answer quotes.
+    # "before" also hides what the old page didn't have: the author line and Confirm.
+    shots = [("before", "baseline_session", "?notes=1&old=1"), ("after", "session", "?notes=1")]
     for name, condition, query in shots:
         db = TMP / f"{name}.db"
         seed(db, condition)

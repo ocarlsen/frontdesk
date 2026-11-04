@@ -42,53 +42,42 @@ hr { border: 0; border-top: 2px solid var(--line); margin: 56px 0 24px; }
 <body>
 <main>
 <h1>Memory needs an author</h1>
-<p class="dek">How my inbox agent came to quote a helper's note back to
-me as my own, and the fix, tested on three vendors' models.</p>
+<p class="dek">We built an inbox agent to stop switching between Gmail and Slack, and to coordinate with
+Claude Code sessions behind the scenes. Then it
+quoted a coding session's note back to me as my own. This is the fix, tested on three vendors'
+models.</p>
 
-<p><a href="https://ocarlsen.ai/frontdesk.html">FrontDesk</a> is an inbox agent I built that runs
-on my own computer. It reads my Gmail and Slack, ranks what needs me, and drafts replies. The part
-I use most is Ask: open a thread, ask "what should I do here?", and it answers like a chief of
-staff who has read the thread, my other threads with the same people, a short profile of what I
-care about, and my notes on the people involved.</p>
-
-<p>Those notes are the interesting part. They are how an advisor remembers that a recruiter
-already asked for my salary floor, or that a client agreed to pay within 15 days. They are also, it turns
-out, the easiest place for an agent to be confidently wrong about me.</p>
+<p><a href="https://ocarlsen.ai/frontdesk.html">FrontDesk</a> runs on my own computer. It reads
+Gmail and Slack, ranks what needs me, and drafts replies. The part I use most is Ask: open a
+thread, ask what I should do, and it answers from within the thread.</p>
+<p>I wanted Ask to know what my sessions knew, so I had them write notes into FrontDesk's memory.
+One of those notes was wrong.</p>
 
 <h2>The note</h2>
-<p>One evening I was working through a reply to someone I had been corresponding with. I was
-doing it in an AI coding session, the same kind of session I had used to build FrontDesk, and
-I asked it to get that analysis into FrontDesk so I could use it there next time. It did that by
-writing a note about the person into FrontDesk's memory, in the first person, the way I would
-have written it myself.</p>
-<p>One line in it was false: that I had promised them something I had only drafted and never
-sent.</p>
-<p>FrontDesk treated notes as the owner's own words, because until then only the owner wrote
-them. So Ask took the note at its word. Later answers quoted the session's text back to me as
-"your notes say...". Several of the questions in that thread's history were also typed by the
-session, not by me, and nothing on the page said so.</p>
+<p>I was in a discussion with someone about working together, and FrontDesk kept insisting I had
+promised them a demo. I hadn't. It turned out to be a false note.</p>
+<p>The note had false provenance. A coding session, the same kind I used to build FrontDesk, had
+written it into
+FrontDesk's memory in the first person, from a to-do in my notes. When I asked where the claim
+came from, the session traced it to its own note. FrontDesk treated notes as my
+words, because until then only I wrote them, so Ask quoted it back to me as "your notes say...".</p>
 <figure>
-  <img src="article-before.jpg" width="760" height="589" loading="lazy"
-       alt="FrontDesk's Ask panel on a class baking-day email. The answer says: your notes say Jordan has a peanut allergy.">
-  <figcaption>Recreated on synthetic data: Opus 5.5's actual answer from my test, with the old
-  prompt. The note was written by a helper, but the answer says "your notes say".</figcaption>
+  <img src="article-before.jpg" width="760" height="759" loading="lazy"
+       alt="FrontDesk's Ask panel on a class baking-day email, with the helper's note open. The answer says: your notes say Jordan has a peanut allergy.">
+  <figcaption>Recreated on synthetic data: Opus 5.5's answer from my test, with the old prompt.
+  The helper's note is open so you can read it. Notice how there is no record of the note's provenance, and the model's answer says "your
+  notes say".</figcaption>
 </figure>
-<p>I caught it because I knew what I had and hadn't promised. An assistant that is only useful
-when you already know the answer isn't much of an assistant.</p>
+<p>It was a false belief, and I wanted the model to have correct information to give me
+calibrated recommendations.</p>
 
 <h2>Why it happened</h2>
-<p>FrontDesk already had a trust boundary, and it held. Mail is written by other people, so it
-goes to the model as quoted data it is told never to obey. My profile and notes are mine, so they
-go in as trusted context.</p>
-<p>The gap was inside "trusted". "Written by the owner" really meant "came in through the owner's
-side", and every tool acting for me is on that side. The whole point
-of an agent is that other agents and tools write on your behalf. A memory that cannot tell you
-from your helpers will eventually put words in your mouth, and the model will repeat them with
-your authority.</p>
-
-<h2>How FrontDesk's memory works</h2>
-<p>The model keeps no memory between calls. Each time I Ask, FrontDesk rebuilds the context from a local SQLite file and sends the same assembled text to
-whichever model I picked:</p>
+<p>Mail from other people already went to the model as quoted data it is told never to obey. My
+profile and notes went in as trusted, because they were mine. But every tool acting for me is on
+my side too, and since the memory couldn't tell us apart, the model was
+repeating their words as mine.</p>
+<p>The model keeps no memory between calls. Each Ask rebuilds the context from a local SQLite file
+and sends it to whichever model I picked, so the same memory works on every model:</p>
 <div class="table-wrap"><table>
 <thead><tr><th>Section</th><th>Written by</th><th>Treated as</th></tr></thead>
 <tbody>
@@ -98,13 +87,11 @@ whichever model I picked:</p>
 <tr><td>Notes on the people in the thread, most recent first</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
 <tr><td>The conversation so far on this thread</td><td>Me, a helper, the model</td><td>Each turn labelled</td></tr>
 </tbody></table></div>
-<p>Keeping memory in the prompt, not in a vendor's memory feature, is what lets FrontDesk run the
-same on every model, with the memory where I can see, test and label it.</p>
 
 <h2>The fix: every memory has an author</h2>
-<p>Every note, every "What's going on" item and every question in Ask's history now records who
-wrote it and when. There are three possible authors: me, a named helper session, or "not
-recorded" for anything saved before the change. The prompt carries that label on every line:</p>
+<p>Every memory now records its provenance: who wrote it and when. That's me, a named helper
+session, or "not recorded" for anything saved before the change. The prompt carries that label on
+every line:</p>
 <pre>def provenance(author: str, at: str) -> str:
     day = (at or "")[:10] or "date unknown"
     if author == OWNER:
@@ -113,76 +100,66 @@ recorded" for anything saved before the change. The prompt carries that label on
         return (f"(written on the owner's behalf by session {author[len('session:'):]}, "
                 f"not confirmed by the owner, {day})")
     return f"(author not recorded, not confirmed by the owner, {day})"</pre>
-<p>The instructions say what to do with it: lines I wrote are trusted. Unconfirmed lines are a
-likely but unverified statement of my view. The model may use them, but when it relies on one it
-has to say so ("an unconfirmed note says..."), never "you said" or "your notes say".</p>
-<p>On the page, each note shows who wrote it and when, with a Confirm button on anything I didn't
-write. Helper sessions get a command-line path that writes as themselves and can never write as
-me. One limit: this is a record kept by honest writers, not a security boundary. Any
-program running as me could claim to be me. What it fixes is the common case, where a helper
-means well and nothing records that it was the one writing.</p>
-<p>Labels don't make a memory true; confirming a note doesn't check it. They settle whose claim it
-is, so I know which lines to check. Every memory also shows its date next to its author, because
-"pending since October 22" is true for a week and then quietly false.</p>
+<p>Notes I wrote are trusted. The model may use an unconfirmed one, but when it relies on it, it
+must say so ("an unconfirmed note says..."), never "you said" or "your notes say".</p>
+<p>On the page, each note shows its author and date, with a Confirm button on anything I didn't
+write. This is not a security boundary, since any program running as me could claim to be me. It
+covers the common case: a helper that means well, and nothing recording that it wrote the note.</p>
+<p>The label doesn't make a note true, but it tells me whose claim it is. The date matters too, because
+"pending since October 22" stops being true after a while. Today I can edit the note in the thread, or delete it from the Memory page. (An
+<a href="https://github.com/ocarlsen/frontdesk/issues/76">in-thread Delete</a> is pending.)</p>
 <figure>
-  <img src="article-after.jpg" width="760" height="748" loading="lazy"
+  <img src="article-after.jpg" width="760" height="779" loading="lazy"
        alt="The same thread after the fix. The answer says: an unconfirmed note says Jordan has a peanut allergy. Below, the note is labelled written by session helper, not confirmed, with a Confirm button.">
   <figcaption>The same thread, model and note with authorship labels. The answer calls the note
-  unconfirmed, and the note says who wrote it, with a Confirm button.</figcaption>
+  unconfirmed, and the note shows who wrote it, with a Confirm button.</figcaption>
 </figure>
 
 <h2>Does the model actually say "unconfirmed"?</h2>
-<p>Instructions are cheap. I wanted to know whether models follow this one without becoming
-useless, by ignoring the note, or annoying, by hedging on notes I did write.</p>
-<p>So I built a small test: 12 invented threads (a recruiter, a landlord, a school, a vendor), each with one note carrying a fact the right answer depends on, such
-as "you agreed to share the deck only after they return the signed NDA". Each thread is asked
-three ways, through FrontDesk's real prompt code:</p>
+<p>I wanted to know whether models follow the instruction without ignoring the note or hedging
+on notes I did write. So I built a small test: 12 invented threads (a recruiter, a landlord, a
+school, a vendor), each with one note carrying a fact the right answer depends on, each asked three
+ways through FrontDesk's real prompt code:</p>
 <ol>
 <li>The note is labelled as written by me.</li>
 <li>The same note is labelled as written by a helper, unconfirmed.</li>
 <li>The old instructions and the old unlabelled note line, with the same helper's note.</li>
 </ol>
-<p>A separate model judges each answer without knowing which way it was asked: did it use the
-fact, did it credit me with it, did it flag it as unconfirmed. Every run also has the judge grade
-hand-labelled answers with known right answers (nine at the time of these runs); if it gets any
-wrong, the report opens with a failure banner and the command exits with an error.</p>
+<p>A separate model judges each answer blind: did it use the fact, did it credit me with it, did
+it flag it as unconfirmed. Before scoring, the judge has to pass a check of its own: ten sample answers with the right
+verdict already written down. If it gets any of them wrong, the run fails.</p>
 <div class="table-wrap"><table>
-<thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>Credited to me, with labels</th><th>My own notes used, no false hedge</th></tr></thead>
+<thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>Credited to me, with labels</th><th>My own notes used, no false hedge</th><th>Cost per answer</th></tr></thead>
 <tbody>
-<tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
-<tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
-<tr><td>Gemini 3.8 Flash</td><td class="num">9 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td></tr>
+<tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">2.2&cent;</td></tr>
+<tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">0.37&cent;</td></tr>
+<tr><td>Gemini 4 Argon</td><td class="num">11 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">0.62&cent;</td></tr>
 </tbody></table></div>
 <p>With labels, every model flagged all 12 helper notes and still used the fact. Without labels,
-every model credited the helper's words to me most of the time: the original failure, on
-demand.</p>
-<p>The difference is easiest to see on one thread. Asked about a class's peanut butter cookie
-day, with a helper's note about an allergy, Opus 5.5 answered without labels: "your notes say Jordan has a
-peanut allergy". With labels, the same model, note and question gave: "An unconfirmed note says
-Jordan has a peanut allergy". Same fact, used the same way; only the claim of whose it is
-changed.</p>
-<p>With 12 cases per condition these are counts, not precise rates. Zero of 12 is still
-consistent with a true rate as high as about one in four, the top of its 95% interval. The Opus 5.5
-run cost about $1.50 including the judge; the other two weren't priced at the time.</p>
-<p>The judge needed checking too. On a strict reading, two or three answers per model missed,
-and every one was the same shape: "An unconfirmed note says you agreed to share the deck only
-after the NDA." The answer flagged the note correctly, but the judge counted "you agreed" as
-crediting me. The note was the source; I was only the subject. Those misses lower the count of
-fully correct answers (used the fact, flagged it, didn't credit it to me) to 10, 10 and 9 of 12; they don't touch the "credited to me" count in the table,
-which is zero for every model. I tightened the judge's
-instructions and added that exact case to its calibration set. I left the published runs as they
-were rather than rescoring them in my favor. A later Opus 5.5 run with the tightened judge scored
-12 of 12 fully correct; the table keeps the original. The
+every model credited the helper's words to me most of the time. The two screenshots above are one
+of those threads.</p>
+<p>Cost per answer is at list prices, from the tokens each run was billed. On this test the cheaper
+models do as well as Opus 5.5. Ranking and Ask can use different models, so FrontDesk now ranks
+with Gemini 4 Argon, the cheapest model that cleared every safety floor in the ranking evals. Ask stays on Opus 5.5
+for now, a choice I haven't measured yet. An Ask eval is next.</p>
+<p>Admittedly, 12 cases per condition is a small sample. And zero of 12 is still consistent with a true rate as
+high as about one in four, the top of its 95% interval.</p>
+<p>The judge had a bug at first. If an answer correctly called a note unconfirmed but the note
+was about something I did, the judge counted that as crediting me, so models scored 9 or 10 of 12.
+I fixed the judge and re-graded the saved answers without asking the models again, and every model
+scored 12 of 12. The main table didn't change. The
 <a href="https://github.com/ocarlsen/frontdesk/tree/main/evals/results">reports</a>, with every
 answer and every judgment, are in the repository.</p>
 
-<h2>What's next</h2>
-<p>A note belongs to a person with any number of addresses, so it follows them whichever one
-they write from, and a Memory page shows everything FrontDesk remembers, each item with who wrote
-it and when; I can edit, confirm, delete or merge people there, or download it all. Next is
-retrieval by topic, for when memory outgrows "send everything relevant".</p>
-<p>The principle won't change: the memory is mine, it lives on my machine, and I can see who
-wrote every line of it. When a model leans on something I didn't write, it says so.</p>
+<h2>Since then</h2>
+<p>A note now belongs to a person, not an address, so it follows them whichever address they write
+from. The Memory page shows everything FrontDesk remembers, with author and date, where I can edit,
+confirm, delete or merge people, or download it all. Next is giving FrontDesk what my Claude Code
+sessions already know about me (<a href="https://github.com/ocarlsen/frontdesk/issues/67">#67</a>,
+<a href="https://github.com/ocarlsen/frontdesk/issues/69">#69</a>). Today Ask sends my notes on the
+people in the thread and every "What's going on" item, which works while memory is small. With a
+session's worth of memory, Ask will need to find the notes that match the thread's subject
+instead.</p>
 <p><a href="https://ocarlsen.ai/frontdesk.html">More about FrontDesk</a>, including
 <a href="https://frontdesk.ocarlsen.com/index.html">a live demo</a> on a synthetic inbox. The code
 is open source on <a href="https://github.com/ocarlsen/frontdesk">GitHub</a>.</p>
