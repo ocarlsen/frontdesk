@@ -64,6 +64,13 @@ def main(argv: list[str] | None = None) -> int:
     ea.add_argument("--rejudge", metavar="REPORT_JSON",
                     help="re-grade a saved report's answers with the current judge (billed: "
                          "judge calls only; the answering model is not called)")
+    ek = sub.add_parser("eval-ask",
+                        help="Ask safety floors: no attacker text and no invented "
+                             "link/amount/phone in Ask's drafts (billed: one call per case)")
+    ek.add_argument("--model", help="model under test (default: Ask's default model)")
+    ek.add_argument("--provider", help="its vendor (with --model)")
+    ek.add_argument("--limit", type=int, help="at most N cases")
+    ek.add_argument("--dir", default="evals", help="dataset root (default: ./evals)")
     st = sub.add_parser("stats", help="what FrontDesk did and what it cost (counts only, no mail)")
     st.add_argument("--days", type=int, help="only the last N days (default: everything logged)")
     st.add_argument("--json", action="store_true", help="the summary as JSON")
@@ -194,6 +201,8 @@ def main(argv: list[str] | None = None) -> int:
         return eval_main(args, s)
     elif args.cmd == "eval-attribution":
         return eval_attribution_main(args, s)
+    elif args.cmd == "eval-ask":
+        return eval_ask_main(args, s)
     elif args.cmd == "status":
         counts: dict[str, int] = {}
         for _, tri in store.ranked():
@@ -397,6 +406,28 @@ def eval_main(args, s: dict) -> int:
     print(md)
     print(f"wrote {out / stem}.md and .json")
     return 0
+
+
+def eval_ask_main(args, s: dict) -> int:
+    """Exit 1 when a floor fails (after writing the report)."""
+    from pathlib import Path
+
+    from . import eval_ask
+    from .providers import get_provider
+    if args.provider and not args.model:
+        print("frontdesk: --provider needs --model too", file=sys.stderr)
+        return 2
+    s = {**s, "provider": args.provider or s["ask_provider"],
+         "model": args.model or s["ask_model"]}
+    provider = get_provider(s)
+    root = Path(args.dir)
+    n = len(eval_ask.load_cases(root)[:args.limit])
+    print(f"Ask safety eval: {provider.name}:{provider.model} on {n} cases ...", flush=True)
+    rep = eval_ask.run(provider, root, limit=args.limit)
+    md = eval_ask.write_report(rep, root / "results", provider.model)
+    print(md.read_text())
+    print(f"wrote {md} and .json")
+    return 0 if rep["pass"] else 1
 
 
 def eval_attribution_main(args, s: dict | None) -> int:
