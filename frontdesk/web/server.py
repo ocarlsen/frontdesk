@@ -803,6 +803,56 @@ def ask_all(db_path: Path, settings: dict, models: list[dict], item_id: str,
     return {"answers": answers}
 
 
+# Plain HTML: the cookie may be absent here, so it loads nothing that needs it.
+CALLBACK_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>FrontDesk</title>
+</head><body><main><h1>{title}</h1><p>{text}</p>
+<p><a href="/index.html">Back to FrontDesk</a></p></main></body></html>"""
+
+
+def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
+    """Google's redirect after consent. Answers a small page either way; the token is written
+    only when the state is one this server issued and Google granted exactly what was asked."""
+    import html
+
+    from ..gmail import connect
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, CALLBACK_PAGE.format(
+            title="Demo", text="Connecting Gmail is off in the demo.")
+    try:
+        kind = connect.finish(query)
+    except connect.ConnectError as e:
+        return HTTPStatus.BAD_REQUEST, CALLBACK_PAGE.format(
+            title="Not connected", text=html.escape(str(e)))
+    return HTTPStatus.OK, CALLBACK_PAGE.format(
+        title="Connected", text=html.escape(connect.KINDS[kind]) + " is connected. "
+        "You can close this tab, or go back to FrontDesk.")
+
+
+def run_google(settings: dict, req: dict, origin: str) -> tuple[int, dict]:
+    """The page's Connect, paste-back and Disconnect: {"op": "start" | "finish" |
+    "disconnect", "kind": "read" | "actions", "url": the pasted address}."""
+    from ..gmail import connect
+    if settings.get("demo"):
+        return HTTPStatus.CONFLICT, {"error": "Connecting Gmail is off in the demo."}
+    op = req.get("op")
+    try:
+        if op == "start":
+            return HTTPStatus.OK, connect.start(req.get("kind"), origin,
+                                                int(settings.get("serve_port", 8765)))
+        if op == "finish":
+            url = req.get("url")
+            if not isinstance(url, str) or len(url) > 4096:
+                raise connect.ConnectError("paste the whole address from the browser bar")
+            return HTTPStatus.OK, {"status": "done", "kind": connect.finish(url)}
+        if op == "disconnect":
+            connect.disconnect(req.get("kind"))
+            return HTTPStatus.OK, {"status": "done"}
+    except connect.ConnectError as e:
+        return HTTPStatus.BAD_REQUEST, {"error": str(e)}
+    return HTTPStatus.BAD_REQUEST, {"error": "unknown operation"}
+
+
 def host_allowed(host_header: str, extra_names: set[str]) -> bool:
     host = host_header.strip().lower()
     if host.startswith("["):                       # [::1]:8765
@@ -881,9 +931,18 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             return True
 
         def do_GET(self) -> None:
+            path, _, query = self.path.partition("?")
+            if path == "/oauth/callback":
+                # Google's redirect is cross-site, so the SameSite=Strict cookie is not sent:
+                # the single-use state FrontDesk issued authenticates this request instead.
+                if not host_allowed(self.headers.get("Host", ""), names):
+                    self._send(HTTPStatus.FORBIDDEN, b"Forbidden\n", TEXT)
+                    return
+                code, page = oauth_callback(settings or {}, query)
+                self._send(code, page.encode(), "text/html; charset=utf-8")
+                return
             if not self._gate():
                 return
-            path, _, query = self.path.partition("?")
             if path == "/":
                 self._send(HTTPStatus.FOUND, extra={"Location": "/index.html"})
             elif path in STATIC:
@@ -945,6 +1004,12 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 code, out = gmail_draft(db_path, settings or {},
                                         parse_qs(query).get("item", [""])[0])
                 self._send(code, json.dumps(out).encode(), "application/json; charset=utf-8")
+            elif path == "/api/google":
+                from ..gmail import connect
+                demo = bool((settings or {}).get("demo"))
+                body = {"demo": True} if demo else {"demo": False, **connect.status()}
+                self._send(HTTPStatus.OK, json.dumps(body).encode(),
+                           "application/json; charset=utf-8")
             elif path == "/api/models":
                 body = [{"index": i, "label": m["label"], "provider": m["provider"]}
                         for i, m in enumerate(available_models(config.settings()))]
@@ -1017,7 +1082,7 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             # scheme counts as same-origin; the Host itself already passed the allowlist.
             host = self.headers.get("Host", "")
             origin = self.headers.get("Origin")
-            routes = {"/api/sync": "sync", "/api/action": "action"}
+            routes = {"/api/sync": "sync", "/api/action": "action", "/api/google": "google"}
             if (routes.get(self.path) is None
                     or self.headers.get("X-FrontDesk") != routes[self.path]
                     or (origin is not None and origin not in (f"http://{host}",
@@ -1040,7 +1105,11 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 except ValueError:
                     self._send(HTTPStatus.BAD_REQUEST, b"Bad request\n", TEXT)
                     return
-                status, out = run_action(db_path, s, req if isinstance(req, dict) else {})
+                req = req if isinstance(req, dict) else {}
+                if self.path == "/api/google":
+                    status, out = run_google(s, req, origin or "")
+                else:
+                    status, out = run_action(db_path, s, req)
             self._send(status, json.dumps(out).encode(), "application/json; charset=utf-8")
 
         def log_message(self, fmt: str, *args) -> None:
@@ -1075,7 +1144,10 @@ def start_dispatcher(db_path: Path, interval: float = 2.0) -> threading.Thread:
     clients: dict = {}
 
     def gmail():
-        if "gmail" not in clients:
+        from ..gmail import connect
+        # Reconnecting or disconnecting in the page changes the token: load it again.
+        if "gmail" not in clients or clients.get("gen") != connect.generation:
+            clients["gen"] = connect.generation
             clients["gmail"] = GmailClient(action_credentials())
         return clients["gmail"]
 

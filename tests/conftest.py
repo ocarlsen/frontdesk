@@ -13,6 +13,7 @@ def isolated_home(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "HOME", home)
     for name, leaf in (("DB_PATH", "frontdesk.db"), ("SETTINGS_PATH", "settings.json"),
                        ("GMAIL_CLIENT_SECRET", "client_secret.json"),
+                       ("GMAIL_WEB_CLIENT_SECRET", "client_secret_web.json"),
                        ("GMAIL_TOKEN", "gmail_token.json"),
                        ("GMAIL_ACTIONS_TOKEN", "gmail_actions_token.json")):
         monkeypatch.setattr(config, name, home / leaf)

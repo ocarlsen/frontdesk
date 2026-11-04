@@ -1716,8 +1716,15 @@ function render(rows) {
   }
 
   if (!rows.length) {
-    const p = el("p", "status", starred.length ? "Inbox clear." : "Nothing synced yet. Run: ");
-    if (!starred.length) p.append(el("code", null, "frontdesk sync"));
+    const p = el("p", "status", starred.length ? "Inbox clear." : "Nothing synced yet. ");
+    if (!starred.length && !STATIC) {
+      const b = el("button", "btn small primary", "Connect Gmail");
+      b.type = "button";
+      b.addEventListener("click", openGoogle);
+      p.append(b, " then Sync, or run ", el("code", null, "frontdesk sync"), " in a Terminal.");
+    } else if (!starred.length) {
+      p.append("Run: ", el("code", null, "frontdesk sync"));
+    }
     main.append(p);
     if (starred.length) counts.append(starredToggle(starred.length));
     return;
@@ -2149,7 +2156,8 @@ async function load() {
 }
 
 // auto: started by opening the page, not by the owner, so a refusal (a sync already running,
-// demo mode) stays quiet; the next status poll shows the result either way.
+// demo mode) stays quiet; a real failure is recorded by the server, and the status shown at
+// once, so a failure is never hidden behind a reload.
 async function syncNow(auto = false) {
   const btn = document.getElementById("sync");
   const note = document.getElementById("syncnote");
@@ -2160,6 +2168,7 @@ async function syncNow(auto = false) {
   btn.disabled = true;
   btn.textContent = "Syncing...";
   note.textContent = "";
+  note.classList.remove("err");
   try {
     const res = await fetch("/api/sync", { method: "POST", headers: { "X-FrontDesk": "sync" } });
     const out = await res.json();
@@ -2171,6 +2180,9 @@ async function syncNow(auto = false) {
     await load();
   } catch (e) {
     note.textContent = auto ? "" : "Sync failed: " + e.message;
+    note.classList.toggle("err", !auto);
+    if (!auto) offerConnect(note, e.message);
+    else pollStatus();
   } finally {
     btn.disabled = false;
     btn.textContent = "Sync";
@@ -2206,7 +2218,9 @@ async function openProfile() {
   const row = el("div", "actions");
   row.append(save, cancel);
   const sitBox = el("div", "situation");
-  box.append(ta, signLabel, sign, status, row, sitBox);
+  const googleBox = el("div", "situation google");
+  box.append(ta, signLabel, sign, status, row, googleBox, sitBox);
+  renderGoogle(googleBox);
   panel.replaceChildren(box);
   panel.hidden = false;
   const load = async () => {
@@ -2245,6 +2259,126 @@ async function openProfile() {
     }
   });
   ta.focus();
+}
+
+// ---- Google: connect, reconnect or disconnect Gmail's two permissions from the page.
+async function postGoogle(body) {
+  const res = await fetch("/api/google", { method: "POST",
+    headers: { "X-FrontDesk": "google", "Content-Type": "application/json" },
+    body: JSON.stringify(body) });
+  const out = await res.json();
+  if (!res.ok) throw new Error(out.error || "HTTP " + res.status);
+  return out;
+}
+
+const GOOGLE_KINDS = [
+  ["read", "Gmail", "Reads your inbox to sync and rank it. Read-only."],
+  ["actions", "Gmail actions", "Archive, star, save drafts and send replies you confirm. " +
+    "A separate permission, granted on its own."],
+];
+
+// Just the Google account controls, for the Connect Gmail buttons (Profile shows them too).
+function openGoogle() {
+  const panel = document.getElementById("profilepanel");
+  panel.setAttribute("aria-label", "Google account");
+  const box = el("div", "helpbox");
+  const g = el("div", "google");
+  const close = el("button", "btn", "Close");
+  close.type = "button";
+  close.addEventListener("click", () => { panel.hidden = true; });
+  const row = el("div", "actions");
+  row.append(close);
+  box.append(g, row);
+  panel.replaceChildren(box);
+  panel.hidden = false;
+  renderGoogle(g);
+}
+
+async function renderGoogle(box) {
+  box.replaceChildren(el("h3", null, "Google account"));
+  if (STATIC) { box.append(el("p", "kbdhint", "Demo: connecting Gmail is off here.")); return; }
+  let st;
+  try {
+    st = await (await fetch("/api/google", { cache: "no-store" })).json();
+  } catch (e) { box.append(el("p", "kbdhint", "Could not load: " + e.message)); return; }
+  if (st.demo) { box.append(el("p", "kbdhint", "Demo: connecting Gmail is off here.")); return; }
+  if (!st.desktop_client && !st.web_client) {
+    box.append(el("p", "kbdhint", "No Google OAuth client yet: create a Desktop OAuth client in " +
+      "Google Cloud Console and save its JSON as ~/.frontdesk/client_secret.json (see the README)."));
+    return;
+  }
+  const note = el("p", "kbdhint");
+  for (const [kind, name, what] of GOOGLE_KINDS) {
+    const li = el("div", "situationitem");
+    li.append(el("p", "situationtext", name + ": " + (st[kind] ? "connected" : "not connected")),
+      el("p", "kbdhint", what));
+    const row = el("div", "actions");
+    const go = el("button", "btn small" + (st[kind] ? "" : " primary"),
+      st[kind] ? "Reconnect" : "Connect");
+    go.type = "button";
+    go.addEventListener("click", () => connectGoogle(kind, box, note));
+    row.append(go);
+    if (st[kind]) {
+      const off = el("button", "btn small", "Disconnect");
+      off.type = "button";
+      off.title = "Delete this permission's sign-in from this computer";
+      off.addEventListener("click", async () => {
+        if (off.dataset.armed !== "1") {   // two clicks, no browser dialog
+          off.dataset.armed = "1";
+          off.textContent = "Disconnect: click again";
+          return;
+        }
+        try { await postGoogle({ op: "disconnect", kind }); renderGoogle(box); }
+        catch (e) { note.textContent = "Disconnect failed: " + e.message; }
+      });
+      row.append(off);
+    }
+    li.append(row);
+    box.append(li);
+  }
+  box.append(note);
+}
+
+async function connectGoogle(kind, box, note) {
+  // Open the tab inside the click, before any await, so a popup blocker allows it.
+  const tab = window.open("", "_blank");
+  let out;
+  try {
+    out = await postGoogle({ op: "start", kind });
+  } catch (e) {
+    if (tab) tab.close();
+    note.textContent = "Could not start: " + e.message;
+    return;
+  }
+  if (tab) tab.location = out.url; else window.open(out.url, "_blank");
+  if (out.mode === "paste") {
+    note.replaceChildren();
+    const help = el("p", "kbdhint", "Google's page opened in a new tab. After you allow access, " +
+      "that tab shows a page that cannot load (it points at localhost on this device). Copy " +
+      "its whole address from the address bar and paste it here.");
+    const paste = el("textarea");
+    paste.rows = 2;
+    paste.placeholder = "http://localhost:.../oauth/callback?state=...&code=...";
+    const fin = el("button", "btn small primary", "Finish connecting");
+    fin.type = "button";
+    fin.addEventListener("click", async () => {
+      try { await postGoogle({ op: "finish", url: paste.value }); renderGoogle(box); }
+      catch (e) { msg.textContent = e.message; }
+    });
+    const msg = el("p", "kbdhint");
+    const r = el("div", "actions");
+    r.append(fin);
+    note.append(help, paste, r, msg);
+    return;
+  }
+  note.textContent = "Finish in the new tab; this updates when Google is done.";
+  const was = JSON.stringify(await (await fetch("/api/google", { cache: "no-store" })).json());
+  for (let i = 0; i < 200; i++) {   // up to ~10 minutes, like the sign-in link
+    await new Promise(r => setTimeout(r, 3000));
+    if (!box.isConnected) return;
+    const now = JSON.stringify(await (await fetch("/api/google", { cache: "no-store" })).json());
+    if (now !== was) { renderGoogle(box); return; }
+  }
 }
 
 // ---- What's going on: what is live for you right now, sent to Ask and to each ranking.
@@ -2827,6 +2961,17 @@ function showSyncLine(s) {
     { hour: "numeric", minute: "2-digit" });
   note.textContent = (s.ok === false ? "Sync failed " + when + ": " + s.summary : "Synced " + when) +
     (s.auto_sync_minutes ? ", auto every " + s.auto_sync_minutes + " min" : "");
+  note.classList.toggle("err", s.ok === false);
+  if (s.ok === false) offerConnect(note, s.summary);
+}
+
+// A sync that failed for want of a Google sign-in gets a button to the Connect controls.
+function offerConnect(note, text) {
+  if (!/sign-in needed/i.test(text || "")) return;
+  const b = el("button", "btn small", "Connect Gmail");
+  b.type = "button";
+  b.addEventListener("click", openGoogle);
+  note.append(" ", b);
 }
 
 // Opening the page syncs when the last sync is older than this, so it never shows stale mail
