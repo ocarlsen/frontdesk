@@ -2156,7 +2156,7 @@ async function load() {
 }
 
 // auto: started by opening the page, not by the owner, so a refusal (a sync already running,
-// demo mode) stays quiet; a real failure is recorded by the server, and the status shown at
+// demo mode) stays quiet; a failed sync (502, recorded by the server) shows its status at
 // once, so a failure is never hidden behind a reload.
 async function syncNow(auto = false) {
   const btn = document.getElementById("sync");
@@ -2172,7 +2172,7 @@ async function syncNow(auto = false) {
   try {
     const res = await fetch("/api/sync", { method: "POST", headers: { "X-FrontDesk": "sync" } });
     const out = await res.json();
-    if (!res.ok) throw new Error(out.error || "HTTP " + res.status);
+    if (!res.ok) throw Object.assign(new Error(out.error || "HTTP " + res.status), { status: res.status });
     let msg = "Synced " + out.synced + ", removed " + out.removed + ", ranked " + out.triaged;
     if (out.failed) msg += ", " + out.failed + " failed";
     if (out.triage_error) msg += ". Ranking skipped: " + out.triage_error;
@@ -2182,7 +2182,7 @@ async function syncNow(auto = false) {
     note.textContent = auto ? "" : "Sync failed: " + e.message;
     note.classList.toggle("err", !auto);
     if (!auto) offerConnect(note, e.message);
-    else pollStatus();
+    else if (e.status === 502) pollStatus();   // a failed sync, not a refusal: show it now
   } finally {
     btn.disabled = false;
     btn.textContent = "Sync";
