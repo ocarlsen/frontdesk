@@ -809,7 +809,7 @@ def ask_all(db_path: Path, settings: dict, models: list[dict], item_id: str,
 CALLBACK_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>FrontDesk</title>
 </head><body><main><h1>{title}</h1><p>{text}</p>
-<p><a href="/index.html">Back to FrontDesk</a></p></main></body></html>"""
+<p><a href="{back}">Back to FrontDesk</a></p></main></body></html>"""
 
 
 def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
@@ -820,15 +820,19 @@ def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
     from ..gmail import connect
     if settings.get("demo"):
         return HTTPStatus.CONFLICT, CALLBACK_PAGE.format(
-            title="Demo", text="Connecting Gmail is off in the demo.")
+            title="Demo", text="Connecting Gmail is off in the demo.", back="/index.html")
     try:
-        kind = connect.finish(query)
+        kind, origin = connect.finish_with_origin(query)
     except connect.ConnectError as e:
         return HTTPStatus.BAD_REQUEST, CALLBACK_PAGE.format(
-            title="Not connected", text=html.escape(str(e)))
+            title="Not connected", text=html.escape(str(e)), back="/index.html")
+    # Back to the address the owner started from, where their cookie is (Google returned here,
+    # to localhost). The origin came from that signed-in page's own POST, which passed the
+    # same-host check.
+    back = html.escape(origin + "/index.html", quote=True) if origin else "/index.html"
     return HTTPStatus.OK, CALLBACK_PAGE.format(
         title="Connected", text=html.escape(connect.KINDS[kind]) + " is connected. "
-        "You can close this tab, or go back to FrontDesk.")
+        "You can close this tab, or go back to FrontDesk.", back=back)
 
 
 def run_attack(db_path: Path, settings: dict, req: dict,
