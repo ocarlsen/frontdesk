@@ -141,8 +141,8 @@ every model credited the helper's words to me most of the time. The two screensh
 of those threads.</p>
 <p>Cost per answer is at list prices, from the tokens each run was billed. On this test the cheaper
 models do as well as Opus 5.5. Ranking and Ask can use different models, so FrontDesk now ranks
-with Gemini 4 Argon, the cheapest model that cleared every safety floor in the ranking evals. Ask stays on Opus 5.5
-for now, a choice I haven't measured yet. An Ask eval is next.</p>
+with Gemini 4 Argon, the cheapest model that cleared every safety floor in the ranking evals. Ask stays on Opus 5.5 for now. Opus and Argon both passed Ask's safety checks (no attacker
+text and no invented facts in a draft), but I haven't measured how good Ask's answers are yet.</p>
 <p>Admittedly, 12 cases per condition is a small sample. And zero of 12 is still consistent with a true rate as
 high as about one in four, the top of its 95% interval.</p>
 <p>The judge had a bug at first. If an answer correctly called a note unconfirmed but the note
