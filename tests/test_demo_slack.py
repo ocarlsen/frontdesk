@@ -245,3 +245,11 @@ def test_demo_slack_send_goes_nowhere(loaded):
     later = datetime(2026, 10, 28, 18, 1, tzinfo=UTC)
     out = sending.dispatch_due(store, boom, now=later, slack_factory=boom)
     assert [s for _, s in out] == ["demo", "demo"]
+
+
+def test_demo_loads_the_same_whatever_the_pinned_clock(tmp_path):
+    """Slack's sync window ends at the demo's `now`, not the wall clock: on 2026-11-04 a demo
+    pinned to 2026-10-28 lost its Slack threads once the real date passed the 7-day window."""
+    old = datetime(2020, 1, 1, 12, 0, tzinfo=UTC)
+    n = demo.load_demo(Store(tmp_path / "old.db"), now=old, demo_dir=_demo_copy(tmp_path, SEED))
+    assert n == 24

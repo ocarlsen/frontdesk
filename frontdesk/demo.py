@@ -137,7 +137,8 @@ def load_items(store: Store, now: datetime | None = None, demo_dir: Path = DEMO_
     real slack.sync over FixtureSlackClient). Returns {item id: recording key}."""
     threads = load_threads(demo_dir)
     slack = load_slack(demo_dir)
-    ts_map = shift_dates(threads, now or datetime.now(UTC), slack)
+    now = now or datetime.now(UTC)
+    ts_map = shift_dates(threads, now, slack)
     keys: dict[str, str] = {}
     for t in threads:
         item = thread_to_item(t, DEMO_ACCOUNT)
@@ -146,7 +147,7 @@ def load_items(store: Store, now: datetime | None = None, demo_dir: Path = DEMO_
             keys[item.id] = item.id
     if slack:
         slack_sync(store, {"slack_days": 7, "slack_max_items": 100}, token="demo", log=log,
-                   client=FixtureSlackClient(slack))
+                   client=FixtureSlackClient(slack), now=now.timestamp())
         for r in store.db.execute("SELECT id FROM items WHERE source='slack'"):
             keys[r["id"]] = recording_key(r["id"], ts_map)
     return keys

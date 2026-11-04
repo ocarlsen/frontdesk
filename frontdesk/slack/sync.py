@@ -222,14 +222,18 @@ def _candidates(conv: dict, history: list[dict], owner: str, window: float,
 
 
 def sync(store: Store, settings: dict, token: str, log=print,
-         client: SlackClient | None = None) -> SyncResult:
+         client: SlackClient | None = None, now: float | None = None) -> SyncResult:
     """One bad conversation (a history error, a missing scope on one channel) is logged and
     skipped so it cannot abort the run; auth and the conversation listing still raise.
 
     Afterwards, Slack items for this workspace that this run did not produce are pruned (gone
     quiet, aged out of the window, or past the cap). Items of a conversation whose fetch failed
-    are kept, so a transient error never empties part of the inbox."""
+    are kept, so a transient error never empties part of the inbox.
+
+    `now` (epoch seconds, default the wall clock) is when the window ends: the demo passes the
+    time its fixtures were shifted to, so a pinned clock and the window agree."""
     client = client or SlackClient(token)
+    now = time.time() if now is None else now
     me = client.auth_test()
     owner = me["user_id"]
     team = me.get("team_id", "")
@@ -241,10 +245,10 @@ def sync(store: Store, settings: dict, token: str, log=print,
     host = urlparse(me["url"]).hostname or me.get("team", "")
     days = float(settings.get("slack_days", 7))
     cap = int(settings.get("slack_max_items", 100))
-    window = time.time() - days * 86400
+    window = now - days * 86400
     # How far back unread may reach: a conversation never read would otherwise mean its whole
     # history.
-    floor = time.time() - float(settings.get("slack_unread_days", 90)) * 86400
+    floor = now - float(settings.get("slack_unread_days", 90)) * 86400
     mode = settings.get("slack_channel_messages", "mentions")
     if mode not in ("mentions", "all"):
         raise ValueError(f"slack_channel_messages={mode!r}: expected \"mentions\" or \"all\"")
