@@ -54,6 +54,12 @@ https://frontdesk.ocarlsen.com/hijack.html (recorded with `frontdesk eval --suit
 --record --model <model>`; built into the demo by `export-demo` from `evals/hijack-gallery.json` and
 `evals/injection/recordings/`).
 
+**Test an attack** (the header button): in your own copy, paste an email, or start from one of the
+32, and it is ranked once with the model you pick, on the same prompt the scoreboard measures, then
+checked the way the suite checks it, with the cost shown. Nothing is stored but a usage row
+(`frontdesk stats` counts it). In the demo, which has no model, it shows each model's recorded run
+of any attack.
+
 Measured on 80 labeled synthetic threads and 32 prompt-injection attacks with the current triage
 prompt, 2026-10-30 ([`evals/`](evals/), full table with intervals in
 [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)). Single runs: an earlier Opus 5.5 run

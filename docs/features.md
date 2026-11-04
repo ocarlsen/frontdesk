@@ -79,6 +79,14 @@ Every feature, in detail. The [README](../README.md) has the idea and the result
 - **Phone:** swipe a thread left to archive it (Gmail) or mark it done (Slack), with the usual
   undo; a short swipe snaps back, and scrolling up and down never swipes. Buttons are
   thumb-sized on narrow screens.
+- **Test an attack** (header button): paste an email, or load one of the injection suite's 32
+  attacks, mark the text the reply must not contain and the buckets it should land in, and pick a
+  model. One live ranking on the bare triage prompt the scoreboard measures, scored with the
+  suite's three checks (bucket, planted text, invented link/amount/phone), with tokens and cost.
+  An attack loaded unedited runs the suite's own thread through the real normalizer, so the
+  result compares with the recordings; anything edited runs as pasted text. Only a usage row is
+  stored (kind `test`, shown as "Attack tests" in `frontdesk stats`). The demo, which has no
+  model, shows each model's recorded result instead, with the planted text highlighted.
 - **Act**, with a second, separate permission (`frontdesk authorize-actions`): archive with undo,
   star, save the edited reply as a Gmail draft, or send it. Send shows the exact message and its
   recipients (derived from the thread, never from the model), waits 30 seconds for an undo,

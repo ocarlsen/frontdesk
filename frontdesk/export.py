@@ -45,6 +45,10 @@ def _export_gallery(out: Path, evals: Path = EVALS) -> bool:
     if not (evals / "hijack-gallery.json").exists():
         return False
     (out / "api" / "hijack.json").write_text(json.dumps(build(evals), ensure_ascii=False))
+    # Same shape as GET /api/attack/examples in demo mode: the suite's recorded runs.
+    from .attack import recorded_examples
+    (out / "api" / "attack-examples.json").write_text(json.dumps(
+        {"demo": True, "examples": recorded_examples(evals)}, ensure_ascii=False))
     page = (WEB / "hijack.html").read_text()
     page = page.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n'
                         + _meta_csp(server.CSP), 1)

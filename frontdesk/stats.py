@@ -50,6 +50,7 @@ def render(summary: dict) -> str:
     row("Sent", "send", "replies")
     row("Searches", "search", "all-of-Gmail searches")
     row("Kept", "keep", "threads from search")
+    row("Attack tests", "test", "pasted emails")
     total = sum(k["cost_usd"] for k in kinds.values())
     lines.append(f"  {'Model cost':<13}{_money(total):>5} paid to your provider")
     return "\n".join(lines)
