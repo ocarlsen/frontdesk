@@ -648,9 +648,11 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
                                                  s["owner_profile"], author=author,
                                                  signoff=s["reply_signoff"],
                                                  label=m["label"])
+            # No model picked: Ask's own default, which need not be the ranking model.
+            s = {**s, "provider": s["ask_provider"], "model": s["ask_model"]}
             return HTTPStatus.OK, assist.ask(store, get_provider(s), str(item_id), q,
                                              s["owner_profile"], author=author,
-                                                 signoff=s["reply_signoff"])
+                                             signoff=s["reply_signoff"])
         except ProviderError as e:
             return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
         finally:

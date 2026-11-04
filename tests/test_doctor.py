@@ -11,6 +11,10 @@ from frontdesk.gmail.auth import ACTION_SCOPES, SCOPES
 from frontdesk.providers import VENDORS
 
 KEY = "sk-test-NEVER-PRINTED-0123456789"
+# The ranking vendor's key (env var, Keychain item), read from DEFAULTS so these tests follow the
+# configured default instead of assuming one vendor.
+RANK_ENV, RANK_KC = VENDORS[config.DEFAULTS["provider"]][0], \
+    config.DEFAULTS[VENDORS[config.DEFAULTS["provider"]][1]]
 
 
 @pytest.fixture
@@ -39,9 +43,9 @@ def probe_of(answers):
 
 def test_a_ready_setup_passes_and_says_where_each_key_comes_from(home):
     ready(home)
-    env = {"ANTHROPIC_API_KEY": KEY, "SLACK_USER_TOKEN": KEY}
+    env = {RANK_ENV: KEY, "ANTHROPIC_API_KEY": KEY, "SLACK_USER_TOKEN": KEY}
     r = by_what(doctor.checks(environ=env, probe=probe_of({})))
-    assert r["Model:"].level == "ok" and "ANTHROPIC_API_KEY" in r["Model:"].detail
+    assert r["Model:"].level == "ok" and RANK_ENV in r["Model:"].detail
     assert r["Slack"].level == "ok" and "channel messages: mentions" in r["Slack"].detail
     assert r["Gmail actions (archive, drafts, send)"].level == "ok"
     assert not [c for c in doctor.checks(environ=env, probe=probe_of({})) if c.level == "fail"]
@@ -64,7 +68,7 @@ def test_a_web_client_json_is_not_a_desktop_client(home):
 
 def test_a_locked_keychain_is_named_not_reported_missing(home):
     ready(home)
-    r = by_what(doctor.checks(environ={}, probe=probe_of({"frontdesk-anthropic": "locked",
+    r = by_what(doctor.checks(environ={}, probe=probe_of({RANK_KC: "locked",
                                                          "frontdesk-slack": "locked"})))
     assert r["Model:"].level == "fail" and "locked" in r["Model:"].detail
     assert r["Slack"].level == "warn" and "sync skips Slack here" in r["Slack"].detail
@@ -72,8 +76,8 @@ def test_a_locked_keychain_is_named_not_reported_missing(home):
 
 def test_linux_without_a_keychain_points_at_the_environment_variable(home):
     ready(home)
-    r = by_what(doctor.checks(environ={}, probe=probe_of({"frontdesk-anthropic": "unavailable"})))
-    assert r["Model:"].detail == "no key: set ANTHROPIC_API_KEY"
+    r = by_what(doctor.checks(environ={}, probe=probe_of({RANK_KC: "unavailable"})))
+    assert r["Model:"].detail == f"no key: set {RANK_ENV}"
 
 
 def test_a_token_with_other_scopes_will_be_discarded(home):
@@ -129,6 +133,7 @@ def test_online_reports_the_workspace_or_a_rejected_token(home):
 
 def test_main_never_prints_a_key_and_exits_by_failures(home, monkeypatch):
     ready(home)
+    monkeypatch.setenv(RANK_ENV, KEY)
     monkeypatch.setenv("ANTHROPIC_API_KEY", KEY)
     monkeypatch.setenv("SLACK_USER_TOKEN", KEY)
     monkeypatch.setattr(doctor, "keychain_probe", probe_of({}))
@@ -140,3 +145,13 @@ def test_main_never_prints_a_key_and_exits_by_failures(home, monkeypatch):
 
 def test_every_vendor_has_an_install_check():
     assert set(doctor.EXTRAS) == set(VENDORS)
+
+
+def test_the_ask_default_is_checked_on_its_own(home):
+    """Ranking and Ask can use different vendors: a missing Ask-default key warns by name."""
+    ready(home)
+    r = by_what(doctor.checks(environ={RANK_ENV: KEY}, probe=probe_of({})))
+    assert r["Model:"].level == "ok"
+    ask = [c for c in doctor.checks(environ={RANK_ENV: KEY}, probe=probe_of({}))
+           if c.what.startswith("Ask default:")]
+    assert len(ask) == 1 and ask[0].level != "ok" and config.DEFAULTS["ask_model"] in ask[0].what

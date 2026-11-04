@@ -121,3 +121,23 @@ def test_polish_carries_the_draft_and_requires_one(tmp_path):
     assist.ask(s, f, "gmail:t1", "", "", author="owner", mode="polish", draft="Hi Fab, let's align on a call.")
     assert "Hi Fab, let's align on a call." in f.seen[-1][1]
     assert s.ask_history("gmail:t1")[-2]["text"].startswith("Review this draft")
+
+
+def test_ask_without_a_pick_uses_the_ask_default_not_the_ranking_model(tmp_path, monkeypatch):
+    """Ranking and Ask are independent: Ask's "Default model" is ask_provider/ask_model."""
+    from frontdesk import assist as assist_mod
+    from frontdesk import providers
+    from frontdesk.store import Store
+    from frontdesk.web import server as srv
+    seen = []
+    monkeypatch.setattr(providers, "get_provider",
+                        lambda s: seen.append((s["provider"], s["model"])) or object())
+    monkeypatch.setattr(assist_mod, "ask", lambda *a, **k: {"answer": "ok"})
+    db = tmp_path / "s.db"
+    Store(db).db.close()
+    code, _ = srv.run_action(db, {}, {"kind": "ask", "item_id": "gmail:t1", "key": "k" * 16,
+                                      "question": "?", "author": "owner"})
+    from frontdesk import config
+    assert code == 200
+    assert seen == [(config.DEFAULTS["ask_provider"], config.DEFAULTS["ask_model"])]
+    assert seen[0] != (config.DEFAULTS["provider"], config.DEFAULTS["model"])

@@ -141,7 +141,17 @@ def checks(environ=os.environ, probe=None, online: bool = False,
             c = _key_check(f"Model: {name} {s['model']}", env_var, s[kc],
                            secret_source(env_var, s[kc], environ, probe), required=True)
             out.append(c)
-    others = sorted({m.get("provider") for m in s.get("ask_models", [])} - {name})
+    ask = s.get("ask_provider", name)
+    if ask != name and ask in VENDORS:
+        env_var, kc, _ = VENDORS[ask]
+        module, extra = EXTRAS[ask]
+        if not _installed(module):
+            out.append(Check("warn", f"Ask default: {ask}", f"not installed: .venv/bin/pip "
+                             f"install -e '.[{extra}]'" if extra else f"not installed: {module}"))
+        else:
+            out.append(_key_check(f"Ask default: {ask} {s.get('ask_model', '')}", env_var, s[kc],
+                                  secret_source(env_var, s[kc], environ, probe), required=False))
+    others = sorted({m.get("provider") for m in s.get("ask_models", [])} - {name, ask})
     for other in others:
         if other not in VENDORS:
             continue
