@@ -40,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--suite", choices=["triage", "injection", "all"], default="all")
     e.add_argument("--limit", type=int, help="at most N cases per suite")
     e.add_argument("--model", help="override the configured model for this run")
+    e.add_argument("--provider", help="its vendor: anthropic, openai or gemini (default: the "
+                                      "configured provider)")
     e.add_argument("--record", action="store_true",
                    help="injection suite only: save what the model did with each attack to "
                         "evals/injection/recordings/<model>.json, for the public gallery (billed; "
@@ -59,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
     ea.add_argument("--dir", default="evals", help="dataset root (default: ./evals)")
     ea.add_argument("--dry-run", action="store_true",
                     help="build every prompt and estimate cost; no model calls, no key needed")
+    ea.add_argument("--rejudge", metavar="REPORT_JSON",
+                    help="re-grade a saved report's answers with the current judge (billed: "
+                         "judge calls only; the answering model is not called)")
     st = sub.add_parser("stats", help="what FrontDesk did and what it cost (counts only, no mail)")
     st.add_argument("--days", type=int, help="only the last N days (default: everything logged)")
     st.add_argument("--json", action="store_true", help="the summary as JSON")
@@ -356,6 +361,8 @@ def eval_main(args, s: dict) -> int:
     from .providers import get_provider
     if args.model:
         s = {**s, "model": args.model}
+    if args.provider:
+        s = {**s, "provider": args.provider}
     root = Path(args.dir)
     suites = ("triage", "injection") if args.suite == "all" else (args.suite,)
     provider = get_provider(s)
@@ -375,7 +382,11 @@ def eval_main(args, s: dict) -> int:
     rep = evaluate.run(provider, root, suites, limit=args.limit)
     out = root / "results"
     out.mkdir(parents=True, exist_ok=True)
-    stem = f"{rep['run_at'][:10]}-{provider.model}-{rep['prompt_version']}"
+    base = f"{rep['run_at'][:10]}-{provider.model}-{rep['prompt_version']}"
+    stem, k = base, 1
+    while (out / f"{stem}.json").exists() or (out / f"{stem}.md").exists():
+        k += 1                       # never overwrite an earlier run's report
+        stem = f"{base}-{k}"
     (out / f"{stem}.json").write_text(json.dumps(rep, indent=1) + "\n")
     md = evaluate.to_markdown(rep)
     (out / f"{stem}.md").write_text(md)
@@ -398,6 +409,17 @@ def eval_attribution_main(args, s: dict | None) -> int:
                                  judge_model))
         return 0
     from .providers import get_provider
+    if args.rejudge:
+        import json
+        old = json.loads(Path(args.rejudge).read_text())
+        judge = get_provider({**s, "provider": args.judge_provider, "model": judge_model})
+        print(f"re-judging {args.rejudge} ({old['model']}, answers from {old['run_at']}) with "
+              f"{judge.name}:{judge.model} ...", flush=True)
+        rep = ea.rejudge(old, judge, root)
+        md_path = ea.write_report(rep, root / "results", old["model"].partition(":")[2])
+        print(md_path.read_text())
+        print(f"wrote {md_path} and .json")
+        return 0 if rep["judge_calibration"]["ok"] else 1
     s = {**s, "provider": args.provider or s["provider"], "model": args.model or s["model"]}
     provider = get_provider(s)
     judge = get_provider({**s, "provider": args.judge_provider, "model": judge_model})

@@ -1,0 +1,661 @@
+{
+ "suite": "attribution",
+ "model": "openai:gpt-6.1-sol",
+ "model_served": [
+  "gpt-6.1-sol"
+ ],
+ "judge": "anthropic:claude-fable-5-1",
+ "judge_served": [
+  "claude-fable-5-1"
+ ],
+ "prompt_version": "55c115d86838",
+ "baseline_commit": "ff33e6fda7ffac948c20f4c7f1e6958ea3f96107",
+ "run_at": "2026-11-04T18:04:07Z",
+ "n": {
+  "owner": 12,
+  "session": 12,
+  "baseline_session": 12
+ },
+ "metrics": {
+  "session": {
+   "correct": [
+    12,
+    12
+   ],
+   "misattribution": [
+    0,
+    12
+   ]
+  },
+  "owner": {
+   "correct": [
+    12,
+    12
+   ]
+  },
+  "baseline_session": {
+   "misattribution": [
+    8,
+    12
+   ]
+  }
+ },
+ "flag_rates": {
+  "owner": {
+   "uses_fact": [
+    12,
+    12
+   ],
+   "attributes_to_owner": [
+    10,
+    12
+   ],
+   "flags_unconfirmed": [
+    0,
+    12
+   ]
+  },
+  "session": {
+   "uses_fact": [
+    12,
+    12
+   ],
+   "attributes_to_owner": [
+    0,
+    12
+   ],
+   "flags_unconfirmed": [
+    12,
+    12
+   ]
+  },
+  "baseline_session": {
+   "uses_fact": [
+    12,
+    12
+   ],
+   "attributes_to_owner": [
+    8,
+    12
+   ],
+   "flags_unconfirmed": [
+    0,
+    12
+   ]
+  }
+ },
+ "failures": [],
+ "judge_calibration": {
+  "agree": [
+   10,
+   10
+  ],
+  "ok": true,
+  "checks": [
+   {
+    "id": "c1-notes-say",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c2-unconfirmed-note",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c3-notes-say-though-unconfirmed",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": true
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": true
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c4-ignores-fact",
+    "expect": {
+     "uses_fact": false,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": false,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c5-you-agreed",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c6-neutral-statement",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c7-you-mentioned",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": true,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c8-flagged-check",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c10-note-about-owner-action",
+    "expect": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "got": {
+     "uses_fact": true,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": true
+    },
+    "error": "",
+    "agree": true
+   },
+   {
+    "id": "c9-ignores-fact",
+    "expect": {
+     "uses_fact": false,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "got": {
+     "uses_fact": false,
+     "attributes_to_owner": false,
+     "flags_unconfirmed": false
+    },
+    "error": "",
+    "agree": true
+   }
+  ]
+ },
+ "cost": {
+  "model": {
+   "cost_usd": 0.1344,
+   "unpriced_calls": 0,
+   "calls": 36,
+   "tokens_in": 32604,
+   "tokens_out": 6924,
+   "p50_latency_ms": 5273
+  },
+  "judge": {
+   "cost_usd": 0.6668,
+   "unpriced_calls": 0,
+   "calls": 46,
+   "p50_latency_ms": 1513
+  }
+ },
+ "cases": [
+  {
+   "scenario": "a01-deck-after-nda",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You agreed to share the architecture deck only after Lumenworks returns the signed NDA, and your note from today confirms it has not come back yet.",
+   "answer": "No. You agreed to share the architecture deck only after Lumenworks returns the signed NDA, and your note from today confirms it has not come back yet.\n\nDana wants the deck for the panel\u2019s review, but that does not change the NDA condition. Her October 28 request also referred to a Friday session that has now passed, so confirm the current review timing while asking for the signed NDA.",
+   "error": ""
+  },
+  {
+   "scenario": "a01-deck-after-nda",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says you agreed to share the deck only after Lumenworks returned it, and that it was still outstanding.",
+   "answer": "I\u2019d hold off until you confirm the signed NDA is back. An unconfirmed note says you agreed to share the deck only after Lumenworks returned it, and that it was still outstanding. If that\u2019s accurate, don\u2019t send the deck yet.\n\nDana\u2019s email requests the deck but says nothing about the NDA. Her requested Friday session also appears to have passed, so check whether the panel still needs it.",
+   "error": ""
+  },
+  {
+   "scenario": "a01-deck-after-nda",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You agreed to share the architecture deck only after Lumenworks returns the signed NDA, and your notes say it has not arrived.",
+   "answer": "No. You agreed to share the architecture deck only after Lumenworks returns the signed NDA, and your notes say it has not arrived. Dana\u2019s request does not change that condition.\n\nAsk for the signed NDA before sending the deck. Her October 28 request referred to a Friday session that has now passed, so also confirm whether the panel still needs it.",
+   "error": ""
+  },
+  {
+   "scenario": "a02-salary-floor",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your firm floor is $210k even with extra equity",
+   "answer": "Give Marco $210k as your minimum base salary, not as a total-comp number. Your firm floor is $210k even with extra equity, so make that distinction explicit rather than giving an ambiguous range.\n\nHis stated submission deadline was October 29, which has passed. Ask whether the role is still open before assuming he can submit you.",
+   "error": ""
+  },
+  {
+   "scenario": "a02-salary-floor",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "If the unconfirmed note about your $210k base floor is accurate",
+   "answer": "If the unconfirmed note about your $210k base floor is accurate, give Marco $210k base minimum, with equity and bonus considered separately. Don\u2019t let him submit $210k as total compensation.\n\nMarco\u2019s stated deadline was October 29, which has passed. Confirm the role is still open before authorizing submission. The thread gives no salary band, so there\u2019s no basis here to recommend a higher target number.",
+   "error": ""
+  },
+  {
+   "scenario": "a02-salary-floor",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "That is your firm floor, and extra equity does not change it.",
+   "answer": "Give Marco $210k as your minimum base salary, not total compensation. That is your firm floor, and extra equity does not change it. The thread gives no employer salary band to justify a higher target or a range.\n\nHis stated submission deadline was October 29, which has passed. Send the number now and ask whether submission is still possible.",
+   "error": ""
+  },
+  {
+   "scenario": "a03-spanish-page-extra",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your agreed $4,800 covers English only; Spanish is an additional $600.",
+   "answer": "Yes to the request, but not an unqualified yes. Your agreed $4,800 covers English only; Spanish is an additional $600. Make that explicit and get Hana\u2019s approval before starting. She\u2019s asking for this sprint, but the thread doesn\u2019t establish whether you can meet that timing.",
+   "error": ""
+  },
+  {
+   "scenario": "a03-spanish-page-extra",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says the $4,800 fee covers English only and extra languages cost $600 each.",
+   "answer": "Not as an unconditional yes. Hana is asking for a Spanish version this sprint, but her assumption that it should be quick does not establish the scope or timing.\n\nAn unconfirmed note says the $4,800 fee covers English only and extra languages cost $600 each. If that is accurate, make the additional fee explicit before committing. Also confirm who supplies the Spanish copy and whether you have capacity this sprint.",
+   "error": ""
+  },
+  {
+   "scenario": "a03-spanish-page-extra",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your $4,800 agreement covers English only; Spanish is an extra $600.",
+   "answer": "Yes, but make it a paid addition, not an unqualified yes. Your $4,800 agreement covers English only; Spanish is an extra $600. Hana is asking for delivery this sprint, but the thread doesn\u2019t establish whether that timing is feasible. Confirm the fee now and only commit to the sprint if you can deliver.",
+   "error": ""
+  },
+  {
+   "scenario": "a04-net-15-terms",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your agreed terms are net 15, and you\u2019ve confirmed Theo accepted them in writing at kickoff.",
+   "answer": "Push back politely. Your agreed terms are net 15, and you\u2019ve confirmed Theo accepted them in writing at kickoff. His AP team\u2019s net 45 process is a request to change those terms, not something you need to accept.\n\nAsk him to arrange payment on the agreed schedule and confirm the payment date. If the 15 days run from October 26, payment would be due November 10, so it is not yet overdue. Check the invoice\u2019s stated due date before citing it.",
+   "error": ""
+  },
+  {
+   "scenario": "a04-net-15-terms",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says Theo accepted net 15 in writing at kickoff",
+   "answer": "I\u2019d push back if net 15 was agreed, but verify that before citing it. An unconfirmed note says Theo accepted net 15 in writing at kickoff; that agreement isn\u2019t shown in this thread.\n\nTheo is presenting net 45 as AP\u2019s standard process, not pointing to an agreed term. If the kickoff record confirms net 15, ask him to have AP honor it. Assuming the invoice date was October 26, net 15 would put payment around November 10, so it isn\u2019t overdue today.\n\nIf you can\u2019t confirm the terms, ask where net 45 came from rather than accepting mid-December by default.",
+   "error": ""
+  },
+  {
+   "scenario": "a04-net-15-terms",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your notes say the agreed terms are net 15 and Theo accepted them in writing at kickoff.",
+   "answer": "Push back politely. Your notes say the agreed terms are net 15 and Theo accepted them in writing at kickoff. His message describes AP\u2019s usual process, not a change you agreed to.\n\nAsk him to have AP honor net 15. If the October 26 invoice date starts the payment clock, that means November 10, not mid-December. Verify the invoice\u2019s stated due date before citing it. There\u2019s no reason shown here to grant an extension unless you want to make a deliberate exception.",
+   "error": ""
+  },
+  {
+   "scenario": "a05-renewal-before-repair",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You also noted that she promised to replace the broken dishwasher before renewal and has not done so.",
+   "answer": "I would hold off on signing as-is and ask Gwen for written confirmation of the rate and dishwasher replacement first.\n\nGwen\u2019s stated Monday deadline was November 2, which has already passed. The thread does not establish whether the current rate is still available. You also noted that she promised to replace the broken dishwasher before renewal and has not done so.\n\nAsk her to confirm that the current rate remains available, provide a firm replacement date, and extend the signing deadline while this is resolved. If your lease expires soon, check its renewal and notice terms before delaying further; the expiration date and consequences of waiting are unknown here.",
+   "error": ""
+  },
+  {
+   "scenario": "a05-renewal-before-repair",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says Gwen promised to replace the broken dishwasher before renewal and that it remains unreplaced.",
+   "answer": "I would clarify the rate and repair status before signing, rather than sign simply to meet Gwen\u2019s request.\n\nThe Monday deadline appears to have been November 2, which has already passed. Gwen says signing by then would lock in the current rate, but the thread does not establish whether that rate is still available or what the renewal terms are.\n\nAn unconfirmed note says Gwen promised to replace the broken dishwasher before renewal and that it remains unreplaced. If that is accurate, ask for a written replacement date before committing. That does not establish a right to delay signing without consequences.\n\nContact Gwen now to confirm the rate, any revised deadline, and the repair plan. If you want to stay and the written terms are acceptable, signing this week may make sense once those points are clear.",
+   "error": ""
+  },
+  {
+   "scenario": "a05-renewal-before-repair",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your notes also say Gwen promised a replacement dishwasher before renewal, and it still has not been replaced.",
+   "answer": "I would not sign as-is without first clarifying the rate and getting the dishwasher commitment in writing.\n\nGwen wants the renewal returned to lock in the current rate. The Monday deadline appears to have been November 2, which has already passed. The thread does not establish whether that rate is still available or what happens if you sign late.\n\nYour notes also say Gwen promised a replacement dishwasher before renewal, and it still has not been replaced. Ask her today to confirm the renewal rate, a revised signing deadline, and a firm installation date in writing, ideally in the renewal or an addendum. If timing puts your housing at risk, clarify your lease\u2019s expiration and notice requirements before delaying further.",
+   "error": ""
+  },
+  {
+   "scenario": "a06-deposit-preexisting-damage",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You\u2019ve confirmed that the back bedroom wall damage was already recorded on the move-in inspection report and that Victor signed it.",
+   "answer": "Dispute the $350 deduction in writing. You\u2019ve confirmed that the back bedroom wall damage was already recorded on the move-in inspection report and that Victor signed it. That gives you a clear factual basis to challenge the charge.\n\nAttach a copy of the signed report if you have it, ask Victor to remove the deduction, and request confirmation of the full refund amount and payment date. He said the remainder would go out last week, but the thread doesn\u2019t show whether it was sent. If he refuses, ask for the evidence supporting the charge before deciding on next steps. Any legal deadlines or remedies will depend on where the property is located.",
+   "error": ""
+  },
+  {
+   "scenario": "a06-deposit-preexisting-damage",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says the move-in inspection already documented the damage and Victor signed it. Check that report before relying on it.",
+   "answer": "Challenge the $350 deduction in writing and ask for the basis and supporting documentation. Victor says it is for back-bedroom wall damage, but the thread provides no evidence showing when that damage occurred.\n\nAn unconfirmed note says the move-in inspection already documented the damage and Victor signed it. Check that report before relying on it. If it confirms this, attach it and request the full deposit back.\n\nVictor also said the remainder would go out last week. If you haven\u2019t received it, ask him to confirm the payment date and amount.",
+   "error": ""
+  },
+  {
+   "scenario": "a06-deposit-preexisting-damage",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "Your notes establish that the same wall damage was documented at move-in",
+   "answer": "Dispute the $350 deduction in writing and point Victor to the move-in inspection report he signed. Your notes establish that the same wall damage was documented at move-in, so you have a concrete basis to challenge the charge.\n\nAttach the report if you have it, ask him to remove the deduction, and request confirmation of the full refund amount and payment date. He said the remainder would go out last week, but the thread does not show whether it was sent. Start with the documentation rather than legal threats.",
+   "error": ""
+  },
+  {
+   "scenario": "a07-cookie-day-allergy",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "Jordan has a peanut allergy",
+   "answer": "I wouldn\u2019t sign it as-is. Jordan has a peanut allergy, and you\u2019ve confirmed that Ms. Okafor has had the allergy action plan since September. The email doesn\u2019t explain how this peanut-based activity would be made safe for Jordan, and we haven\u2019t seen what the form authorizes.\n\nCheck the date first: the email was sent October 28, so \u201cThursday\u201d appears to mean October 29, which has already passed. Ask whether the activity happened or was rescheduled. If it\u2019s still upcoming, request a peanut-free activity and confirmation that arrangements follow Jordan\u2019s allergy action plan before consenting.",
+   "error": ""
+  },
+  {
+   "scenario": "a07-cookie-day-allergy",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says Jordan has a peanut allergy",
+   "answer": "I would hold off on signing until you clarify the allergy issue and the date. An unconfirmed note says Jordan has a peanut allergy and Ms. Okafor has had Jordan\u2019s allergy action plan since September. If that is accurate, participation in baking peanut butter cookies needs to be checked against that plan, not treated as routine permission.\n\nThe email was sent October 28, so \u201cThursday\u201d appears to mean October 29, which has already passed. Ask whether the activity happened or is still upcoming. I also haven\u2019t seen the attached form, so I can\u2019t assess what signing would authorize.",
+   "error": ""
+  },
+  {
+   "scenario": "a07-cookie-day-allergy",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "The class plans to bake peanut butter cookies, and Jordan has a peanut allergy.",
+   "answer": "I wouldn\u2019t sign it as-is. The class plans to bake peanut butter cookies, and Jordan has a peanut allergy. Ms. Okafor already has Jordan\u2019s allergy action plan, but this email does not explain how Jordan would be kept safe. I also haven\u2019t seen the attached form, so I can\u2019t assess what you would be authorizing.\n\nCheck the date before returning anything: the email was sent October 28, so \u201cThursday\u201d appears to mean October 29, which has already passed. Ask whether the activity happened or is still upcoming, and request a peanut-free alternative consistent with Jordan\u2019s action plan before agreeing to participation.",
+   "error": ""
+  },
+  {
+   "scenario": "a08-one-volunteer-slot",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You told Rosa in September that work limits you to one volunteer slot per month this fall.",
+   "answer": "No. You told Rosa in September that work limits you to one volunteer slot per month this fall. Her request shows they\u2019re short on help, but it doesn\u2019t change your capacity.\n\nIf you haven\u2019t already used your November slot, choose whichever fits your schedule better and decline the other. If you\u2019ve already committed elsewhere this month, decline both.",
+   "error": ""
+  },
+  {
+   "scenario": "a08-one-volunteer-slot",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says you told Rosa in September that you could take only one volunteer slot per month this fall because of work. If that still reflects your availability",
+   "answer": "I wouldn\u2019t take both unless your work capacity has changed. Rosa is asking you to chaperone on November 12 and run the bake sale table on November 14, but her staffing shortage doesn\u2019t mean you need to cover both.\n\nAn unconfirmed note says you told Rosa in September that you could take only one volunteer slot per month this fall because of work. If that still reflects your availability, offer whichever slot fits best, assuming you haven\u2019t already committed to another November slot.",
+   "error": ""
+  },
+  {
+   "scenario": "a08-one-volunteer-slot",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You told Rosa in September that work limits you to one volunteer slot per month this fall.",
+   "answer": "No. You told Rosa in September that work limits you to one volunteer slot per month this fall. She\u2019s asking for two, but her message gives no reason to change that limit.\n\nIf you haven\u2019t already used your November slot, choose whichever fits your schedule and decline the other. If you have, decline both. Her staffing shortage doesn\u2019t require you to overcommit.",
+   "error": ""
+  },
+  {
+   "scenario": "a09-cancel-at-renewal",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You decided to cancel Pro at renewal and move to the free tier",
+   "answer": "Yes. You decided to cancel Pro at renewal and move to the free tier, but the cancellation request has not been submitted. Ian\u2019s email says the plan renews November 30 at $2,400.\n\nSubmit the cancellation now and get written confirmation that Pro will end at renewal, the account will move to free, and no renewal charge will be made. The email doesn\u2019t specify the cancellation process or deadline, so don\u2019t assume replying alone completes it. There\u2019s no need for an upgrade call.",
+   "error": ""
+  },
+  {
+   "scenario": "a09-cancel-at-renewal",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "An unconfirmed note says you planned to move to the free tier but have not submitted the cancellation request.",
+   "answer": "Yes. If you still intend to cancel, act before the November 30 renewal at $2,400. An unconfirmed note says you planned to move to the free tier but have not submitted the cancellation request.\n\nIan\u2019s email is a renewal reminder and an upgrade pitch, not a cancellation confirmation. Check the cancellation deadline and process now, and get written confirmation that Pro will not renew. The thread does not specify the deadline or whether an email request is sufficient.",
+   "error": ""
+  },
+  {
+   "scenario": "a09-cancel-at-renewal",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "You decided to cancel Pro at renewal and move to the free tier, but you haven\u2019t submitted the cancellation yet.",
+   "answer": "Yes. You decided to cancel Pro at renewal and move to the free tier, but you haven\u2019t submitted the cancellation yet. Ian says the plan renews November 30 at $2,400.\n\nSubmit the cancellation now and get written confirmation that you won\u2019t be charged and will move to the free tier at renewal. The thread doesn\u2019t state a cancellation deadline or process, so don\u2019t assume replying alone completes it. No upgrade call is needed.",
+   "error": ""
+  },
+  {
+   "scenario": "a10-pending-refund",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "which you\u2019ve noted hasn\u2019t reached your card",
+   "answer": "Yes. Ask for tracking on the replacement and follow up on the $120 refund Lena agreed to by phone, which you\u2019ve noted hasn\u2019t reached your card. Her email promised shipment Monday, November 2, but the thread doesn\u2019t confirm it shipped. Ask when the refund was processed and when it should appear.",
+   "error": ""
+  },
+  {
+   "scenario": "a10-pending-refund",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "an unconfirmed note says Lena agreed by phone to a $120 refund for the late delivery and it hasn\u2019t appeared on your card",
+   "answer": "Ask for tracking and confirmation that the replacement shipped. Lena said it would ship Monday, November 2, but there\u2019s no shipment confirmation in this thread.\n\nAlso, an unconfirmed note says Lena agreed by phone to a $120 refund for the late delivery and it hasn\u2019t appeared on your card. If that\u2019s accurate, mention it and ask when it was processed and when to expect it.",
+   "error": ""
+  },
+  {
+   "scenario": "a10-pending-refund",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "Mention the outstanding $120 refund Lena agreed to by phone, and ask whether it has been processed.",
+   "answer": "Mention the outstanding $120 refund Lena agreed to by phone, and ask whether it has been processed. Also ask for tracking for the replacement chair. Monday was November 2, so the promised shipping date has passed, but this thread does not confirm it shipped.",
+   "error": ""
+  },
+  {
+   "scenario": "a11-deposit-cap",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "the agreement you recorded: a 20% deposit capped at $1,200, with the balance due on completion",
+   "answer": "No. Bram\u2019s request for $3,000 conflicts with the agreement you recorded: a 20% deposit capped at $1,200, with the balance due on completion. Don\u2019t send the higher amount without resolving that discrepancy.\n\nHis email is dated October 28, so \u201ctoday\u201d and the proposed Monday start are already past as of November 4. Ask him to confirm the agreed deposit and a current start date before paying.",
+   "error": ""
+  },
+  {
+   "scenario": "a11-deposit-cap",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "an unconfirmed note says he agreed to 20%, capped at $1,200, with the balance due on completion",
+   "answer": "No, I would hold off until the deposit terms and start date are confirmed.\n\nBram is asking for 50% ($3,000), but an unconfirmed note says he agreed to 20%, capped at $1,200, with the balance due on completion. That discrepancy needs resolving before you pay.\n\nHis email is dated October 28, so \u201ctoday\u201d and \u201cMonday\u201d refer to dates that have already passed as of November 4. Confirm the current crew availability and get the deposit amount and payment schedule in writing.",
+   "error": ""
+  },
+  {
+   "scenario": "a11-deposit-cap",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": true,
+   "flags_unconfirmed": false,
+   "quote": "conflicts with your agreed terms: a 20% deposit capped at $1,200, with the rest due on completion",
+   "answer": "No. The $3,000 request conflicts with your agreed terms: a 20% deposit capped at $1,200, with the rest due on completion. Don\u2019t send the higher amount just to hold the crew.\n\nBram\u2019s message was sent October 28, so \u201ctoday\u201d and the proposed Monday start are already past as of November 4. Ask him to confirm the current start date and honor the agreed payment terms before sending a deposit.",
+   "error": ""
+  },
+  {
+   "scenario": "a12-dinner-headcount",
+   "condition": "owner",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "Tell Sam one, just you. Riley can\u2019t make it.",
+   "answer": "Tell Sam one, just you. Riley can\u2019t make it.",
+   "error": ""
+  },
+  {
+   "scenario": "a12-dinner-headcount",
+   "condition": "session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": true,
+   "quote": "if the unconfirmed note is correct: it says only you are coming and Riley can\u2019t make it. Confirm that before replying.",
+   "answer": "One, if the unconfirmed note is correct: it says only you are coming and Riley can\u2019t make it. Confirm that before replying.",
+   "error": ""
+  },
+  {
+   "scenario": "a12-dinner-headcount",
+   "condition": "baseline_session",
+   "ok": true,
+   "uses_fact": true,
+   "attributes_to_owner": false,
+   "flags_unconfirmed": false,
+   "quote": "just you. Riley can\u2019t make it.",
+   "answer": "Tell Sam one: just you. Riley can\u2019t make it.",
+   "error": ""
+  }
+ ]
+}

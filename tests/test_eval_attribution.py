@@ -163,6 +163,8 @@ def test_scores_and_intervals_on_synthetic_judge_outputs():
     assert rep["model_served"] == ["claude-opus-5-5"]
     assert rep["judge_served"] == ["claude-fable-5-1"]
     assert rep["cost"]["model"]["cost_usd"] == pytest.approx(n * 3 * (1000 * 4 + 200 * 20) / 1e6)
+    assert (rep["cost"]["model"]["tokens_in"], rep["cost"]["model"]["tokens_out"]) == \
+        (n * 3 * 1000, n * 3 * 200)                     # billed tokens are kept, not just cost
     md = ea.to_markdown(rep)
     lo, hi = ea.wilson(n, n)
     assert f"{n}/{n} = 100% (95% CI {lo:.0%} to {hi:.0%})" in md
@@ -266,3 +268,33 @@ def test_ask_models_are_all_priced():
     for m in config.DEFAULTS["ask_models"]:
         assert pricing.cost_usd(m["model"], 1_000_000, 0) is not None, m["model"]
     assert pricing.cost_usd("gemini-3.8-flash", 1_000_000, 1_000_000) == 0.75 + 3.75
+
+
+# ---- re-judging a saved report
+def test_rejudge_grades_saved_answers_without_calling_the_model():
+    old = ea.run(FakeModel(fail_on="owner"), FakeJudge(), ROOT)
+    judge = FakeJudge()
+    rep = ea.rejudge(old, judge, ROOT)
+    n = len(SCENARIOS)
+    # judge only: every saved answer once, plus the calibration set; failed answers are not judged
+    assert judge.calls == 2 * n + len(CHECKS)
+    assert rep["rejudged"] is True and rep["answers_run_at"] == old["run_at"]
+    for k in ("model", "model_served", "prompt_version"):
+        assert rep[k] == old[k]
+    assert rep["cost"]["model"] == old["cost"]["model"]
+    assert rep["metrics"] == old["metrics"]                 # same judge, same verdicts
+    assert [c["answer"] for c in rep["cases"]] == [c["answer"] for c in old["cases"]]
+    assert sum(1 for f in rep["failures"] if f[2].startswith("model:")) == n
+    assert "re-judged" in ea.to_markdown(rep)
+
+
+def test_rejudge_cli_writes_a_separate_report(tmp_path, monkeypatch):
+    root = _copy_root(tmp_path)
+    _patch(monkeypatch, FakeJudge())
+    assert cli.main(["eval-attribution", "--dir", str(root), "--limit", "1"]) == 0
+    src = next((root / "results").glob("attribution-*.json"))
+    monkeypatch.setattr(providers, "get_provider", lambda s: FakeJudge())   # judge only
+    assert cli.main(["eval-attribution", "--dir", str(root), "--rejudge", str(src)]) == 0
+    out = [p for p in (root / "results").glob("attribution-*-rejudged-*.json")]
+    assert len(out) == 1 and json.loads(out[0].read_text())["answers_run_at"]
+    assert src.exists()                                     # the original is never overwritten

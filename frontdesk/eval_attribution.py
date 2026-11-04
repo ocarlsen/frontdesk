@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from . import assist
 from .evaluate import wilson
@@ -191,6 +192,8 @@ class Call:
     model_served: str = ""
     cost_usd: float | None = None
     latency_ms: int = 0
+    tokens_in: int = 0      # as the provider billed them (output includes any thinking)
+    tokens_out: int = 0
 
 
 def _call(provider: Provider, system: str, user: str, schema: dict, check) -> Call:
@@ -208,7 +211,8 @@ def _call(provider: Provider, system: str, user: str, schema: dict, check) -> Ca
     served = u.model_served or provider.model
     return Call(True, data, model_served=served,
                 cost_usd=cost_usd(served, u.tokens_in, u.tokens_out, u.cache_read, u.cache_write),
-                latency_ms=u.latency_ms or int((time.monotonic() - t0) * 1000))
+                latency_ms=u.latency_ms or int((time.monotonic() - t0) * 1000),
+                tokens_in=u.tokens_in, tokens_out=u.tokens_out)
 
 
 @dataclass
@@ -264,6 +268,34 @@ def run(provider: Provider, judge: Provider, root: Path, limit: int | None = Non
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = list(pool.map(one, rows))
     return score(results, checks, provider, judge)
+
+
+def rejudge(rep: dict, judge: Provider, root: Path, workers: int = 4) -> dict:
+    """Re-grade a saved report's answers with the current judge and calibration set, calling
+    only the judge: the answering model is not called again, so the answers (and their prompt
+    version and model cost) are exactly the original run's. Lets every report be scored by one
+    judge, so a comparison changes only the model."""
+    facts = {sc["id"]: sc["fact"] for sc in load_scenarios(root)}
+
+    def one(c) -> CaseResult:
+        failed_answer = not c["answer"] and c.get("error", "").startswith("model:")
+        ans = (Call(False, error=c["error"][len("model: "):]) if failed_answer
+               else Call(True, {"answer": c["answer"]}))
+        r = CaseResult(c["scenario"], c["condition"], ans)
+        if ans.ok:
+            r.judge = _call(judge, JUDGE_SYSTEM, judge_prompt(facts[c["scenario"]], c["answer"]),
+                            JUDGE_SCHEMA, validate_judge)
+        return r
+    checks = calibrate(judge, load_checks(root), workers)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(one, rep["cases"]))
+    name, _, model = rep["model"].partition(":")
+    out = score(results, checks, SimpleNamespace(name=name, model=model), judge)
+    # The answers are the original run's: keep what describes them, and say what was redone.
+    out.update(model_served=rep["model_served"], prompt_version=rep["prompt_version"],
+               answers_run_at=rep["run_at"], rejudged=True)
+    out["cost"]["model"] = rep["cost"]["model"]
+    return out
 
 
 # ---- Scoring
@@ -323,6 +355,8 @@ def score(results: list[CaseResult], checks: list[dict], provider: Provider,
                                                             "agree")} for c in checks]},
         "cost": {"model": {**_costs([a.cost_usd for a in answers if a.ok]),
                            "calls": len(answers),
+                           "tokens_in": sum(a.tokens_in for a in answers),
+                           "tokens_out": sum(a.tokens_out for a in answers),
                            "p50_latency_ms": _p50([a.latency_ms for a in answers])},
                  "judge": {**_costs([j.cost_usd for j in judged if j.ok]
                                     + [c["cost_usd"] for c in checks if c["got"] is not None]),
@@ -363,7 +397,9 @@ def to_markdown(rep: dict) -> str:
         lines += [f"**JUDGE CALIBRATION FAILED: {cal['agree'][0]}/{cal['agree'][1]} checks agree "
                   f"(disagreed: {', '.join(bad)}). The scores below are not trustworthy.**", ""]
     lines += [
-        f"Run {rep['run_at']}. Model served: {', '.join(rep['model_served']) or 'none'}. "
+        (f"Answers from the run of {rep['answers_run_at']}, re-judged {rep['run_at']} (the "
+         "answering model was not called again). " if rep.get("rejudged") else "")
+        + f"Run {rep['run_at']}. Model served: {', '.join(rep['model_served']) or 'none'}. "
         f"Judge {rep['judge']} (served: {', '.join(rep['judge_served']) or 'none'}). "
         f"Baseline prompt from commit {rep['baseline_commit'][:7]}.",
         "",
@@ -383,7 +419,10 @@ def to_markdown(rep: dict) -> str:
         f"| {_rate(m['baseline_session']['misattribution'])} |",
         f"| Judge calibration agreement | {_rate(cal['agree'])} |",
         f"| Failures (provider or validation, never retried) | {len(rep['failures'])} |",
-        f"| Model cost | {_money(c['model'])}, p50 latency {c['model']['p50_latency_ms']} ms |",
+        f"| Model cost | {_money(c['model'])}"
+        + (f" ({c['model']['tokens_in']:,} tokens in, {c['model']['tokens_out']:,} out)"
+           if "tokens_in" in c["model"] else "")
+        + f", p50 latency {c['model']['p50_latency_ms']} ms |",
         f"| Judge cost | {_money(c['judge'])}, p50 latency {c['judge']['p50_latency_ms']} ms |",
         "",
         "Flag rates per condition:",
@@ -417,7 +456,8 @@ def write_report(rep: dict, out: Path, model: str) -> Path:
     """Writes <stem>.json and .md, never overwriting: a numeric suffix is added when either
     exists. Returns the .md path."""
     out.mkdir(parents=True, exist_ok=True)
-    base = f"attribution-{rep['run_at'][:10]}-{model}"
+    base = (f"attribution-{rep['answers_run_at'][:10]}-{model}-rejudged-{rep['run_at'][:10]}"
+            if rep.get("rejudged") else f"attribution-{rep['run_at'][:10]}-{model}")
     stem, n = base, 1
     while (out / f"{stem}.json").exists() or (out / f"{stem}.md").exists():
         n += 1

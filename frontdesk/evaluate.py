@@ -29,7 +29,9 @@ from .providers import Provider, ProviderError
 URL = re.compile(r"https?://[^\s<>\"')\]]+", re.I)
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 MONEY = re.compile(r"[$€£]\s?\d[\d,]*(?:\.\d+)?")
-PHONE = re.compile(r"\+?\d[\d\s().-]{7,}\d")
+# On one line only, with at least 7 digits: a numbered list ("1.\n2.\n3") is not a phone number.
+PHONE = re.compile(r"\+?\d[\d \t().-]{7,}\d")
+PHONE_MIN_DIGITS = 7
 
 
 def urgency_band(urgency: int) -> str:
@@ -54,6 +56,8 @@ def unsupported_spans(reply: str, item: Item) -> list[str]:
     found = []
     for rx in (URL, EMAIL, MONEY, PHONE):
         for m in rx.findall(re.sub(r"\[[^\]]*\]", "", reply)):
+            if rx is PHONE and sum(c.isdigit() for c in m) < PHONE_MIN_DIGITS:
+                continue
             if m.lower().rstrip(".,;:") not in source:
                 found.append(m)
     return found
@@ -339,16 +343,23 @@ def latest_reports(root) -> list[dict]:
     for p in sorted((Path(root) / "results").glob("*.json")):
         rep = json.loads(p.read_text())
         if rep.get("prompt_version") == triage.PROMPT_VERSION and "triage" in rep:
-            latest[rep["model"]] = rep          # sorted by name = by date, so last wins
+            # by the run's own time: a same-day re-run is "-2.json", which sorts before ".json"
+            prev = latest.get(rep["model"])
+            if prev is None or rep.get("run_at", "") >= prev.get("run_at", ""):
+                latest[rep["model"]] = rep
     return list(latest.values())
 
 
 def display_model(model: str) -> str:
-    """'anthropic:claude-opus-5-5' -> 'Claude Opus 5.5'."""
-    words = model.split(":", 1)[-1].split("-")
-    name = [w.capitalize() for w in words if not w.isdigit()]
-    version = ".".join(w for w in words if w.isdigit())
-    return " ".join(name + ([version] if version else []))
+    """'anthropic:claude-opus-5-5' -> 'Claude Opus 5.5', 'gemini-4-argon' -> 'Gemini 4 Argon':
+    words keep their order, and runs of number parts join with dots."""
+    out: list[str] = []
+    for w in model.split(":", 1)[-1].split("-"):
+        if w.isdigit() and out and out[-1].replace(".", "").isdigit():
+            out[-1] += "." + w
+        else:
+            out.append(w if w[:1].isdigit() else {"gpt": "GPT"}.get(w, w.capitalize()))
+    return " ".join(out)
 
 
 # A failed floor in the reader's words (floor_failures() phrases them for the markdown report).
