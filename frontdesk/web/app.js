@@ -2304,7 +2304,7 @@ async function renderGoogle(box) {
   if (st.demo) { box.append(el("p", "kbdhint", "Demo: connecting Gmail is off here.")); return; }
   if (!st.desktop_client && !st.web_client) {
     box.append(el("p", "kbdhint", "No Google OAuth client yet: create a Desktop OAuth client in " +
-      "Google Cloud Console and save its JSON as ~/.frontdesk/client_secret.json (see the README)."));
+      "Google Cloud Console and save its JSON as ~/.frontdesk/client_secret.json (see docs/setup.md)."));
     return;
   }
   const note = el("p", "kbdhint");

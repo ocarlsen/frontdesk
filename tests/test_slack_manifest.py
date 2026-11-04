@@ -56,9 +56,9 @@ def test_the_manifest_has_no_bot():
     assert "bot:" not in text and "bot_user" not in text
 
 
-def test_the_readme_link_carries_the_same_manifest():
+def test_the_setup_guide_link_carries_the_same_manifest():
     from urllib.parse import parse_qs, urlparse
-    readme = (ROOT / "README.md").read_text()
+    readme = (ROOT / "docs" / "setup.md").read_text()
     links = re.findall(r"\((https://api\.slack\.com/apps\?new_app=1&manifest_yaml=[^)\s]+)\)", readme)
     assert len(links) == 1
     linked = parse_qs(urlparse(links[0]).query)["manifest_yaml"][0]

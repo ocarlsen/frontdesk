@@ -1,17 +1,35 @@
 # FrontDesk
 
-A local-first inbox agent. It reads your mail, ranks what actually needs you, explains why in one
-line, and has a reply drafted for the threads that want one, like walking into an agent session
-that already has all the context.
+I built FrontDesk because I didn't like switching between Gmail and Slack, and I wanted help
+drafting replies in the app instead of jumping to a Claude Code session and asking there. It reads
+both, ranks what needs me and says why, and drafts the replies. It runs on my computer, with the
+model I choose.
+
+It doesn't know everything my Claude Code sessions know about me yet. That's next
+([#67](https://github.com/ocarlsen/frontdesk/issues/67), [#69](https://github.com/ocarlsen/frontdesk/issues/69)).
+
+- [Live demo](https://frontdesk.ocarlsen.com/index.html): a synthetic inbox, nothing to install
+- [Walkthrough video](docs/site/frontdesk-tour.mp4): three minutes, no sound
+- [Memory needs an author](https://ocarlsen.com/memory-needs-an-author.html): the article
+- [About page](https://ocarlsen.ai/frontdesk.html)
 
 ![Ranked inbox: Needs you, FYI, Ignore](docs/screenshot-list.jpg)
 
-**Live demo:** https://frontdesk.ocarlsen.com/index.html (a synthetic inbox, nothing to install).
+## Memory needs an author
 
-**Walkthrough video (about three minutes, no sound):** [docs/site/frontdesk-tour.mp4](docs/site/frontdesk-tour.mp4),
-a guided tour of the same synthetic inbox in six parts: triage (with Move to), the keyboard, Ask, Memory,
-guardrails (two planted instructions that do not work, and Send's confirm and undo), and the
-inbox on a phone.
+Other tools write into FrontDesk's memory for me, so every memory records who wrote it: me, or a
+session acting for me. I added this after FrontDesk quoted a note back to me as mine when I hadn't
+written it. The [article](https://ocarlsen.com/memory-needs-an-author.html) has the details.
+
+- Every note, "What's going on" item and Ask question has an author: `owner`, or
+  `session:<name>` for a tool writing on my behalf. The command line can't write `owner`.
+- Anything I didn't write goes to the model marked "not confirmed", and the page shows the same
+  label. **Confirm** makes it mine.
+- Sessions keep their own items current with `frontdesk situation sync`. An item about a thread
+  closes when someone replies, and one nobody restates for a week drops out of ranking.
+
+Any vendor's model gets the same memory, rebuilt from a local SQLite file on each call.
+Details: [docs/memory.md](docs/memory.md).
 
 ## Try it in 30 seconds (no Google account, no API key, no network)
 
@@ -28,89 +46,6 @@ replaying answers recorded once from Claude Opus 5.5 (`tools/record_demo.py`), s
 three prompt-injection attempts (one in Slack) so you can see how they are handled:
 
 ![An injection attempt inside a real request: still ranked Needs you, reply drafted with placeholders](docs/screenshot-thread.jpg)
-
-## What it does
-
-- **Sync** your Gmail inbox with a read-only token.
-- **Triage** each thread with the model you choose: `needs_you` / `fyi` / `ignore`, urgency 1 to 5,
-  a one-line reason, and a proposed reply when one is warranted. Replies never invent facts: where
-  only you know the answer they carry a placeholder like `[time that works]`.
-- **Show** a ranked page that leads each thread with a short summary, renders the full thread
-  like Gmail (the mail's own HTML, safely sandboxed), and has a Sync button.
-- **Slack (optional):** your own Slack app and user token. DMs, group DMs and channel threads
-  that mention you, that you replied in or that you started become threads on the same page, from
-  the last 7 days (`slack_days`), plus anything still unread however old (back to
-  `slack_unread_days`, 90): DMs with someone else's message after your read position, and
-  channel messages that mention you after it. With `slack_channel_messages: "all"` (default
-  `"mentions"`), every message in your channels comes in, for a workspace that is yours (agents
-  or bots posting to you), with unread ones back to `slack_unread_days`. The newest 100
-  conversations are kept
-  (`slack_max_items`, like `gmail_max_threads`). DMs and threads you follow show unread from
-  Slack's own read position. Reading a channel message in FrontDesk (or marking it done) moves
-  Slack's read position for that channel too, but only up to the newest message such that every
-  older unread one there is read or done in FrontDesk, so nothing you have not seen is marked
-  read in Slack (needs the `channels:write`/`groups:write` scopes in the manifest; reinstall an
-  older app to add them). A thread's own read state stays in FrontDesk (no public Slack API moves
-  it), and a mark you made holds through syncs until you read it in Slack or a new reply comes. **Done** hides one until someone posts again, and
-  **Send** replies in the thread with the same confirm-and-undo flow.
-  A star on a Slack thread is kept in FrontDesk only: Slack has no supported API for saving a
-  message for later (`stars.add` still answers, but since 2023 it has no effect anyone can see in
-  Slack, per [Slack's changelog](https://docs.slack.dev/changelog/2023-07-its-later-already-for-stars-and-reminders/)),
-  so no extra Slack scope is needed, and the star goes when the thread ages out of the sync window.
-- **Ask** about any thread: the box starts with FrontDesk's own question ("What do you think? ...")
-  as editable text; change it or leave it, and **Ask** sends what is in the box (the model picker
-  chooses the model). **Second opinion** has the review model check the answer; **Polish draft**
-  tightens the reply. Each answer resets the box to the built-in question.
-- **Auto-sync** a few seconds after the server starts, then every 15 minutes (`auto_sync_minutes`);
-  `Shift+N` (Gmail's update key) or the Sync button syncs now. When Gmail's `historyId` (it moves
-  on any change in the mailbox), the query and the kept threads are as they were after the last
-  complete sync, Gmail sync is one call and fetches nothing. Opening the page syncs when the last
-  sync is more than 2 minutes old. An open page reloads only after a sync that changed something. With an `in:inbox` query, a thread Gmail lists whose messages carry no INBOX
-  label (Gmail's listing can be stale for old mail) is left out, as Gmail's own inbox leaves it
-  out. Gmail-style keyboard shortcuts (`?`):
-  `j`/`k` move, `o` opens, `e`/`y` archive (or mark a Slack thread done), `[`/`]` archive and
-  open the next thread, `s` stars, `r` replies, `a` replies all, `Shift+I`/`Shift+U` mark read
-  and unread (Gmail too; on Slack, unread is kept in FrontDesk), `z` undoes, `g i`/`g s`/`g u` go to the
-  inbox, Starred or Unread (both views are toggles beside the section counts, Unread listing
-  every unread thread from Gmail and Slack). Each action that changes mail also has a control: row icons on hover, the
-  thread's buttons, and the toast's Undo.
-- **Bulk:** select with the row checkbox, `x`, Shift-click for a range, or `*` then `a`/`n`/`r`/`u`
-  (all, none, read, unread); on a phone, long-press a row, then tap more. A bar then marks the
-  selection read or unread, archives it (Done for Slack), stars it or moves it, one action per
-  thread through the same checked path as a single one, with one Undo for the batch. `e`, `y`,
-  `Shift+I`, `Shift+U`, `s` and `v` act on the selection; Esc clears it.
-- **Stats:** `frontdesk stats [--days N] [--json]` shows what FrontDesk did and what it cost:
-  threads ranked and cost per thread by model, Ask answers, drafts saved and replies sent (with the
-  share sent as FrontDesk proposed, as Ask drafted, edited, or written from scratch), searches and
-  keeps. It counts from the first run that has it, seeded from the rankings and answers already
-  stored.
-- **Search** with `/`: typing filters the synced threads; Enter also searches all of Gmail
-  (archived mail too, Gmail's operators work) with the read-only token and lists up to 20 threads
-  FrontDesk has not synced, unranked and unstored, plus matching Slack messages when Slack is
-  connected (`search.messages`; needs the `search:read` user scope), each opening in Slack. Open one to read it in place (plain text,
-  still unstored); **Keep in FrontDesk** stores it, ranks it once, and lists it under From search
-  with every action until it is archived or marked done (sync keeps it current); **Move to inbox**
-  (thread or selection) puts an archived one back in Gmail's inbox. Gmail results can be selected
-  too (`x`, the checkbox): the bar then archives them, marks them read or unread or stars them
-  straight in Gmail by thread id (actions permission, nothing stored, no model call). Move to inbox
-  also keeps each one (ranked, one model call), so it shows in FrontDesk whatever its age, since
-  sync reads only the last week of the inbox. Each Gmail result also has icons under its age, for
-  its own state: Mark read or Mark unread, and Archive or Move to inbox. Slack matches are ones
-  FrontDesk has not stored: they open in Slack, and **Keep** (their icon, or the bar after `x`)
-  brings the conversation in, ranked once, kept current by sync until you mark it done.
-  Esc clears it.
-- **Star** a thread from its row, its detail view or with `s`. On Gmail it is Gmail's own star
-  (the `STARRED` label, through the actions permission), so it shows in Gmail too. The star count
-  in the header opens a **Starred** view; a starred Gmail thread you archive or mark done stays
-  there, marked, while Gmail keeps the star (each sync keeps archived threads that are still
-  starred), with a button to move it back.
-- **Phone:** swipe a thread left to archive it (Gmail) or mark it done (Slack), with the usual
-  undo; a short swipe snaps back, and scrolling up and down never swipes. Buttons are
-  thumb-sized on narrow screens.
-- **Act**, with a second, separate permission (`frontdesk authorize-actions`): archive with undo,
-  star, save the edited reply as a Gmail draft, or send it. Send shows the exact message and its
-  recipients (derived from the thread, never from the model), waits 30 seconds for an undo,
-  refuses if a new message arrived, and is never retried on a timeout.
 
 ## Results
 
@@ -154,101 +89,8 @@ Gmail API ──► normalize ──► Item ──► SQLite ──► triage �
 - **Incremental:** a thread is re-triaged only when it changes or the prompt changes (the prompt is
   versioned by hash). A refusal is never retried; an error is retried at most 3 times, so a Sync
   click never re-bills the same failure.
-
-### Memory
-
-Ask ("Ask FrontDesk about this thread") works from four kinds of owner-side memory: your
-**profile** (a few sentences in `settings.json`), **What's going on** (up to 50 short items on
-what is live for you now: decisions, open matters), a **note** on each person, and the **Ask
-history** of each thread. All of it is local SQLite (the profile is local settings), assembled
-into every call; the model keeps no state between calls, so any vendor's model gets the same
-context.
-
-Ranking reads your profile and What's going on too, never notes. It reads your own items first,
-then everyone else's, newest first, whole items only, up to 2,500 characters
-(`SITUATION_RANK_CHARS` in `frontdesk/triage.py`), so the cost of a ranking has a ceiling however
-many items or sessions there are. Changing What's going on does not re-rank threads already
-ranked: sessions restate it often, and re-ranking the whole inbox each time would re-bill every
-thread. It applies to new and changed threads, and to all of them when the profile changes.
-
-**Keeping it current.** A session that tracks what you are waiting on restates its full list
-with `frontdesk situation sync --by NAME`, one item per line on stdin. Its items not in the new
-list are removed, ones still there are kept, and new ones are added, so a closed matter drops out
-when the session next syncs. A sync touches only items that session wrote: yours, other
-sessions', and any you confirmed stay. An empty list is refused unless you pass `--clear`, so a
-failed command piped into it cannot wipe the list.
-
-**Items that close themselves.** An item about one thread can be linked to it:
-`frontdesk situation add TEXT --by NAME --thread ID`, or a sync line starting `thread:ID ` (the
-thread must be one FrontDesk has stored). It closes when someone other than you writes in that
-thread, or you mark the thread done or archive it in FrontDesk; your own reply leaves it open.
-Closed items are kept, marked on the page with the reason, and left out of Ask and ranking;
-**Reopen** puts one back, and it then waits for a newer reply. Undoing a done or an archive
-reopens what it closed. A thread that leaves FrontDesk another way (it ages out of the sync
-window, or you archive it in Gmail) cannot close its item, and the page says so.
-
-**Stale items.** A session's item not restated or edited for 7 days
-(`SITUATION_STALE_DAYS`) is marked stale on the page and left out of ranking; Ask still reads it,
-labelled unconfirmed. **Confirm** makes it yours, and your own items never go stale. A session
-that syncs regularly keeps its items fresh.
-
-Every note, What's going on item and Ask question records its author: `owner` when you typed or
-clicked it in the page (a model's suggestion counts as yours once you click it), `session:<name>`
-when a tool or agent session wrote it on your behalf (`frontdesk note WHO TEXT --by NAME`,
-`frontdesk situation add TEXT --by NAME`, `frontdesk situation sync --by NAME`; this path can
-never write `owner`), or `unrecorded` for
-rows from before authors were recorded. Only `owner` counts as confirmed: the prompt labels every
-other line "not confirmed", and the model is told to say so when it relies on one instead of
-writing "you said". The page shows who wrote each item, and **Confirm** (or editing and saving)
-makes it yours.
-
-A **person** owns any number of addresses (Gmail addresses; on Slack, the user's stable ID, so a
-renamed colleague keeps their note and two people with one name stay apart) and one note, so Ask
-finds the note through whichever address a thread uses. A person has a name only when you type
-one: the display name in a From header is written by the sender, so the Memory page shows it
-greyed as "from mail, unconfirmed" and it never enters the prompt. Ask's notes block
-lists a person as their addresses, the name only if you typed it, then the same author and date
-label, e.g. `fab@example.com, f@example.org (written by the owner, 2026-10-28): Pre-seed, no pay.`
-Slack display names, like From names, are the other person's text: the page shows them, the
-notes block lists Slack people by ID only. Notes saved before Slack IDs were keyed by display
-name; each sync links such a name to the one Slack user it belongs to, and the Memory page marks
-any it cannot link (a name two users share, or one not seen since) as "Slack name, not linked to
-a user". Your own address is never a person: on Gmail that is the mailbox, on Slack your own user
-ID, learnt at each sync.
-
-**Memory** (header button, or `m`; `Esc` closes) lists everything kept: your profile, What's going
-on, then people, newest first, each with addresses, name, note, author and date. Edit there; only
-you can **Confirm**, **Delete** or **Merge into...** another person (merge asks first and cannot be
-undone; the merged note is yours only if both notes were). **Download my memory** saves it all as
-JSON. In an open thread, the **People** strip under the subject has a chip per person ("· note"
-or "· add note") that opens their note in place. Sessions can add a note or append to one, never
-delete, merge, confirm, name, or replace a note you wrote; saving empty text is refused rather
-than deleting. Ask's "Save note for ..." suggestions save only when the person they name is in
-that thread, so model output never creates a person. The demo shows Memory empty and read-only.
-
-Older databases are migrated once on open (under a write lock, so two FrontDesk processes cannot
-copy twice): each per-address note becomes a person with that address, keeping its text, author
-and date. A note on your own address is left out and listed on the Memory page. The old `notes`
-table stays read-only for one release.
-
-This is a record for honest writers, not a security boundary: any process on your machine can
-open the database or call the local API and claim any author.
-
-### Cost
-
-You pay the model vendor directly; FrontDesk has no server. On my own inbox with Claude Opus 5.5,
-a ranking costs about 1.5¢ per thread and an Ask about 3¢. The [Results](#results) table gives the
-cost per 1,000 threads for each model. `frontdesk stats` shows what yours cost, by model, and each
-ranking's "Why this ranking" panel shows its own tokens and cost. Prices are list prices in
-`frontdesk/pricing.py`, with their sources and dates; a model not listed there shows no cost
-rather than a guess.
-
-Context added to a ranking is paid on every thread, so it is bounded: What's going on is capped
-at 2,500 characters per ranking (about 600 input tokens; at most about 0.25¢ more per thread with
-Opus 5.5 at the full budget), and notes are never sent to ranking. Prompt caching is off for
-Anthropic today: the part of the prompt shared across threads is below the minimum size Anthropic
-caches, so every call paid the cache-write premium and none read it back. It will be re-measured
-as the shared part grows.
+- **Everything else** it does (Slack, search, keyboard, bulk actions, starring, sending with
+  undo, stats): [docs/features.md](docs/features.md).
 
 ## Threat model
 
@@ -268,191 +110,20 @@ still try to sway a ranking or a draft. The red-team suite in `evals/injection/`
 that works per model; two known gaps it documents: CSS-hidden text still reaches the model, and a
 forged quote placed at the very top of a message survives quote stripping.
 
-## Data handling
+Data handling, what is stored and what leaves the machine: [docs/threat-model.md](docs/threat-model.md#data-handling).
 
-- Stored locally in `~/.frontdesk` (mode 0700): the SQLite database, your Google OAuth client and
-  token, optional `settings.json`. The database includes an append-only usage log for
-  `frontdesk stats`: counts and model costs only (rankings, Ask answers, drafts saved, replies
-  sent and whether each went out as FrontDesk wrote it, searches, keeps), no mail text, addresses
-  or thread ids.
-- **Sent off the machine:** the text of each thread, with your profile and up to 2,500 characters
-  of What's going on, to the model vendor you configure (Ask also sends your notes on that
-  thread's people, your other threads with them and the Ask conversation); and the
-  searches you run against all of Gmail, to Google (results are shown, never stored or sent to a
-  model). Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
-- The model API key is read at call time from the vendor's environment variable
-  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) or, on macOS, its Keychain item
-  (`frontdesk-anthropic`, `frontdesk-openai`, `frontdesk-gemini`). It is never written to disk by
-  FrontDesk.
+## How it was built
+
+It was great building with Claude. I described what I wanted, and then we iterated until it got
+here: seven days from the first commit on October 28, every change a pull request with tests and
+CI.
 
 ## Set it up on your own mail
 
-Python 3.12 (the version CI tests), on macOS or Linux. Keys and tokens can live in environment
-variables; on macOS they can also live in the login Keychain, which is what the item names below
-refer to. On Linux, use the environment variables.
-
-**1. Gmail (required).** In Google Cloud Console: create a project, enable the Gmail API, configure
-the OAuth consent screen (External, Testing), add yourself as a test user, and create a **Desktop
-app** OAuth client. Save its JSON as `~/.frontdesk/client_secret.json`. Then connect from the
-page (**Profile**, **Google account**, **Connect**), or run `frontdesk sync` once, which opens
-Google's consent page for read-only access.
-
-**2. Pick a model.** Claude is the default; OpenAI and Gemini work the same way.
-
-| Vendor | `settings.json` | Key | Install |
-| --- | --- | --- | --- |
-| Anthropic (default) | `"provider": "anthropic", "model": "claude-opus-5-5"` | `ANTHROPIC_API_KEY`, or Keychain `frontdesk-anthropic` | included |
-| OpenAI | `"provider": "openai", "model": "gpt-6.1-sol"` | `OPENAI_API_KEY`, or Keychain `frontdesk-openai` | `.venv/bin/pip install -e '.[openai]'` |
-| Gemini | `"provider": "gemini", "model": "gemini-3.8-flash"` | `GEMINI_API_KEY`, or Keychain `frontdesk-gemini` | `.venv/bin/pip install -e '.[gemini]'` |
-
-To store a key in the Keychain: `security add-generic-password -U -s frontdesk-anthropic -a $USER -w`
-(it prompts for the key, so it never lands in your shell history). Ask's model picker offers every
-vendor in `ask_models` that has a key.
-
-**3. Run it.** `frontdesk doctor` first lists what is set up and what is missing, each with the
-step that fixes it (offline; it never prints a key; `--online` also checks the Slack token).
-
-```
-frontdesk doctor
-frontdesk sync                # first run opens Google consent (read-only)
-frontdesk triage --limit 20
-frontdesk serve               # prints the page URL; syncs on start and every 15 minutes
-```
-
-**4. Let it act (optional).** Archive, star, mark read, drafts and Send use a second, separate
-Google permission (`gmail.modify`), kept in its own token file: **Connect** beside Gmail
-actions in **Profile**, or `frontdesk authorize-actions`. Without it, FrontDesk reads and ranks
-but never changes your mail.
-
-**5. Slack (optional).** [Create the Slack app](https://api.slack.com/apps?new_app=1&manifest_yaml=display_information%3A%0A%20%20name%3A%20FrontDesk%0A%20%20description%3A%20Your%20own%20copy%20of%20FrontDesk%20reads%20your%20Slack%20for%20your%20local%20inbox.%0Aoauth_config%3A%0A%20%20scopes%3A%0A%20%20%20%20user%3A%0A%20%20%20%20%20%20-%20channels%3Aread%0A%20%20%20%20%20%20-%20groups%3Aread%0A%20%20%20%20%20%20-%20im%3Aread%0A%20%20%20%20%20%20-%20mpim%3Aread%0A%20%20%20%20%20%20-%20channels%3Ahistory%0A%20%20%20%20%20%20-%20groups%3Ahistory%0A%20%20%20%20%20%20-%20im%3Ahistory%0A%20%20%20%20%20%20-%20mpim%3Ahistory%0A%20%20%20%20%20%20-%20users%3Aread%0A%20%20%20%20%20%20-%20chat%3Awrite%0A%20%20%20%20%20%20-%20search%3Aread%0A%20%20%20%20%20%20-%20im%3Awrite%0A%20%20%20%20%20%20-%20mpim%3Awrite%0A%20%20%20%20%20%20-%20channels%3Awrite%0A%20%20%20%20%20%20-%20groups%3Awrite%0Asettings%3A%0A%20%20org_deploy_enabled%3A%20false%0A%20%20socket_mode_enabled%3A%20false%0A%20%20token_rotation_enabled%3A%20false): this opens Slack's "Create from a
-manifest" dialog already filled in from [`docs/slack-app-manifest.yaml`](docs/slack-app-manifest.yaml)
-(or paste that file at [api.slack.com/apps](https://api.slack.com/apps): Create New App, From a
-manifest). Pick your workspace, then **Next** and **Create and Install**. It asks only for
-user-token scopes, each commented in the file with the call that needs it. Then, on the app's
-**OAuth & Permissions** page, copy the **User OAuth Token** (`xoxp-...`), and store it as `SLACK_USER_TOKEN` or the Keychain item
-`frontdesk-slack`. The next sync brings Slack in. In a workspace that is yours (agents or bots
-posting to you), `"slack_channel_messages": "all"` brings in every channel message, not only
-the ones that mention you.
-
-**While the Google app is in Testing**, Google shows an "unverified app" screen (you are the
-developer) and both tokens expire after 7 days: the page's sync message then offers **Connect
-Gmail**, and `sync` and `authorize-actions` ask you to consent again.
-
-**Connecting from the page.** **Profile** shows each permission as connected or not, with
-**Connect** (or **Reconnect**) and **Disconnect**, which deletes that token from this computer;
-Google keeps listing FrontDesk at [myaccount.google.com/permissions](https://myaccount.google.com/permissions)
-until you remove it there. A Desktop client may only send the browser back to `localhost`. On the
-computer running FrontDesk that finishes by itself. From another device (a phone or laptop on
-your tailnet), Google's tab ends on a page that cannot load; copy its whole address into the box
-FrontDesk shows, and it finishes the same way. To skip that step, add a second OAuth client of
-type **Web application** with the authorized redirect URI `https://<your FrontDesk address>/oauth/callback`
-(for example a Tailscale Serve name) and save its JSON as `~/.frontdesk/client_secret_web.json`:
-a page opened at that https address then connects directly.
-
-**Settings** (`~/.frontdesk/settings.json`, all optional; the full list with defaults is
-`DEFAULTS` in [`frontdesk/config.py`](frontdesk/config.py)):
-
-- Model: `provider`, `model`, `provider_options`, `ask_models`, `review_model`, and the Keychain
-  item names `keychain_service`, `openai_keychain_service`, `gemini_keychain_service`.
-- You: `owner_profile` (a few sentences for the model), `reply_signoff`.
-- Gmail: `gmail_query` (default `in:inbox newer_than:7d`), `gmail_max_threads` (100).
-- Slack: `slack_keychain_service`, `slack_days` (7), `slack_unread_days` (90), `slack_max_items`
-  (100), `slack_channel_messages` (`"mentions"` or `"all"`).
-- Server: `serve_host`, `serve_port`, `serve_display_host`, `serve_allowed_hosts`,
-  `auto_sync_minutes` (15; 0 turns it off), `mark_read_on_open`.
-- The IMAP settings below.
-
-Unknown keys are an error, not ignored.
-
-## Unanswered email (optional, IMAP)
-
-`frontdesk unanswered` lists Gmail threads still waiting on your reply: threads from the last 14
-days that are in your inbox or have an unread message anywhere (so archived and read threads drop
-out; promotions, social, updates and forums left out) whose newest message in that
-window, counting your own sent replies (`from:me`), is from a person and not from you. Mail with
-`List-Unsubscribe`, `List-Id`, a bulk/list/junk `Precedence`, an `Auto-Submitted` header, or a
-sender like `noreply@` or `notifications@` is treated as automated and skipped. It is separate from
-`sync`: no OAuth token, no model call, nothing stored.
-
-It is read-only. It opens mailboxes with `EXAMINE`, fetches only a few headers with `BODY.PEEK`,
-and never sends `STORE`, `COPY`, `MOVE` or `EXPUNGE`, so nothing is marked read, moved or
-labelled.
-
-Setup: create a Gmail app password (Google Account, Security, App passwords; needs 2-Step
-Verification), store it in the login Keychain, and name both in `~/.frontdesk/settings.json`:
-
-```
-security add-generic-password -U -s my-gmail-imap -a you@gmail.com -w
-```
-
-```json
-{"imap_account": "you@gmail.com", "imap_keychain_service": "my-gmail-imap"}
-```
-
-`IMAP_ACCOUNT` and `IMAP_APP_PASSWORD` override these; `imap_host` defaults to `imap.gmail.com`.
-
-```
-frontdesk unanswered                      # a short list
-frontdesk unanswered --json --days 14 --limit 15
-```
-
-`frontdesk inbox-buckets --since <ISO 8601, with a UTC offset>` uses the same read-only IMAP
-machinery to answer a different question: every inbox thread with a message newer than a given
-time, sorted into exactly one of three buckets, or left out as already replied to. `--since`
-should be the **start** time of the previous run, not its end time: re-seeing a message that
-landed during the previous run is harmless, but using the end time can silently drop one that
-arrived mid-run. Unlike `unanswered`, promotions and updates still land in a bucket instead of
-being dropped, and there's no `is:unread` filter.
-
-A thread is `newsletters` when its newest message carries `List-Unsubscribe`, `List-Id`, a
-bulk/list `Precedence`, or comes from an address or domain in `newsletter_senders`; `unanswered`
-when it's from a person who isn't automated, isn't on `unanswered_ignore_senders`, and isn't mail
-Gmail itself has sorted into the Promotions, Updates, Social or Forums category (order
-confirmations and shipping notices from UPS or Amazon, for instance, usually carry none of the
-List-* headers but do land in Updates); otherwise `other`. A thread where you replied last is
-left out of every bucket and counted separately as `replied`.
-
-`person_senders` (same matching rules as the other two lists) overrides all of that -- the
-category check, the newsletter headers, the automated/ignore check -- and always buckets a match
-as `unanswered`; use it for a sender that looks automated but is really a person, like a
-recruiter mailing through Greenhouse or Lever, or someone posting through a Google Group.
-
-`other_senders` works the other way: a match always lands in `other`, even with newsletter
-headers. Use it for notices that look exactly like newsletters, such as Google's account-security
-mail, which carries List-Id and List-Unsubscribe and sits in Gmail's Updates category.
-`person_senders` still wins if a sender is on both lists.
-
-```json
-{"imap_account": "you@gmail.com", "imap_keychain_service": "my-gmail-imap",
- "newsletter_senders": ["@substack.com"], "person_senders": ["@greenhouse.io"],
- "other_senders": ["noreply-accounts@google.com"]}
-```
-
-```
-frontdesk inbox-buckets --since 2026-10-29T09:00:00-07:00
-frontdesk inbox-buckets --json --since 2026-10-29T09:00:00-07:00 --limit 15
-```
-
-`--json` prints `{"since": ..., "total": N, "replied": R, "buckets": {"unanswered": {"total": n,
-"items": [...]}, "newsletters": {...}, "other": {...}}}`, each bucket's items oldest first and
-capped at `--limit` while its `total` stays uncapped; `total` always equals `replied` plus every
-bucket's uncapped total (checked at runtime; a mismatch exits 2 naming step `count`). Items use
-the same shape as `unanswered`'s, plus `read_url` (same as `gmail_url`) on newsletter items. It
-takes a fixed number of IMAP round trips -- two searches (candidates, your own replies) plus one
-per Gmail category (promotions, updates, social, forums), each with fetches chunked by 300 -- and
-the same 60-second cap and one-line, step-named failure contract as `unanswered`.
-
-`--json` prints `{"total": N, "items": [...]}`, oldest first; `total` counts every unanswered thread
-and `items` holds at most `--limit`. Each item has `thread_id` (decimal), `gmail_url`, `from_name`,
-`from_addr`, `subject`, `last_at` (ISO 8601 with offset), `age_days` and `n_messages` (messages in
-the window, not the thread's whole history). It takes a fixed number of IMAP round trips: two
-searches plus fetches in chunks of 300. Any failure exits nonzero with one line naming the step (for
-example `imap login: [AUTHENTICATIONFAILED] ...`), never an empty list, and the whole run is capped
-at 60 seconds.
-
-To leave out senders that are never a person waiting on you (your own reports, a tool that writes
-from a normal address), list them in `unanswered_ignore_senders`: exact addresses
-(`"reports@example.com"`) or whole domains (`"@example.org"`, which also covers its subdomains).
+Python 3.12 on macOS or Linux, a Google Cloud project with a Desktop OAuth client, and a key from
+Anthropic, OpenAI or Google. Then connect Gmail from the page (**Profile**, **Google account**).
+Step by step, including Slack and every setting: [docs/setup.md](docs/setup.md). An optional,
+model-free IMAP check for threads still waiting on your reply: [docs/unanswered.md](docs/unanswered.md).
 
 ## Development
 
