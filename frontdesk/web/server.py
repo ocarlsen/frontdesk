@@ -1111,7 +1111,11 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                         "SELECT 1 FROM items WHERE source='slack' LIMIT 1").fetchone() is not None
                 finally:
                     store.db.close()
-                self._send(HTTPStatus.OK, json.dumps({**_last_sync, "slack": slack}).encode(),
+                # login: a Gmail permission's sign-in has expired (the header's Account turns red).
+                from ..gmail import connect
+                login = False if (settings or {}).get("demo") else connect.needs_login()
+                self._send(HTTPStatus.OK, json.dumps({**_last_sync, "slack": slack,
+                                                      "login": login}).encode(),
                            "application/json; charset=utf-8")
             elif path == "/api/send-status":
                 from .. import actions, sending

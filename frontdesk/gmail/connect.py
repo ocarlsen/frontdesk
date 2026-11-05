@@ -28,7 +28,7 @@ from urllib.parse import parse_qs, urlsplit
 from google_auth_oauthlib.flow import Flow
 
 from .. import config
-from .auth import ACTION_SCOPES, SCOPES, _load_token, _write_token
+from .auth import ACTION_SCOPES, SCOPES, _load_token, _write_token, expired_marker
 
 STATE_TTL = 600
 MAX_PENDING = 8
@@ -65,15 +65,24 @@ generation = 0
 
 def status() -> dict:
     """What the page shows, without a network call: per permission, whether a token with the
-    right scopes is stored (a revoked one still looks connected until a sync says otherwise),
-    and which OAuth clients exist."""
+    right scopes is stored and, as <kind>_expired, whether Google has since refused to renew it
+    (known only once a sync or an action tried), plus which OAuth clients exist."""
     out = {"desktop_client": config.GMAIL_CLIENT_SECRET.exists(),
            "web_client": config.GMAIL_WEB_CLIENT_SECRET.exists(),
            "generation": generation}   # moves on every connect, so a Reconnect shows too
     for kind in KINDS:
         creds = _load_token(_token_path(kind), _scopes(kind))
-        out[kind] = bool(creds and (creds.valid or creds.refresh_token))
+        stored = bool(creds and (creds.valid or creds.refresh_token))
+        out[f"{kind}_expired"] = stored and expired_marker(_token_path(kind)).exists()
+        out[kind] = stored and not out[f"{kind}_expired"]
     return out
+
+
+def needs_login() -> bool:
+    """A permission that was connected has a sign-in Google refused to renew: the page's Account
+    link turns red. A permission never connected is not flagged here."""
+    s = status()
+    return any(s[f"{kind}_expired"] for kind in KINDS)
 
 
 def _host_of(origin: str) -> tuple[str, str]:
@@ -176,5 +185,7 @@ def disconnect(kind) -> None:
     """Delete the local token for `kind`. Google still lists FrontDesk under your account's
     third-party access until you remove it there."""
     global generation
-    _token_path(_kind(kind)).unlink(missing_ok=True)
+    path = _token_path(_kind(kind))
+    path.unlink(missing_ok=True)
+    expired_marker(path).unlink(missing_ok=True)
     generation += 1
