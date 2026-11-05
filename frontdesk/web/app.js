@@ -3319,9 +3319,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("profile").addEventListener("click", openProfile);
   document.getElementById("memory").addEventListener("click", openMemory);
   document.getElementById("attack").addEventListener("click", openAttack);
-  const acct = document.getElementById("account");
-  if (STATIC) acct.hidden = true;   // the demo has no Google account to sign in to
-  else acct.addEventListener("click", e => { e.preventDefault(); openGoogle(); });
+  // In the demo the panel says connecting is off: the header stays the same as your own copy's.
+  document.getElementById("account").addEventListener("click", e => { e.preventDefault(); openGoogle(); });
   buildHelp();
   setupSearch();
   document.addEventListener("keydown", onKey);

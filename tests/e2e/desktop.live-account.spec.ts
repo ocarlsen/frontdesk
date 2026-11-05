@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { card, GMAIL_ID, liveUrl } from "./helpers";
+import { card, GMAIL_ID, liveUrl, openDemo } from "./helpers";
 
 // Account (top right, beside the counts) opens the Google account panel. It turns red once a Gmail sign-in has
 // expired; the panel shows connected in green and anything else in red; and an action that
@@ -43,4 +43,12 @@ test("an archive that fails on sign-in offers Account, which opens the panel", a
   await toast.getByRole("button", { name: "Account" }).click();
   await expect(page.locator("#profilepanel")).toBeVisible();
   await expect(page.locator("#profilepanel h3")).toHaveText("Google account");
+});
+
+test("the static demo shows Account too, and its panel says connecting is off", async ({ page }) => {
+  await openDemo(page);
+  const acct = page.locator("header #account");
+  await expect(acct).toHaveText("Account");
+  await acct.click();
+  await expect(page.locator("#profilepanel")).toContainText("Demo: connecting Gmail is off here.");
 });

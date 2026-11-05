@@ -7,7 +7,8 @@ recorder starts it as a child process and closes stdin when it is done).
 
 - static: the exported public demo (`frontdesk export-demo`), for the inbox, threads,
   shortcuts and Send (which in the demo sends nothing).
-- live: the real server on a throwaway store in a temp FRONTDESK_HOME, for Ask and Memory. It is
+- live: the real server on a throwaway store in a temp FRONTDESK_HOME, for Ask and Memory, with
+  sync and the Gmail draft lookup stubbed as demo mode answers them (there is no Gmail). It is
   seeded with the demo inbox plus the synthetic a07 eval thread, its note (written by a helper
   session), the model's recorded answer from the 2026-10-29 Opus 5.5 attribution run, two "What's
   going on" items and two named people. Ask's model list is stubbed empty, so nothing asks the
@@ -106,6 +107,12 @@ def main() -> int:
     threading.Thread(target=static.serve_forever, daemon=True).start()
 
     server.available_models = lambda _settings: []   # no Keychain lookups for Ask's model list
+    # The tour store has no Gmail account: answer sync and the Gmail draft lookup the way demo mode
+    # does (sync off, no draft), so the page never shows a sign-in failure on film.
+    from http import HTTPStatus
+    server.run_sync = lambda _db, _s: (HTTPStatus.CONFLICT,
+                                       {"error": "Sync is off in the tour (synthetic inbox)."})
+    server.gmail_draft = lambda _db, _s, _item, client_factory=None: (HTTPStatus.OK, {"draft": None})
     db = work / "tour.db"
     st = Store(db)
     seed(st, now)

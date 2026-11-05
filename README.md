@@ -9,7 +9,7 @@ It doesn't know everything my Claude Code sessions know about me yet. That's nex
 ([#67](https://github.com/ocarlsen/frontdesk/issues/67), [#69](https://github.com/ocarlsen/frontdesk/issues/69)).
 
 - [Live demo](https://frontdesk.ocarlsen.com/index.html): a synthetic inbox, nothing to install
-- [Walkthrough video](docs/site/frontdesk-tour.mp4): three minutes, no sound
+- [Walkthrough video](docs/site/frontdesk-tour.mp4): three and a half minutes, no sound
 - [Memory needs an author](https://ocarlsen.com/memory-needs-an-author.html): the article
 - [About page](https://ocarlsen.ai/frontdesk.html)
 
