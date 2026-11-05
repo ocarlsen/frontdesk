@@ -259,3 +259,40 @@ def test_callback_links_back_to_the_address_the_owner_started_from(live):
     # a failure has no trusted origin to offer: the relative link stays
     code, page = call(f"{live}/oauth/callback?state=forged&code=c")
     assert code == 400 and 'href="/index.html"' in page
+
+
+def test_a_refused_renewal_shows_as_expired_until_a_fresh_sign_in(monkeypatch):
+    from google.auth.exceptions import RefreshError
+
+    from frontdesk.gmail import auth
+    connect.finish(f"state={state_of(connect.start('actions', 'http://localhost:1', 1))}&code=c")
+    assert connect.status()["actions"] is True and connect.needs_login() is False
+    # Google refuses to renew the stored sign-in (Testing mode's 7 days, or a revoke).
+    t = json.loads(config.GMAIL_ACTIONS_TOKEN.read_text())
+    t["expiry"] = "2020-01-01T00:00:00Z"
+    config.GMAIL_ACTIONS_TOKEN.write_text(json.dumps(t))
+
+    def refuse(self, request):
+        raise RefreshError("invalid_grant: Token has been expired or revoked.")
+    monkeypatch.setattr(Credentials, "refresh", refuse)
+    with pytest.raises(auth.AuthError, match=r"Open Account \(top right\) to reconnect Gmail actions"):
+        auth.action_credentials()
+    s = connect.status()
+    assert s["actions"] is False and s["actions_expired"] is True
+    assert s["read"] is False and s["read_expired"] is False     # never connected: not flagged
+    assert connect.needs_login() is True
+    # Reconnecting clears it; so does Disconnect.
+    connect.finish(f"state={state_of(connect.start('actions', 'http://localhost:1', 1))}&code=c")
+    assert connect.status()["actions_expired"] is False and connect.needs_login() is False
+    auth.expired_marker(config.GMAIL_ACTIONS_TOKEN).touch()
+    connect.disconnect("actions")
+    assert not auth.expired_marker(config.GMAIL_ACTIONS_TOKEN).exists()
+
+
+def test_status_route_reports_login(live):
+    from frontdesk.gmail import auth
+    code, body = call(live + "/api/status", headers={"Cookie": "fd_token=t0ken"})
+    assert code == 200 and json.loads(body)["login"] is False
+    connect.finish(f"state={state_of(connect.start('read', 'http://localhost:1', 1))}&code=c")
+    auth.expired_marker(config.GMAIL_TOKEN).touch()
+    assert json.loads(call(live + "/api/status", headers={"Cookie": "fd_token=t0ken"})[1])["login"] is True

@@ -48,6 +48,13 @@ def _load_token(path: Path, scopes: list[str] = SCOPES) -> Credentials | None:
         return None
 
 
+def expired_marker(path: Path) -> Path:
+    """Beside a token: present while Google has refused to renew it (a revoked or timed-out
+    sign-in), so the page can say "sign-in expired" without calling Google. A fresh sign-in
+    removes it."""
+    return path.with_name(path.name + ".expired")
+
+
 def _write_token(path: Path, creds: Credentials) -> None:
     """Write via a fresh 0600 temp file then rename, so the token is never readable by others,
     even for an instant, and a pre-existing file's looser mode is not inherited."""
@@ -58,6 +65,7 @@ def _write_token(path: Path, creds: Credentials) -> None:
     with os.fdopen(fd, "w") as f:
         f.write(creds.to_json())
     os.replace(tmp, path)
+    expired_marker(path).unlink(missing_ok=True)   # a token Google just issued or renewed
 
 
 def _run_flow(secret: Path, scopes: list[str] = SCOPES) -> Credentials:
@@ -72,7 +80,7 @@ def _run_flow(secret: Path, scopes: list[str] = SCOPES) -> Credentials:
 
 def credentials(token_path: Path | None = None, secret_path: Path | None = None,
                 interactive: bool = True, scopes: list[str] = SCOPES,
-                how_to_consent: str = "Connect Gmail in FrontDesk's Profile, or run "
+                how_to_consent: str = "Open Account (top right) to reconnect Gmail, or run "
                                       "'bin/frontdesk sync' in a Terminal once."
                 ) -> Credentials:
     token_path = token_path or config.GMAIL_TOKEN
@@ -84,6 +92,7 @@ def credentials(token_path: Path | None = None, secret_path: Path | None = None,
         try:
             creds.refresh(Request())
         except RefreshError:  # revoked or expired refresh token: fall through to fresh consent
+            expired_marker(token_path).touch()
             creds = None
         if creds and creds.valid:
             _write_token(token_path, creds)
@@ -97,5 +106,5 @@ def credentials(token_path: Path | None = None, secret_path: Path | None = None,
 
 def action_credentials(interactive: bool = False) -> Credentials:
     return credentials(config.GMAIL_ACTIONS_TOKEN, interactive=interactive, scopes=ACTION_SCOPES,
-                       how_to_consent="Connect Gmail actions in FrontDesk's Profile, or run "
-                                      "'bin/frontdesk authorize-actions' in a Terminal once.")
+                       how_to_consent="Open Account (top right) to reconnect Gmail actions, or "
+                                      "run 'bin/frontdesk authorize-actions' in a Terminal once.")

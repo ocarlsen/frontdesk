@@ -152,7 +152,7 @@ CI.
 ## Set it up on your own mail
 
 Python 3.12 on macOS or Linux, a Google Cloud project with a Desktop OAuth client, and a key from
-Anthropic, OpenAI or Google. Then connect Gmail from the page (**Profile**, **Google account**).
+Anthropic, OpenAI or Google. Then connect Gmail from the page (**Account**, top right).
 Step by step, including Slack and every setting: [docs/setup.md](docs/setup.md). An optional,
 model-free IMAP check for threads still waiting on your reply: [docs/unanswered.md](docs/unanswered.md).
 

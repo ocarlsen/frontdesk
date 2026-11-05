@@ -8,7 +8,7 @@ refer to. On Linux, use the environment variables.
 **1. Gmail (required).** In Google Cloud Console: create a project, enable the Gmail API, configure
 the OAuth consent screen (External, Testing), add yourself as a test user, and create a **Desktop
 app** OAuth client. Save its JSON as `~/.frontdesk/client_secret.json`. Then connect from the
-page (**Profile**, **Google account**, **Connect**), or run `frontdesk sync` once, which opens
+page (**Account**, top right, then **Connect**), or run `frontdesk sync` once, which opens
 Google's consent page for read-only access.
 
 **2. Pick a model.** Ranking and Ask use separate models. By default ranking uses Gemini 4
@@ -51,10 +51,12 @@ posting to you), `"slack_channel_messages": "all"` brings in every channel messa
 the ones that mention you.
 
 **While the Google app is in Testing**, Google shows an "unverified app" screen (you are the
-developer) and both tokens expire after 7 days: the page's sync message then offers **Connect
-Gmail**, and `sync` and `authorize-actions` ask you to consent again.
+developer) and both tokens expire after 7 days. Once Google refuses to renew one, **Account**
+turns red and reads "sign in again", the Google account panel shows that permission as "sign-in expired", and a failed sync,
+archive, draft or send offers **Account**; `sync` and `authorize-actions` ask you to consent again.
 
-**Connecting from the page.** **Profile** shows each permission as connected or not, with
+**Connecting from the page.** **Account** (or **Profile**) shows each permission as connected (in
+green), not connected or sign-in expired (in red), with
 **Connect** (or **Reconnect**) and **Disconnect**, which deletes that token from this computer;
 Google keeps listing FrontDesk at [myaccount.google.com/permissions](https://myaccount.google.com/permissions)
 until you remove it there. A Desktop client may only send the browser back to `localhost`. On the
