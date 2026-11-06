@@ -8,8 +8,9 @@ Access control, in order, on every request:
    name listed in settings. A rebinding attack arrives under the attacker's hostname, so it is
    refused before any data is read.
 2. Token, only when bound beyond loopback: a random token stored 0600 in FRONTDESK_HOME. Opening
-   /index.html?token=... once sets an HttpOnly, SameSite=Strict cookie; every route then requires
-   it. On 127.0.0.1 the OS already limits callers to this machine.
+   /index.html?token=... once sets an HttpOnly, SameSite=Strict cookie that lasts 90 days (Secure
+   behind an https proxy); every route then requires it. On 127.0.0.1 the OS already limits
+   callers to this machine.
 3. POST additionally requires a custom header and a same-host Origin (CSRF).
 
 Email content is untrusted. The list is sent as JSON and rendered with textContent only. A
@@ -61,6 +62,8 @@ MSG_HEAD = ('<!doctype html><meta charset="utf-8"><base target="_blank">'
             'img{max-width:100%;height:auto}table{max-width:100%}</style>')
 _META_EQUIV = re.compile(r"<meta\b[^>]*http-equiv[^>]*>", re.I)
 COOKIE = "fd_token"
+# The cookie outlives a browser restart; the token itself only changes when serve_token is deleted.
+COOKIE_MAX_AGE = 90 * 24 * 3600
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 TEXT = "text/plain; charset=utf-8"
 
@@ -992,9 +995,14 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
             if token is not None and path == "/index.html":
                 offered = parse_qs(query).get("token", [""])[0]
                 if offered and secrets.compare_digest(offered, token):
+                    # Secure only behind an https proxy (Tailscale Serve): on plain http to a
+                    # tailnet name or IP the browser would drop a Secure cookie.
+                    secure = ("; Secure" if self.headers.get("X-Forwarded-Proto") == "https"
+                              else "")
                     self._send(HTTPStatus.FOUND, extra={
                         "Location": "/index.html",
-                        "Set-Cookie": f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict"})
+                        "Set-Cookie": f"{COOKIE}={token}; Path=/; Max-Age={COOKIE_MAX_AGE}; "
+                                      f"HttpOnly; SameSite=Strict{secure}"})
                     return False
             if not self._authorized():
                 self._send(HTTPStatus.UNAUTHORIZED,

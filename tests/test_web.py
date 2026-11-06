@@ -214,7 +214,14 @@ def test_token_gate_and_meta_refresh_strip(tmp_path):
         assert get("/api/items")[0] == 401
         assert get("/index.html?token=wrong")[0] == 401
         code, hdrs, _ = get("/index.html?token=sekret")
-        assert code == 302 and "HttpOnly" in hdrs["Set-Cookie"]
+        assert code == 302
+        # A lifetime, so a browser restart keeps the sign-in; no Secure on plain http.
+        attrs = [a.strip() for a in hdrs["Set-Cookie"].split(";")]
+        assert {"HttpOnly", "SameSite=Strict", f"Max-Age={90 * 24 * 3600}"} <= set(attrs)
+        assert "Secure" not in attrs
+        # Behind an https proxy (Tailscale Serve) the cookie is also Secure.
+        _, hdrs, _ = get("/index.html?token=sekret", {"X-Forwarded-Proto": "https"})
+        assert "Secure" in [a.strip() for a in hdrs["Set-Cookie"].split(";")]
         ck = {"Cookie": "fd_token=sekret"}
         assert get("/api/items", ck)[0] == 200
         assert get("/api/items", {**ck, "Host": "evil.example:1"})[0] == 403
