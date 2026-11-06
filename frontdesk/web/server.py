@@ -8,8 +8,8 @@ Access control, in order, on every request:
    name listed in settings. A rebinding attack arrives under the attacker's hostname, so it is
    refused before any data is read.
 2. Token, only when bound beyond loopback: a random token stored 0600 in FRONTDESK_HOME. Opening
-   /index.html?token=... once sets an HttpOnly, SameSite=Strict cookie; every route then requires
-   it. On 127.0.0.1 the OS already limits callers to this machine.
+   /index.html?token=... once sets an HttpOnly, SameSite=Strict cookie that lasts 90 days (Secure
+   behind an https proxy); every route then requires it. On 127.0.0.1 the OS already limits callers to this machine.
 3. POST additionally requires a custom header and a same-host Origin (CSRF).
 
 Email content is untrusted. The list is sent as JSON and rendered with textContent only. A
