@@ -41,7 +41,7 @@ def idate(d: datetime) -> str:
 
 class StubImap(imaplib.IMAP4):
     def __init__(self, msgs, *, login_reply=None, all_mail="[Gmail]/All Mail", sleep_on=None,
-                 bad_fetch=False):
+                 bad_fetch=False, extra_fetch=None):
         # Deliberately no super().__init__: it would open a socket.
         self.debug = 0
         self.state = "NONAUTH"
@@ -55,6 +55,7 @@ class StubImap(imaplib.IMAP4):
         self._mode_ascii()
         self.msgs, self.login_reply, self.all_mail = msgs, login_reply, all_mail
         self.sleep_on, self.bad_fetch = sleep_on, bad_fetch
+        self.extra_fetch = extra_fetch or []
         self.calls: list[tuple] = []
 
     def shutdown(self):
@@ -101,6 +102,9 @@ class StubImap(imaplib.IMAP4):
                        f'"{idate(m["when"])}" FLAGS ({m["flags"]}) BODY[HEADER.FIELDS '
                        f'({iu.HEADER_FIELDS})] {{{len(raw)}}}')
                 out += [(pre.encode(), raw), b")"]
+            if self.extra_fetch:
+                mid = len(out) // 4 * 2        # between two records: never inside (tuple, b")")
+                out = out[:mid] + list(self.extra_fetch) + out[mid:]
             if self.bad_fetch:
                 out = [b"garbage"]
             self.untagged_responses["FETCH"] = out
@@ -512,3 +516,41 @@ def test_ignore_list_from_settings_is_lowercased():
                            "unanswered_ignore_senders": [" Reports@Example.com "]},
                           environ={"IMAP_APP_PASSWORD": "x"})
     assert c.ignore == ("reports@example.com",)
+
+
+# ------------------------------------------------------------------ unsolicited FETCH flag updates
+# RFC 3501 7.4.2: a server may send an untagged FETCH with just the changed items (e.g. a FLAGS
+# update) at any time, not only as a reply to a command we issued. imaplib puts these in the same
+# response list as our own FETCH data, so _parse_fetch must drop them rather than raise.
+
+def test_parse_fetch_skips_unsolicited_flags_only_records():
+    normal1 = (f'1 (UID 1 X-GM-THRID 100 INTERNALDATE "{idate(at(3))}" '
+              f'FLAGS (\\Seen))').encode()
+    normal2 = (f'2 (UID 2 X-GM-THRID 200 INTERNALDATE "{idate(at(1))}" '
+              f'FLAGS (\\Seen))').encode()
+    flags_with_uid = b'88658 (UID 141371 FLAGS (\\Seen))'
+    flags_no_uid = b'88658 (FLAGS (\\Seen))'
+    out = iu._parse_fetch([normal1, flags_with_uid, normal2, flags_no_uid])
+    assert [(m.uid, m.thrid) for m in out] == [(1, 100), (2, 200)]
+
+
+def test_unanswered_run_tolerates_an_unsolicited_flags_update():
+    msgs = [msg(1, 2001, at(3), "Alice <alice@example.org>"),
+            msg(2, 2002, at(1), "Bob <bob@example.org>")]
+    baseline, _ = run(msgs)
+    with_flags_update, _ = run(msgs, extra_fetch=[b'88658 (UID 141371 FLAGS (\\Seen))'])
+    assert with_flags_update == baseline
+    assert ids(with_flags_update) == ["2001", "2002"]
+
+
+def test_parse_fetch_still_raises_when_internaldate_is_missing():
+    rec = b'3 (UID 3 X-GM-THRID 300 FLAGS (\\Seen))'
+    with pytest.raises(ValueError, match="FETCH item missing"):
+        iu._parse_fetch([rec])
+
+
+def test_parse_fetch_still_raises_on_a_uid_flags_record_with_a_header_literal():
+    raw = b"From: a@example.org\r\n\r\n"
+    pre = f'4 (UID 4 FLAGS (\\Seen) BODY[HEADER.FIELDS (FROM)] {{{len(raw)}}}'.encode()
+    with pytest.raises(ValueError, match="FETCH item missing"):
+        iu._parse_fetch([(pre, raw), b")"])
