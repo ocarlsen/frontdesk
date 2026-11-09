@@ -103,7 +103,7 @@ class StubImap(imaplib.IMAP4):
                        f'({iu.HEADER_FIELDS})] {{{len(raw)}}}')
                 out += [(pre.encode(), raw), b")"]
             if self.extra_fetch:
-                mid = len(out) // 2            # interleaved with the real records, not appended
+                mid = len(out) // 4 * 2        # between two records: never inside (tuple, b")")
                 out = out[:mid] + list(self.extra_fetch) + out[mid:]
             if self.bad_fetch:
                 out = [b"garbage"]
@@ -538,7 +538,7 @@ def test_unanswered_run_tolerates_an_unsolicited_flags_update():
     msgs = [msg(1, 2001, at(3), "Alice <alice@example.org>"),
             msg(2, 2002, at(1), "Bob <bob@example.org>")]
     baseline, _ = run(msgs)
-    with_flags_update, stub = run(msgs, extra_fetch=[b'88658 (UID 141371 FLAGS (\\Seen))'])
+    with_flags_update, _ = run(msgs, extra_fetch=[b'88658 (UID 141371 FLAGS (\\Seen))'])
     assert with_flags_update == baseline
     assert ids(with_flags_update) == ["2001", "2002"]
 
