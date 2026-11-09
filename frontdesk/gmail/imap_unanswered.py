@@ -229,10 +229,23 @@ def _parse_internaldate(s: str) -> datetime:
                     tzinfo=timezone(off))
 
 
+_FETCH_ITEM_NAMES = ("X-GM-THRID", "INTERNALDATE", "UID", "FLAGS")
+
+
+def _item_names(meta: str) -> set[str]:
+    """The FETCH item names present in one record's metadata line (BODY/BODY.PEEK literals
+    collapse to 'BODY')."""
+    names = {name for name in _FETCH_ITEM_NAMES if re.search(rf"\b{name}\b", meta)}
+    if re.search(r"\bBODY(\.PEEK)?\[", meta):
+        names.add("BODY")
+    return names
+
+
 def _parse_fetch(data) -> list[_Msg]:
     """imaplib FETCH data: (b'N (UID .. X-GM-THRID .. INTERNALDATE ".." FLAGS (..) BODY[..]
     {n}', header bytes) tuples, each followed by b')' (which may carry items placed after the
-    literal)."""
+    literal). A UID/FLAGS-only record is an unsolicited flag update (RFC 3501 7.4.2) that
+    imaplib mixed into this same list, and is skipped rather than raised on."""
     recs: list[list] = []
     for part in data or []:
         if isinstance(part, tuple):
@@ -252,6 +265,9 @@ def _parse_fetch(data) -> list[_Msg]:
         idate = re.search(r'\bINTERNALDATE "([^"]+)"', meta)
         flags = re.search(r"\bFLAGS \(([^)]*)\)", meta)
         if not (uid and thrid and idate):
+            names = _item_names(meta)
+            if names and "FLAGS" in names and names <= {"UID", "FLAGS"}:
+                continue    # unsolicited flag update, not a reply to our own FETCH
             raise ValueError(f"FETCH item missing UID/X-GM-THRID/INTERNALDATE: {meta[:80]!r}")
         out.append(_Msg(uid=int(uid.group(1)), thrid=int(thrid.group(1)),
                         at=_parse_internaldate(idate.group(1)),

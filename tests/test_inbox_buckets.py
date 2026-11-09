@@ -83,6 +83,15 @@ def expected_ids(classified):
 # ------------------------------------------------------------------ bucket rules
 
 
+def test_unsolicited_flags_update_does_not_break_the_fetch():
+    """RFC 3501 7.4.2: an untagged FETCH flag update interleaved with our own FETCH data must be
+    skipped by _parse_fetch, not raised (see test_unanswered.py's version of this test)."""
+    msgs = [cmsg(1, 101, at(0.1), "Alice <alice@example.org>")]
+    baseline = run(msgs)[0]
+    with_update = run(msgs, extra_fetch=[b'88658 (UID 141371 FLAGS (\\Seen))'])[0]
+    assert bucket_ids(with_update, "unanswered") == bucket_ids(baseline, "unanswered") == ["101"]
+
+
 def test_unanswered_bucket_is_a_person_not_automated_not_ignored():
     classified = run([cmsg(1, 101, at(0.1), "Alice <alice@example.org>")])[0]
     assert bucket_ids(classified, "unanswered") == ["101"]
