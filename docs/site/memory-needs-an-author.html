@@ -83,9 +83,9 @@ and sends it to whichever model I picked, so the same memory works on every mode
 <tbody>
 <tr><td>The thread, and related threads with the same people</td><td>Other people</td><td>Untrusted data</td></tr>
 <tr><td>Profile: who I am, what matters to me</td><td>Me</td><td>Trusted</td></tr>
-<tr><td>"What's going on": open matters, decisions, dated</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
-<tr><td>Notes on the people in the thread, most recent first</td><td>Me, or a helper</td><td>Trusted if mine, labelled if not</td></tr>
-<tr><td>The conversation so far on this thread</td><td>Me, a helper, the model</td><td>Each turn labelled</td></tr>
+<tr><td>"What's going on": open matters, decisions, dated</td><td>Me, or a helper</td><td>Trusted if mine, labeled if not</td></tr>
+<tr><td>Notes on the people in the thread, most recent first</td><td>Me, or a helper</td><td>Trusted if mine, labeled if not</td></tr>
+<tr><td>The conversation so far on this thread</td><td>Me, a helper, the model</td><td>Each turn labeled</td></tr>
 </tbody></table></div>
 
 <h2>The fix: every memory has an author</h2>
@@ -110,7 +110,7 @@ covers the common case: a helper that means well, and nothing recording that it 
 <a href="https://github.com/ocarlsen/frontdesk/issues/76">in-thread Delete</a> is pending.)</p>
 <figure>
   <img src="article-after.jpg" width="760" height="779" loading="lazy"
-       alt="The same thread after the fix. The answer says: an unconfirmed note says Jordan has a peanut allergy. Below, the note is labelled written by session helper, not confirmed, with a Confirm button.">
+       alt="The same thread after the fix. The answer says: an unconfirmed note says Jordan has a peanut allergy. Below, the note is labeled written by session helper, not confirmed, with a Confirm button.">
   <figcaption>The same thread, model and note with authorship labels. The answer calls the note
   unconfirmed, and the note shows who wrote it, with a Confirm button.</figcaption>
 </figure>
@@ -121,9 +121,9 @@ on notes I did write. So I built a small test: 12 invented threads (a recruiter,
 school, a vendor), each with one note carrying a fact the right answer depends on, each asked three
 ways through FrontDesk's real prompt code:</p>
 <ol>
-<li>The note is labelled as written by me.</li>
-<li>The same note is labelled as written by a helper, unconfirmed.</li>
-<li>The old instructions and the old unlabelled note line, with the same helper's note.</li>
+<li>The note is labeled as written by me.</li>
+<li>The same note is labeled as written by a helper, unconfirmed.</li>
+<li>The old instructions and the old unlabeled note line, with the same helper's note.</li>
 </ol>
 <p>A separate model judges each answer blind: did it use the fact, did it credit me with it, did
 it flag it as unconfirmed. Before scoring, the judge has to pass a check of its own: ten sample answers with the right
@@ -132,7 +132,7 @@ verdict already written down. If it gets any of them wrong, the run fails.</p>
 <thead><tr><th>Model</th><th>Helper's note credited to me, old prompt</th><th>Credited to me, with labels</th><th>My own notes used, no false hedge</th><th>Cost per answer</th></tr></thead>
 <tbody>
 <tr><td>Claude Opus 5.5</td><td class="num">12 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">2.2&cent;</td></tr>
-<tr><td>GPT-6.1</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">0.37&cent;</td></tr>
+<tr><td>GPT-6.1 Sol</td><td class="num">8 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">0.37&cent;</td></tr>
 <tr><td>Gemini 4 Argon</td><td class="num">11 of 12</td><td class="num">0 of 12</td><td class="num">12 of 12</td><td class="num">0.62&cent;</td></tr>
 </tbody></table></div>
 <p><small>Gemini 4 Argon ran this test twice on 2026-11-04: without labels it credited the helper's note to me 12 of 12 times in one run and 11 of 12 in the other. The table shows the run with recorded costs; with labels, both runs credited it 0 times.</small></p>

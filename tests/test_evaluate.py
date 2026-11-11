@@ -170,7 +170,7 @@ def test_display_model_keeps_word_order():
     assert display_model("claude-fable-5-1") == "Claude Fable 5.1"
     assert display_model("gemini-4-argon") == "Gemini 4 Argon"
     assert display_model("gemini-3.8-flash") == "Gemini 3.8 Flash"
-    assert display_model("gpt-6.1-sol") == "GPT 6.1 Sol"
+    assert display_model("gpt-6.1-sol") == "GPT-6.1 Sol"
 
 
 def test_eval_never_overwrites_an_earlier_report(tmp_path, monkeypatch):
