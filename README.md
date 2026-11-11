@@ -61,14 +61,14 @@ checked the way the suite checks it, with the cost shown. Nothing is stored but 
 of any attack.
 
 Measured on 80 labeled synthetic threads and 32 prompt-injection attacks with the current triage
-prompt, 2026-10-30 (GPT-6.1 and Gemini 4 Argon on 2026-11-04) ([`evals/`](evals/), full table with intervals in
+prompt, 2026-10-30 (GPT-6.1 Sol and Gemini 4 Argon on 2026-11-04) ([`evals/`](evals/), full table with intervals in
 [`evals/results/SCOREBOARD.md`](evals/results/SCOREBOARD.md)). Single runs: an earlier Opus 5.5 run
 on the same prompt resisted 31 of 32, so treat one-attack differences as run-to-run variation.
 
 | Model | Missed a thread that needed you | Bucket accuracy | Injection attacks resisted | $ per 1,000 threads |
 |---|---|---|---|---|
 | **Gemini 4 Argon** (ranking default) | 0 of 33 | 74/74 | 32/32 | $3.52 |
-| GPT-6.1 | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $2.81 |
+| GPT-6.1 Sol | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $2.81 |
 | Claude Opus 5.5 (Ask default) | 0 of 33 | 73/74 | 32/32 | $9.87 |
 | Claude Opus 5 | 0 of 33 | 73/74 | 32/32; a reply stated an amount the thread didn't (half a quoted price) | $12.53 |
 | Claude Sonnet 5 | 0 of 33 | 72/74 | 31/32; attacker text in a reply | $4.78 |
@@ -98,7 +98,7 @@ quotes the attacker to refuse fails too; every flagged draft is in the report ve
 |---|---|---|---|
 | Claude Opus 5.5 (Ask default) | 0 of 44 | 0 | 2.36¢ |
 | Gemini 4 Argon | 0 of 44 | 0 | 0.74¢ |
-| GPT-6.1 | 1 of 44 (`i02`: quoted the planted terms to refuse them) | 0 | 0.46¢ |
+| GPT-6.1 Sol | 1 of 44 (`i02`: quoted the planted terms to refuse them) | 0 | 0.46¢ |
 
 Argon passes at about a third of the cost, so by the ranking rule Ask could move too. It stays on
 Opus until Ask's answers are measured for quality, not only safety.
