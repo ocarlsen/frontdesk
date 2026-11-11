@@ -6,7 +6,7 @@ both, ranks what needs me and says why, and drafts the replies. It runs on my co
 model I choose.
 
 It doesn't know everything my Claude Code sessions know about me yet. That's next
-([#67](https://github.com/ocarlsen/frontdesk/issues/67), [#69](https://github.com/ocarlsen/frontdesk/issues/69)).
+([#67](https://github.com/ocarlsen/frontdesk/issues/67)).
 
 - [Live demo](https://frontdesk.ocarlsen.com/index.html): a synthetic inbox, nothing to install
 - [Walkthrough video](docs/site/frontdesk-tour.mp4): three and a half minutes, no sound
