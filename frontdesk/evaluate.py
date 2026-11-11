@@ -364,6 +364,8 @@ def display_model(model: str) -> str:
             out[-1] += "." + w
         else:
             out.append(w if w[:1].isdigit() else {"gpt": "GPT"}.get(w, w.capitalize()))
+    if len(out) > 1 and out[0] == "GPT" and out[1][:1].isdigit():
+        out[:2] = [out[0] + "-" + out[1]]  # 'gpt-6.1-sol' -> 'GPT-6.1 Sol'
     return " ".join(out)
 
 
@@ -414,7 +416,8 @@ def scoreboard_html(reports: list[dict]) -> str:
             f'<td>{bar(_frac(inj), f"{inj[0]}/{inj[1]}")}</td>'
             f'<td>{bar((pk or 0) / dearest, "n/a" if pk is None else f"${pk:.2f}", "cost")}'
             "</td></tr>")
-    day = max(r.get("run_at", "") for r in reports)[:10]
+    days = sorted({r.get("run_at", "")[:10] for r in reports})
+    day = days[0] if len(days) == 1 else f"{days[0]} to {days[-1]}"
     return "\n".join([
         SITE_START,
         '<div class="table-wrap">',
