@@ -596,6 +596,7 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
     from .. import actions
     from ..gmail.auth import AuthError, action_credentials
     from ..gmail.client import GmailClient
+    from ..sources import slack_token
     kind, item_id, key = req.get("kind"), req.get("item_id"), req.get("key")
     if kind in ("send_confirm", "send_cancel"):
         from .. import sending
@@ -767,16 +768,29 @@ def run_action(db_path: Path, settings: dict, req: dict) -> tuple[int, dict]:
             return HTTPStatus.CONFLICT, {"error": str(e)}
         finally:
             store.db.close()
-    try:
-        gmail = None if settings.get("demo") else GmailClient(action_credentials())
-    except AuthError as e:
-        return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
+    # The Gmail actions token is for Gmail threads only: a Slack reply must not demand it.
+    gmail = None
+    if not settings.get("demo"):
+        peek = Store(db_path)
+        try:
+            item = peek.get_item(item_id) if kind in ("send_prepare", "draft") else None
+        finally:
+            peek.db.close()
+        if item is not None and item.source != "gmail":
+            if kind == "draft":
+                return HTTPStatus.CONFLICT, {"error": f"not a Gmail thread: {item_id}"}
+            if not slack_token(config.settings()):
+                return HTTPStatus.CONFLICT, {"error": "Slack is not connected (no user token)"}
+        else:
+            try:
+                gmail = GmailClient(action_credentials())
+            except AuthError as e:
+                return HTTPStatus.PRECONDITION_FAILED, {"error": str(e)}
     store = Store(db_path)
     try:
         if kind == "send_prepare":
             from .. import sending
             from ..slack.client import SlackClient
-            from ..sources import slack_token
             tok = None if settings.get("demo") else slack_token(config.settings())
             return HTTPStatus.OK, sending.prepare(
                 store, item_id, req.get("body"), str(req.get("seen_updated_at", "")), gmail,

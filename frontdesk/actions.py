@@ -22,6 +22,7 @@ import sqlite3
 import time
 
 import requests
+from google.auth.exceptions import GoogleAuthError, TransportError
 
 from . import drafting
 from .gmail.client import GmailClient, GmailError
@@ -45,6 +46,11 @@ def _check_account(gmail: GmailClient, account: str) -> None:
     if owner != account.lower():
         raise ActionError(f"the actions token is for {owner}, but this thread is in {account}")
 
+
+# A dropped connection or a credential refresh that fails mid-call. Label changes are idempotent,
+# so the owner can simply try again.
+_UNREACHABLE = (requests.RequestException, GoogleAuthError)
+_TRY_AGAIN = "Gmail did not answer; try again"
 
 _CLIENT_KEY = re.compile(r"[A-Za-z0-9-]{8,64}")
 
@@ -79,6 +85,9 @@ def set_archived(store: Store, item_id: str, archived: bool, gmail: GmailClient 
     except (GmailError, ActionError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
+    except _UNREACHABLE as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(_TRY_AGAIN) from e
     if archived:
         store.hide(item_id, "archived")
     else:
@@ -108,6 +117,8 @@ def result_op(item_id: str, op: str, gmail: GmailClient | None) -> dict:
         gmail.modify_thread(m.group(1), add=add, remove=remove)
     except GmailError as e:
         raise ActionError(str(e)) from e
+    except _UNREACHABLE as e:
+        raise ActionError(_TRY_AGAIN) from e
     return {"status": "done", "op": op}
 
 
@@ -141,6 +152,9 @@ def move_to_inbox(store: Store, item_id: str, gmail: GmailClient | None, client_
     except (GmailError, ActionError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
+    except _UNREACHABLE as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(_TRY_AGAIN) from e
     store.set_labels(item_id, [*item.labels, "INBOX"])
     store.unhide(item_id)
     store.finish_action(action_id, "done")
@@ -186,6 +200,9 @@ def set_starred(store: Store, item_id: str, starred: bool, gmail: GmailClient | 
     except (GmailError, ActionError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
+    except _UNREACHABLE as e:
+        store.finish_action(action_id, "failed")
+        raise ActionError(_TRY_AGAIN) from e
     labels = [lb for lb in item.labels if lb != "STARRED"] + (["STARRED"] if starred else [])
     store.set_labels(item_id, labels)
     store.finish_action(action_id, "done")
@@ -237,6 +254,13 @@ def save_draft(store: Store, item_id: str, body: str, seen_updated_at: str,
     except (GmailError, ActionError, drafting.DraftError) as e:
         store.finish_action(action_id, "failed")
         raise ActionError(str(e)) from e
+    except TransportError as e:   # before the create call or during it: say we don't know
+        store.finish_action(action_id, "unknown")
+        raise ActionError("Gmail did not answer; check Drafts before trying again") from e
+    except GoogleAuthError as e:   # the token could not be refreshed: nothing was created
+        store.finish_action(action_id, "failed")
+        raise ActionError("Gmail would not accept the saved sign-in; reconnect Gmail actions") \
+            from e
     except requests.RequestException as e:
         # The create call is not retried: it may have reached Gmail. Record that we don't know.
         store.finish_action(action_id, "unknown")
@@ -316,6 +340,8 @@ def mark_read(store: Store, item_id: str, gmail: GmailClient | None, slack=None)
             gmail.modify_thread(_native_id(item_id), remove=["UNREAD"])
         except GmailError as e:
             raise ActionError(str(e)) from e
+        except _UNREACHABLE as e:
+            raise ActionError(_TRY_AGAIN) from e
     store.set_labels(item_id, [lb for lb in item.labels if lb != "UNREAD"])
     store.set_local_unread(item_id, False)
     return {"status": "done"}
@@ -352,6 +378,8 @@ def mark_unread(store: Store, item_id: str, gmail: GmailClient | None) -> dict:
             gmail.modify_thread(_native_id(item_id), add=["UNREAD"])
         except GmailError as e:
             raise ActionError(str(e)) from e
+        except _UNREACHABLE as e:
+            raise ActionError(_TRY_AGAIN) from e
     if "UNREAD" not in item.labels:
         store.set_labels(item_id, [*item.labels, "UNREAD"])
     return {"status": "done"}
@@ -475,5 +503,5 @@ def situation_reopen(store: Store, item_id, author) -> dict:
 
 
 def situation_delete(store: Store, item_id, author) -> dict:
-    _author(author)
+    _owner(author, "delete a situation item")
     return _memory(store.delete_situation, _situation_id(item_id))

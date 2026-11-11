@@ -350,3 +350,55 @@ def test_upsert_reports_whether_anything_changed(tmp_path):
     item.labels.append("UNREAD")
     assert store.upsert_item(item) is True
 
+
+
+def test_slack_send_prepare_needs_no_gmail_actions_token(served, monkeypatch):
+    from frontdesk import sources
+    from frontdesk.gmail import auth
+    from frontdesk.slack import client as slack_client
+
+    def no_token():
+        raise auth.AuthError("run frontdesk authorize-actions")
+    monkeypatch.setattr(auth, "action_credentials", no_token)
+
+    class FakeSlack:
+        def __init__(self, token):
+            pass
+
+        def auth_test(self):
+            return {"url": "https://example.slack.com/"}
+    monkeypatch.setattr(slack_client, "SlackClient", FakeSlack)
+    monkeypatch.setattr(sources, "slack_token", lambda settings: "xoxp-test")
+    store, start = served
+    seen = store.get_item("slack:C1:1.0").updated_at
+    code, out = _post(start(), {"kind": "send_prepare", "item_id": "slack:C1:1.0",
+                                "key": "k" * 16, "body": "On it.", "seen_updated_at": seen})
+    assert code == 200 and not out.get("demo") and out["action_id"]
+
+
+def test_slack_send_prepare_without_a_slack_token_is_not_a_demo_send(served, monkeypatch):
+    from frontdesk import sources
+    from frontdesk.gmail import auth
+
+    def never():
+        raise AssertionError("no Gmail token for a Slack thread")
+    monkeypatch.setattr(auth, "action_credentials", never)
+    monkeypatch.setattr(sources, "slack_token", lambda settings: None)
+    store, start = served
+    seen = store.get_item("slack:C1:1.0").updated_at
+    code, out = _post(start(), {"kind": "send_prepare", "item_id": "slack:C1:1.0",
+                                "key": "k" * 16, "body": "On it.", "seen_updated_at": seen})
+    assert code == 409 and "Slack is not connected" in out["error"]
+
+
+def test_slack_draft_is_refused_without_asking_for_the_gmail_token(served, monkeypatch):
+    from frontdesk.gmail import auth
+
+    def never():
+        raise AssertionError("no Gmail token for a Slack thread")
+    monkeypatch.setattr(auth, "action_credentials", never)
+    store, start = served
+    seen = store.get_item("slack:C1:1.0").updated_at
+    code, out = _post(start(), {"kind": "draft", "item_id": "slack:C1:1.0", "key": "k" * 16,
+                                "body": "On it.", "seen_updated_at": seen})
+    assert code == 409 and "not a Gmail thread" in out["error"]

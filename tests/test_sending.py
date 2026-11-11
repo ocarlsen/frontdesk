@@ -235,3 +235,60 @@ def test_slack_post_error_is_failed_and_timeout_unknown(tmp_path):
         bad = FakeSlack(exc=exc)
         assert sending.dispatch_due(s, lambda: None, now=T0 + timedelta(seconds=31),
                                     slack_factory=lambda b=bad: b) == [(p["action_id"], want)]
+
+
+def _queued(s, g=None):
+    p = prepared(s, g or FakeGmail())
+    sending.confirm(s, p["action_id"], now=T0)
+    return p["action_id"]
+
+
+def _dispatch_with(s, exc):
+    """One dispatch tick where Gmail's send raises `exc`."""
+    bad = FakeGmail(exc=exc)
+    return sending.dispatch_due(s, lambda: bad, now=T0 + timedelta(seconds=31))
+
+
+def test_refresh_failure_means_not_sent(tmp_path):
+    from google.auth.exceptions import RefreshError
+    s = store(tmp_path)
+    aid = _queued(s)
+    assert _dispatch_with(s, RefreshError("expired")) == [(aid, "failed")]
+    assert s.db.execute("SELECT status FROM actions WHERE id=?", (aid,)).fetchone()[0] == "failed"
+
+
+def test_google_transport_error_during_send_is_unknown(tmp_path):
+    from google.auth.exceptions import TransportError
+    s = store(tmp_path)
+    aid = _queued(s)
+    assert _dispatch_with(s, TransportError("reset")) == [(aid, "unknown")]
+
+
+def test_unexpected_error_during_send_is_unknown_not_stuck(tmp_path):
+    s = store(tmp_path)
+    aid = _queued(s)
+    assert _dispatch_with(s, ValueError("garbled")) == [(aid, "unknown")]
+    assert s.db.execute("SELECT status FROM actions WHERE id=?", (aid,)).fetchone()[0] == "unknown"
+
+
+def test_credential_error_before_the_request_is_failed_and_does_not_stop_the_loop(tmp_path):
+    from frontdesk.gmail.auth import AuthError
+    s = store(tmp_path)
+    aid = _queued(s)
+
+    def no_token():
+        raise AuthError("reconnect Gmail actions")
+    assert sending.dispatch_due(s, no_token, now=T0 + timedelta(seconds=31)) == [(aid, "failed")]
+
+
+def test_row_stuck_in_sending_is_swept_to_unknown(tmp_path):
+    s, g = store(tmp_path), FakeGmail()
+    aid = _queued(s, g)
+    with s.tx() as db:   # as if the process died after claiming it
+        db.execute("UPDATE actions SET status='sending' WHERE id=?", (aid,))
+    assert sending.dispatch_due(s, lambda: g, now=T0 + timedelta(seconds=40)) == []
+    assert s.db.execute("SELECT status FROM actions WHERE id=?", (aid,)).fetchone()[0] == "sending"
+    assert sending.dispatch_due(s, lambda: g, now=T0 + sending.STALE_AFTER
+                                + timedelta(minutes=1)) == [(aid, "unknown")]
+    assert s.db.execute("SELECT status FROM actions WHERE id=?", (aid,)).fetchone()[0] == "unknown"
+    assert g.sent == []
