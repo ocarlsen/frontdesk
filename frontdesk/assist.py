@@ -267,7 +267,7 @@ def build_prompt(store: Store, item: Item, question: str, profile: str, *, autho
     if history:
         convo = "\n\n".join(
             (speaker(h["author"]) + _owner_text(h["text"])) if h["role"] == "owner"
-            else "You: " + h["text"] for h in history)
+            else "You: " + _owner_text(h["text"]) for h in history)
         parts.append(f"Our conversation so far about this thread:\n{convo}")
     asker = "The owner asks" if author == OWNER else \
         f"{speaker(author).removesuffix(': ')}, asks"

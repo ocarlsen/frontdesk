@@ -48,4 +48,5 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 # Test fixtures embed long literal headers/bodies.
 "tests/**" = ["E501"]
-"tools/gen_demo_fixtures.py" = ["E501"]
+# Generator scripts embed long literal fixture text.
+"tools/gen_*_fixtures.py" = ["E501"]

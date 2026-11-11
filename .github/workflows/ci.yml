@@ -19,7 +19,7 @@ jobs:
       - name: Install
         run: pip install -e '.[dev]'
       - name: Lint
-        run: ruff check frontdesk tests
+        run: ruff check frontdesk tests tools
       - name: Test
         run: pytest -q
 

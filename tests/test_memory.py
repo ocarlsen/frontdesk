@@ -368,6 +368,18 @@ def test_confirm_is_the_owners_alone(tmp_path):
         actions.situation_delete(s, "1", "owner")
 
 
+def test_deleting_a_situation_item_is_the_owners_alone(tmp_path):
+    s = Store(tmp_path / "d.db")
+    i = s.add_situation("y", "session:a")
+    with pytest.raises(actions.ActionError, match="only the owner"):
+        actions.situation_delete(s, i, "session:a")
+    assert [x["id"] for x in s.situation()] == [i]
+    assert actions.situation_delete(s, i, "owner") == {"status": "done"}
+    assert s.situation() == []
+
+
+
+
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     db = tmp_path / "api.db"
@@ -411,6 +423,13 @@ def test_api_notes_and_ask_record_the_owner(api):
     assert post({"kind": "ask", "item_id": "gmail:t1", "key": "k" * 16,
                  "question": "Again?"})[0] == 400
     assert len(get("/api/ask?item=gmail:t1")["history"]) == 2
+
+
+def test_api_session_cannot_delete_a_situation_item(api):
+    post, get, db, _ = api
+    sid = Store(db).add_situation("Keep me.", "owner")
+    assert post({"kind": "situation_delete", "id": sid, "author": "session:x"})[0] == 400
+    assert [i["text"] for i in get("/api/profile")["situation"]] == ["Keep me."]
 
 
 def test_api_situation_lifecycle(api):

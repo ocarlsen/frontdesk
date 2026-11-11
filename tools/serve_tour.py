@@ -112,7 +112,8 @@ def main() -> int:
     from http import HTTPStatus
     server.run_sync = lambda _db, _s: (HTTPStatus.CONFLICT,
                                        {"error": "Sync is off in the tour (synthetic inbox)."})
-    server.gmail_draft = lambda _db, _s, _item, client_factory=None: (HTTPStatus.OK, {"draft": None})
+    server.gmail_draft = lambda _db, _s, _item, client_factory=None: (
+        HTTPStatus.OK, {"draft": None})
     db = work / "tour.db"
     st = Store(db)
     seed(st, now)

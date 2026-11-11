@@ -70,3 +70,44 @@ def test_export_shows_web_images_only_on_request_and_only_its_own(tmp_path):
     assert srcs and all(s.startswith("https://frontdesk.ocarlsen.com/img/") for s in srcs), srcs
     for s in srcs:
         assert (out / "img" / s.split("/img/")[1].split("?")[0]).is_file(), s
+
+
+def test_export_writes_its_own_readme(tmp_path):
+    out = tmp_path / "site"
+    export_demo(out)
+    text = (out / "README.md").read_text()
+    assert "synthetic" in text and "export-demo" in text
+
+
+def test_self_check_passes_on_a_normal_export_and_names_what_is_missing(tmp_path):
+    import pytest
+
+    from frontdesk.export import ExportError, verify_export
+    out = tmp_path / "site"
+    export_demo(out)
+    verify_export(out)
+    rows = json.loads((out / "api" / "items.json").read_text())
+    first = static_file(rows[0]["item"]["id"])
+    (out / "api" / "people" / f"{first}.json").unlink()
+    with pytest.raises(ExportError, match=f"api/people/{first}.json"):
+        verify_export(out)
+    (out / "api" / "people" / f"{first}.json").write_text("{}")
+    html = next(p for p in (out / "msg").glob("*.html") if not p.stem.endswith("-images"))
+    html.with_name(html.stem + "-images.html").unlink()
+    with pytest.raises(ExportError, match=f"msg/{html.stem}-images.html"):
+        verify_export(out)
+    html.unlink()
+    with pytest.raises(ExportError, match=f"msg/{html.name}"):
+        verify_export(out)
+
+
+def test_export_demo_runs_the_self_check(tmp_path, monkeypatch):
+    import pytest
+
+    from frontdesk import export
+
+    def boom(out):
+        raise export.ExportError("missing: x")
+    monkeypatch.setattr(export, "verify_export", boom)
+    with pytest.raises(export.ExportError, match="missing: x"):
+        export.export_demo(tmp_path / "site")

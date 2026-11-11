@@ -23,6 +23,7 @@ from email.utils import parseaddr
 from urllib.parse import urlparse
 
 import requests
+from google.auth.exceptions import RefreshError, TransportError
 
 from . import drafting
 from .actions import (
@@ -187,7 +188,19 @@ def dispatch_due(store: Store, gmail_factory, now: datetime | None = None,
     """Send every queued message whose undo window has passed. Returns (action_id, status)."""
     now = now or _now()
     out = []
-    due = store.db.execute("SELECT * FROM actions WHERE kind='send' AND status='queued'")
+    # A row still 'sending' long after it was due means the process died between claiming it
+    # and recording the outcome. Whether it went out is unknown, so say so and never resend.
+    for row in store.db.execute("SELECT * FROM actions WHERE kind='send' "
+                                "AND status='sending'").fetchall():
+        p = _payload(row)
+        if "send_at" in p and now - _parse(p["send_at"]) > STALE_AFTER:
+            with store.tx() as db:
+                swept = db.execute("UPDATE actions SET status='unknown' WHERE id=? "
+                                   "AND status='sending'", (row["id"],)).rowcount == 1
+            if swept:
+                out.append((row["id"], "unknown"))
+    due = store.db.execute("SELECT * FROM actions WHERE kind='send' "
+                           "AND status='queued'").fetchall()   # rows change status below
     for row in due:
         p = _payload(row)
         if _parse(p["send_at"]) > now:
@@ -205,21 +218,29 @@ def dispatch_due(store: Store, gmail_factory, now: datetime | None = None,
         elif item is None or item.updated_at != p["seen_updated_at"]:
             result = "stale"
         else:
-            try:
-                if p.get("source") == "slack":
-                    if slack_factory is None:
-                        raise SlackError("chat.postMessage", "not_connected")
-                    sent = slack_factory().post_message(p["channel"], p["text"],
-                                                        p.get("thread_ts"))
-                    p["slack_ts"] = sent.get("ts", "")
-                else:
-                    sent = gmail_factory().send_message(p["raw"], p["thread_id"])
-                    p["gmail_id"] = sent.get("id", "")
-                result = "sent"
-            except (GmailError, SlackError):
+            is_slack = p.get("source") == "slack"
+            try:   # before any request: whatever goes wrong here, nothing was sent
+                if is_slack and slack_factory is None:
+                    raise SlackError("chat.postMessage", "not_connected")
+                client = slack_factory() if is_slack else gmail_factory()
+            except Exception:  # noqa: BLE001 - missing token, bad credentials, anything
+                client = None
                 result = "failed"
-            except requests.RequestException:
-                result = "unknown"   # it may have gone out; never resend blindly
+            if client is not None:
+                try:
+                    if is_slack:
+                        sent = client.post_message(p["channel"], p["text"], p.get("thread_ts"))
+                        p["slack_ts"] = sent.get("ts", "")
+                    else:
+                        sent = client.send_message(p["raw"], p["thread_id"])
+                        p["gmail_id"] = sent.get("id", "")
+                    result = "sent"
+                except (GmailError, SlackError, RefreshError):
+                    result = "failed"    # the service said no, or no token to ask it with
+                except (requests.RequestException, TransportError):
+                    result = "unknown"   # it may have gone out; never resend blindly
+                except Exception:  # noqa: BLE001 - never leave the row 'sending'
+                    result = "unknown"   # the request was already under way: check, don't resend
         store.finish_action(row["id"], result, p)
         if result == "sent":
             store.log_usage("send", source=p.get("source_kind", p.get("source", "")),

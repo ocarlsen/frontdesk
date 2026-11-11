@@ -241,3 +241,69 @@ def test_mark_read_on_a_slack_channel_thread_is_here_only(tmp_path):
     assert sl.marked == []
     assert store.local_read("slack:C1:1730000000.000001") is not None
     assert "UNREAD" not in store.get_item("slack:C1:1730000000.000001").labels
+
+
+class DownGmail(FakeGmail):
+    """Every Gmail call fails the way a dead network or a dead credential does."""
+    def __init__(self, exc):
+        super().__init__()
+        self.exc = exc
+
+    def modify_thread(self, thread_id, add=(), remove=()):
+        raise self.exc
+
+
+def _unreachable_errors():
+    import requests
+    from google.auth.exceptions import RefreshError, TransportError
+    return [requests.ConnectionError("reset"), RefreshError("expired"), TransportError("down")]
+
+
+@pytest.mark.parametrize("n", range(3))
+def test_archive_network_or_credential_failure_is_failed_and_an_action_error(tmp_path, n):
+    store, g = store_with_item(tmp_path), DownGmail(_unreachable_errors()[n])
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.set_archived(store, "gmail:t1", True, g, "click-0001")
+    assert store.action("archive:gmail:t1:click-0001")["status"] == "failed"
+    assert len(store.ranked()) == 1
+
+
+@pytest.mark.parametrize("n", range(3))
+def test_other_label_actions_turn_unreachable_into_action_errors(tmp_path, n):
+    g = DownGmail(_unreachable_errors()[n])
+    store = store_with_item(tmp_path)
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.set_starred(store, "gmail:t1", True, g, "click-0002")
+    assert store.action("star:gmail:t1:click-0002")["status"] == "failed"
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.result_op("gmail:abc123", "read", g)
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.mark_unread(store, "gmail:t1", g)
+
+
+def test_mark_read_and_move_to_inbox_turn_unreachable_into_action_errors(tmp_path):
+    store = store_with_item(tmp_path)
+    item = store.get_item("gmail:t1")
+    store.set_labels("gmail:t1", [*item.labels, "UNREAD"])
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.mark_read(store, "gmail:t1", DownGmail(_unreachable_errors()[0]))
+    store.set_labels("gmail:t1", [lb for lb in item.labels if lb != "INBOX"])
+    with pytest.raises(actions.ActionError, match="try again"):
+        actions.move_to_inbox(store, "gmail:t1", DownGmail(_unreachable_errors()[1]), "click-0003")
+    assert store.action("inbox:gmail:t1:click-0003")["status"] == "failed"
+
+
+def test_draft_credential_failure_is_failed_but_transport_failure_is_unknown(tmp_path, monkeypatch):
+    from google.auth.exceptions import RefreshError, TransportError
+    seen = "2026-10-28T16:00:00Z"
+    store, g = store_with_item(tmp_path), FakeGmail()
+    for n, (exc, status) in enumerate([(RefreshError("expired"), "failed"),
+                                       (TransportError("down"), "unknown")]):
+        key = f"click-010{n}"
+
+        def boom(*a, _exc=exc, **k):
+            raise _exc
+        monkeypatch.setattr(actions.drafting, "save_reply", boom)
+        with pytest.raises(actions.ActionError):
+            actions.save_draft(store, "gmail:t1", "Thanks.", seen, g, key)
+        assert store.action(f"draft:gmail:t1:{key}")["status"] == status
