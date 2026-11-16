@@ -42,7 +42,7 @@ hr { border: 0; border-top: 2px solid var(--line); margin: 56px 0 24px; }
 <body>
 <main>
 <h1>Memory needs an author</h1>
-<p class="dek">We built an inbox agent to stop switching between Gmail and Slack, and to coordinate with
+<p class="dek">I built an inbox agent to stop switching between Gmail and Slack, and to coordinate with
 Claude Code sessions behind the scenes. Then it
 quoted a coding session's note back to me as my own. This is the fix, tested on three vendors'
 models.</p>
@@ -73,13 +73,12 @@ calibrated recommendations.</p>
 
 <h2>Why it happened</h2>
 <p>Mail from other people already went to the model as quoted data it is told never to obey. My
-profile and notes went in as trusted, because they were mine. But every tool acting for me is on
-my side too, and since the memory couldn't tell us apart, the model was
-repeating their words as mine.</p>
+profile and notes went in as trusted, because they were mine. But my notes were no longer all
+mine, and the memory couldn't tell us apart, so the model repeated a helper's words as mine.</p>
 <p>The model keeps no memory between calls. Each Ask rebuilds the context from a local SQLite file
 and sends it to whichever model I picked, so the same memory works on every model:</p>
 <div class="table-wrap"><table>
-<thead><tr><th>Section</th><th>Written by</th><th>Treated as</th></tr></thead>
+<thead><tr><th>Section</th><th>Written by</th><th>Treated as today</th></tr></thead>
 <tbody>
 <tr><td>The thread, and related threads with the same people</td><td>Other people</td><td>Untrusted data</td></tr>
 <tr><td>Profile: who I am, what matters to me</td><td>Me</td><td>Trusted</td></tr>
@@ -146,9 +145,10 @@ text and no invented facts in a draft), but I haven't measured how good Ask's an
 <p>Admittedly, 12 cases per condition is a small sample. And zero of 12 is still consistent with a true rate as
 high as about one in four, the top of its 95% interval.</p>
 <p>The judge had a bug at first. If an answer correctly called a note unconfirmed but the note
-was about something I did, the judge counted that as crediting me, so models scored 9 or 10 of 12.
-I fixed the judge and re-graded the saved answers without asking the models again, and every model
-scored 12 of 12. The main table didn't change. The
+was about something I did, the judge counted that as crediting me, so models scored 9 or 10 of 12
+on using the fact and flagging the note. I fixed the judge and re-graded the saved answers without
+asking the models again, and every model scored 12 of 12. That score isn't in the table, and none
+of the table's numbers changed. The
 <a href="https://github.com/ocarlsen/frontdesk/tree/main/evals/results">reports</a>, with every
 answer and every judgment, are in the repository.</p>
 
