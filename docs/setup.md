@@ -18,7 +18,7 @@ Opus 5.5, so the defaults need a Google and an Anthropic key. Any vendor below w
 | Vendor | `settings.json` | Key | Install |
 | --- | --- | --- | --- |
 | Anthropic (Ask default) | `"ask_provider": "anthropic", "ask_model": "claude-opus-5-5"` | `ANTHROPIC_API_KEY`, or Keychain `frontdesk-anthropic` | included |
-| OpenAI | `"provider": "openai", "model": "gpt-6.2-sol"` | `OPENAI_API_KEY`, or Keychain `frontdesk-openai` | `.venv/bin/pip install -e '.[openai]'` |
+| OpenAI | `"provider": "openai", "model": "gpt-6.1-sol"` | `OPENAI_API_KEY`, or Keychain `frontdesk-openai` | `.venv/bin/pip install -e '.[openai]'` |
 | Gemini (ranking default) | `"provider": "gemini", "model": "gemini-4-argon"` | `GEMINI_API_KEY`, or Keychain `frontdesk-gemini` | `.venv/bin/pip install -e '.[gemini]'` |
 
 To store a key in the Keychain: `security add-generic-password -U -s frontdesk-anthropic -a $USER -w`
