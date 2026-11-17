@@ -27,7 +27,7 @@ DEFAULTS = {
     "ask_models": [
         {"provider": "anthropic", "model": "claude-opus-5-5", "label": "Opus 5.5"},
         {"provider": "anthropic", "model": "claude-fable-5-1", "label": "Fable 5.1"},
-        {"provider": "openai", "model": "gpt-6.1-sol", "label": "GPT-6.1"},
+        {"provider": "openai", "model": "gpt-6.2-sol", "label": "GPT-6.2"},
         {"provider": "gemini", "model": "gemini-4-argon", "label": "Gemini 4 Argon"},
         {"provider": "gemini", "model": "gemini-3.8-flash", "label": "Gemini 3.8 Flash"},
     ],
