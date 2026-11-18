@@ -96,6 +96,6 @@ def test_keep_and_rank_writes_a_trace_unless_off(tmp_path):
                        provider_factory=Provider)
     server.keep_result(db, {}, f"gmail:{OLD}", client_factory=lambda: SyncGmail("", "", threads()),
                        provider_factory=lambda: Provider(fail=True))
-    rows = [json.loads(x) for x in traces.path().read_text().splitlines()]
+    rows = [json.loads(x) for x in traces.path().read_bytes().split(b"\n") if x]
     assert [r["outcome"] for r in rows] == ["ok", "error"]
     assert rows[0]["item_id"] == f"gmail:{OLD}" and rows[0]["user"] and rows[0]["system"]

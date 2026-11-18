@@ -9,6 +9,13 @@ from .items import BUCKETS
 from .store import Store
 
 
+def _positive(v: str) -> int:
+    n = int(v)
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"must be 1 or more, got {v}")
+    return n
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="frontdesk")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -21,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status", help="counts per bucket")
     tr = sub.add_parser("traces", help="read recent triage traces: input, then raw output "
                                        "(local file; holds mail text)")
-    tr.add_argument("-n", type=int, default=50, help="newest N records (default 50)")
+    tr.add_argument("-n", type=_positive, default=50, help="newest N records (default 50)")
     tr.add_argument("--bucket", choices=BUCKETS, help="only rankings that landed in this bucket")
     tr.add_argument("--version", help="only this prompt version")
     tr.add_argument("--system", action="store_true", help="also show the system prompt")
@@ -228,8 +235,8 @@ def traces_main(args) -> int:
     from . import traces
     rows = traces.load(args.n, args.bucket, args.version)
     if not rows and not traces.path().exists():
-        print(f"no traces yet: {traces.path()} is written by `frontdesk triage` and Sync "
-              "(setting triage_traces)")
+        print(f"no traces yet: {traces.path()} is written by Sync, Keep and "
+              "`frontdesk triage` (setting triage_traces)")
         return 0
     for r in rows:
         if args.json:

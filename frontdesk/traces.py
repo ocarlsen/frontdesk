@@ -3,9 +3,11 @@ and the parsed result), for reading real traces before changing the prompt.
 
 The file holds mail text, so it gets the same care as frontdesk.db: created 0600, never loosened,
 local only. Append-only; when an append would pass TRACES_MAX_BYTES the file moves to
-traces.1.jsonl (replacing any older one) and a fresh file starts. Only triage.run() writes."""
+traces.1.jsonl (replacing any older one) and a fresh file starts. Appends hold a file lock,
+since Sync, Keep and the CLI can run at once. Evals and the smoke check never write."""
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 from datetime import UTC, datetime
@@ -16,6 +18,10 @@ from . import config
 
 def path() -> Path:
     return config.HOME / config.TRACES_FILE
+
+
+def lock_path() -> Path:
+    return path().with_suffix(".lock")
 
 
 def rotated_path() -> Path:
@@ -39,18 +45,34 @@ def _tighten(p: Path) -> None:
 def append(rec: dict, max_bytes: int | None = None) -> None:
     """Append one record as one line, rotating first if it would pass the cap."""
     max_bytes = config.TRACES_MAX_BYTES if max_bytes is None else max_bytes
-    line = (json.dumps(rec, ensure_ascii=False) + "\n").encode()
+    # backslashreplace: a lone surrogate in mail text must not raise after the ranking is saved.
+    line = (json.dumps(rec, ensure_ascii=False) + "\n").encode("utf-8", "backslashreplace")
     p = path()
     config.ensure_home()
-    _tighten(p)
-    if p.exists() and p.stat().st_size > 0 and p.stat().st_size + len(line) > max_bytes:
-        os.replace(p, rotated_path())
-        _tighten(rotated_path())
-    fd = os.open(p, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o600)
+    lock = os.open(lock_path(), os.O_CREAT | os.O_WRONLY, 0o600)
     try:
-        os.write(fd, line)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        _tighten(p)
+        size = p.stat().st_size if p.exists() else 0
+        if size > 0 and size + len(line) > max_bytes:
+            os.replace(p, rotated_path())
+            _tighten(rotated_path())
+            size = 0
+        fd = os.open(p, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o600)
+        try:
+            if size and not _ends_with_newline(p):   # a torn tail must not swallow this record
+                line = b"\n" + line
+            os.write(fd, line)
+        finally:
+            os.close(fd)
     finally:
-        os.close(fd)
+        os.close(lock)   # closing drops the flock
+
+
+def _ends_with_newline(p: Path) -> bool:
+    with open(p, "rb") as f:
+        f.seek(-1, os.SEEK_END)
+        return f.read(1) == b"\n"
 
 
 def record(item, provider, version: str, trace: dict, outcome: str, triage=None,
@@ -84,11 +106,17 @@ def _read(p: Path):
     """Records newest first, skipping a torn or unreadable line."""
     if not p.exists():
         return
-    for line in reversed(p.read_text(encoding="utf-8").splitlines()):
-        try:
-            yield json.loads(line)
-        except ValueError:
+    # Split on b"\n" only: str.splitlines() also breaks on U+2028, U+2029 and U+0085, which
+    # json.dumps(ensure_ascii=False) leaves raw inside a string.
+    for line in reversed(p.read_bytes().split(b"\n")):
+        if not line.strip():
             continue
+        try:
+            r = json.loads(line)
+        except ValueError:   # includes UnicodeDecodeError from a line torn mid-codepoint
+            continue
+        if isinstance(r, dict):
+            yield r
 
 
 def load(n: int, bucket: str | None = None, version: str | None = None) -> list[dict]:
@@ -110,9 +138,9 @@ def load(n: int, bucket: str | None = None, version: str | None = None) -> list[
 def format_record(r: dict, system: bool = False) -> str:
     """One trace for a pager: header, INPUT (the system prompt only on request), RAW OUTPUT."""
     p = r.get("parsed") or {}
-    what = f"{p['bucket']}/{p['urgency']}" if p else "-"
-    head = (f"{r['ts']}  {r['item_id']}  {r['model_requested']}  {what}  {r['outcome']}  "
-            f"prompt {r['prompt_version']}")
+    what = f"{p.get('bucket', '?')}/{p.get('urgency', '?')}" if p else "-"
+    head = (f"{r.get('ts', '?')}  {r.get('item_id', '?')}  {r.get('model_requested', '?')}  "
+            f"{what}  {r.get('outcome', '?')}  prompt {r.get('prompt_version', '?')}")
     parts = ["=" * 78, head]
     if r.get("error"):
         parts.append(f"error: {r['error']}")

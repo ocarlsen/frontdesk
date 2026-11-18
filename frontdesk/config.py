@@ -87,6 +87,9 @@ def settings() -> dict:
     unknown = set(s) - set(DEFAULTS)
     if unknown:
         raise ValueError(f"{SETTINGS_PATH}: unknown setting(s) {sorted(unknown)}")
+    if not isinstance(s["triage_traces"], bool):
+        raise ValueError(f"{SETTINGS_PATH}: triage_traces must be true or false, "
+                         f"got {s['triage_traces']!r}")
     return s
 
 

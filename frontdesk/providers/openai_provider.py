@@ -114,7 +114,8 @@ class OpenAIProvider:
             if reason == "content_filter":
                 raise ProviderRefusal("openai: blocked by content filter")
             if reason == "max_output_tokens":
-                raise ProviderError("openai: hit max_output_tokens before finishing")
+                raise ProviderError("openai: hit max_output_tokens before finishing",
+                                    raw=resp.output_text or "")
             raise ProviderError(f"openai: incomplete ({reason or 'unknown'})")
         if resp.status not in (None, "completed"):
             code = getattr(resp.error, "code", None) if resp.error else None
@@ -125,9 +126,9 @@ class OpenAIProvider:
         try:
             data = json.loads(text)
         except json.JSONDecodeError as e:
-            raise ProviderError("openai: response was not valid JSON") from e
+            raise ProviderError("openai: response was not valid JSON", raw=text) from e
         if not isinstance(data, dict):
-            raise ProviderError("openai: response JSON was not an object")
+            raise ProviderError("openai: response JSON was not an object", raw=text)
 
         u = resp.usage
         details = getattr(u, "input_tokens_details", None) if u else None

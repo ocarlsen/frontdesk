@@ -108,22 +108,22 @@ class GeminiProvider:
             raise ProviderError("gemini: no candidates in response")
         cand = resp.candidates[0]
         finish = _enum_name(cand.finish_reason)
+        parts = (cand.content.parts if cand.content else None) or []
+        text = "".join(p.text for p in parts if p.text and not p.thought)
         if finish in REFUSAL_FINISH:
             raise ProviderRefusal(f"gemini: blocked ({finish})")
         if finish == "MAX_TOKENS":
-            raise ProviderError("gemini: hit max_output_tokens before finishing")
+            raise ProviderError("gemini: hit max_output_tokens before finishing", raw=text)
         if finish and finish not in ("STOP", "FINISH_REASON_UNSPECIFIED"):
-            raise ProviderError(f"gemini: stopped early ({finish})")
-        parts = (cand.content.parts if cand.content else None) or []
-        text = "".join(p.text for p in parts if p.text and not p.thought)
+            raise ProviderError(f"gemini: stopped early ({finish})", raw=text)
         if not text:
             raise ProviderError("gemini: no text in response")
         try:
             data = json.loads(text)
         except json.JSONDecodeError as e:
-            raise ProviderError("gemini: response was not valid JSON") from e
+            raise ProviderError("gemini: response was not valid JSON", raw=text) from e
         if not isinstance(data, dict):
-            raise ProviderError("gemini: response JSON was not an object")
+            raise ProviderError("gemini: response JSON was not an object", raw=text)
 
         u = resp.usage_metadata
         prompt = (u.prompt_token_count or 0) if u else 0

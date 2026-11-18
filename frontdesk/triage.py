@@ -166,7 +166,12 @@ def triage_item(provider: Provider, item: Item, today: str | None = None,
     system, user = system_prompt(profile, situation), render_user(item, today)
     if trace is not None:
         trace.update(system=system, user=user)
-    res = provider.complete_json(system, user, SCHEMA)
+    try:
+        res = provider.complete_json(system, user, SCHEMA)
+    except ProviderError as e:
+        if trace is not None:
+            trace["raw"] = e.raw
+        raise
     if trace is not None:
         trace["raw"] = res.raw
     out = validate(res.data)
@@ -216,7 +221,7 @@ def run(store: Store, provider: Provider, limit: int | None = None, workers: int
     never re-bills the same failure forever. Returns (ok, failed); pass `done` to collect the
     saved Triage rows (for summarize()). Every ranking in the run reads the same What's going on
     lines, read once here. `traces` appends one record per call to traces.jsonl (the caller passes
-    the triage_traces setting through traces.enabled()); only this function writes them."""
+    the triage_traces setting through traces.enabled())."""
     version = prompt_version(profile)
     todo = store.items_needing_triage(version)[:limit]
     situation = situation_block(store.situation()) if todo else ""

@@ -339,8 +339,10 @@ next sync. A usage log, also on your computer, keeps counts and model costs for
 whether each was sent as FrontDesk wrote it); it holds no mail text, addresses or thread ids, and
 is never sent anywhere. A separate trace file on your computer (owner-only, never sent anywhere)
 keeps the full text each ranking sent to the model and what came back, so you can read what the
-model saw with <code>frontdesk traces</code>; it holds mail text and is capped at about 100 MB.
-Set <code>triage_traces</code> to <code>false</code> to stop it. The Memory page deletes any person you keep a note on, with their addresses. Deleting
+model saw with <code>frontdesk traces</code>; it holds mail text, is capped at about 100 MB and is
+not pruned when a thread leaves your inbox. Delete <code>traces.jsonl</code> and
+<code>traces.1.jsonl</code> to remove it, or set <code>triage_traces</code> to <code>false</code> to
+stop it. The Memory page deletes any person you keep a note on, with their addresses. Deleting
 the <code>~/.frontdesk</code> folder removes everything FrontDesk has stored.
 To revoke its access to your Google account, remove it at
 <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
