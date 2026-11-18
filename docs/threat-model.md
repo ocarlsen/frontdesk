@@ -45,8 +45,10 @@ Each item of the [OWASP Top 10 for LLM Applications, 2025 edition](https://genai
   ranking reads at most 2,500 characters of it, Ask reads every open item), to the model vendors
   whose API key you have set: ranking, Ask and Ask's reviewer can each use a different one. Ask
   also sends your notes on that thread's people, your other threads with them and the Ask
-  conversation. Also sent: searches you run against all of Gmail, to Google (results are shown, never stored or sent to a
-  model). Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
+  conversation. Also sent: searches you run, to Google and, when Slack is connected, to Slack (results
+  are shown, never stored or sent to a model unless you keep one). Drafts you save, replies you send
+  and label changes go to Gmail or Slack. Show images loads https images from the sender's hosts.
+  Nothing else. Message HTML is never sent to the model. FrontDesk has no server and no telemetry.
 - The model API key is read at call time from the vendor's environment variable
   (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) or, on macOS, its Keychain item
   (`frontdesk-anthropic`, `frontdesk-openai`, `frontdesk-gemini`). It is never written to disk by

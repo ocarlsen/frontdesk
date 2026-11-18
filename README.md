@@ -166,7 +166,9 @@ Every change the page makes to Gmail or Slack is a POST to `/api/action` that pa
 output: a confirmed send goes out when its Undo window ends, and a sync moves a Slack channel's read
 position past what you already marked read or done here (`frontdesk/slack/sync.py`
 `advance_channel_mark()`). The command line can also create a Gmail draft (`frontdesk draft`, never
-a send) and add notes as a named session, which Ask treats as unconfirmed until you confirm them.
+a send) and add notes or What's going on items as a named session. Those are stored under that
+session's name, a session cannot replace a note you wrote, and both ranking and Ask are told they
+are not confirmed until you confirm them.
 Model output is stored and shown, and nothing reads it back to start a send or a mailbox change.
 The only caller of Gmail's send and Slack's post is `frontdesk/sending.py` (`dispatch_due()`;
 `tests/test_sending.py` `test_only_the_send_module_can_send` pins it), and it sends only rows you
@@ -185,16 +187,20 @@ the sender's headers name, shown on the confirm screen before you send. There is
 and no field where you, the mail or the model can type a recipient. Ask reads the same mail plus
 your notes and related threads, so a draft it proposes can contain them (capped,
 `frontdesk/assist.py` `validate()`); read a draft before you send it. Preparing a send is refused
-once 10 are queued or sent in the last hour, or one for the same thread in the last 10 minutes
-(`_check_limits()`, called from `prepare()`; a cancelled or stale send does not count). A send is
+once 10 sends started in the last hour were confirmed, or one for the same thread in the last 10
+minutes (`_check_limits()`, called from `prepare()`). A confirmed send counts whether it is
+waiting, sent or its outcome is unknown; one that was cancelled, went stale, expired, failed or was
+never confirmed does not. A send is
 refused if a sync has brought in a new message since you loaded the thread (`prepare()`,
 `confirm()`, and again at dispatch).
 
 **What stays local and what goes to the model provider.** Thread text goes to the model vendors
 whose keys you set, along with your profile and What's going on; Ask also sends your notes on the
-people in the thread and your other threads with them. Nothing else leaves the machine except what
-you send through Gmail or Slack and searches you run. The database and your Google token are stored
-only in `~/.frontdesk`. Detail: [docs/threat-model.md](docs/threat-model.md#data-handling).
+people in the thread and your other threads with them. FrontDesk talks to nothing else except
+Gmail and Slack themselves: for sync, the searches you run (to Google, and to Slack when it is
+connected), the drafts you save, the replies you send and the label changes you make. Show images
+lets that mail load https images from the sender's hosts. The database and your Google token are
+stored only in `~/.frontdesk`. Detail: [docs/threat-model.md](docs/threat-model.md#data-handling).
 
 What this does **not** claim: prompt injection is not solved. These layers limit what a malicious
 mail can achieve (it cannot act, exfiltrate through tools, or run code in the page), but it can
