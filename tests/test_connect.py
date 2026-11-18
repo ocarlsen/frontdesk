@@ -66,6 +66,12 @@ def fake_google(monkeypatch):
     connect._pending.clear()
     config.HOME.mkdir(parents=True, exist_ok=True)
     config.GMAIL_CLIENT_SECRET.write_text(json.dumps(DESKTOP))
+    synced.clear()
+    monkeypatch.setattr(srv, "sync_soon", synced.append)   # never a real Gmail pull from a test
+
+
+synced: list = []
+REAL_SYNC_SOON = srv.sync_soon
 
 
 def state_of(out):
@@ -296,3 +302,31 @@ def test_status_route_reports_login(live):
     connect.finish(f"state={state_of(connect.start('read', 'http://localhost:1', 1))}&code=c")
     auth.expired_marker(config.GMAIL_TOKEN).touch()
     assert json.loads(call(live + "/api/status", headers={"Cookie": "fd_token=t0ken"})[1])["login"] is True
+
+
+def test_connecting_read_syncs_right_away(live, tmp_path):
+    """Reconnecting Gmail starts a sync, so "Sync failed: Gmail sign-in needed" clears without
+    waiting up to 15 minutes for the next auto-sync (seen 2026-11-18)."""
+    st = state_of(connect.start("read", "http://localhost:8765", 8765))
+    assert call(f"{live}/oauth/callback?state={st}&code=c")[0] == 200
+    assert synced == [tmp_path / "s.db"]
+    # the paste-back path does the same; the actions login does not touch the mail list
+    synced.clear()
+    ok = {"Cookie": "fd_token=t0ken", "X-FrontDesk": "google",
+          "Content-Type": "application/json", "Origin": live}
+    st = state_of(connect.start("read", "http://localhost:8765", 8765))
+    fin = json.dumps({"op": "finish", "url": f"http://localhost:8765/oauth/callback?state={st}"
+                                             "&code=c"}).encode()
+    assert call(f"{live}/api/google", fin, ok)[0] == 200 and synced == [tmp_path / "s.db"]
+    synced.clear()
+    st = state_of(connect.start("actions", "http://localhost:8765", 8765))
+    assert call(f"{live}/oauth/callback?state={st}&code=c")[0] == 200 and synced == []
+    # a failed callback starts nothing
+    assert call(f"{live}/oauth/callback?state=forged&code=c")[0] == 400 and synced == []
+
+
+def test_sync_soon_runs_one_sync(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(srv, "run_sync", lambda db, s: calls.append(db))
+    REAL_SYNC_SOON(tmp_path / "x.db").join(2)
+    assert calls == [tmp_path / "x.db"]
