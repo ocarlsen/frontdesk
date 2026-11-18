@@ -233,6 +233,22 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
 STARTUP_SYNC_SECONDS = 5
 
 
+def sync_soon(db_path: Path) -> threading.Thread:
+    """Sync in the background now, e.g. right after Gmail is reconnected, so the page's
+    "Sync failed: sign-in needed" line is replaced without waiting for the next auto-sync. A busy
+    lock means a sync is already running, which serves the same purpose."""
+    def go():
+        try:
+            run_sync(db_path, config.settings())
+        except Exception as e:  # noqa: BLE001 - report the type only, as the auto-sync loop does
+            _record_sync(False, type(e).__name__)
+            print(f"sync after connect: {type(e).__name__}", flush=True)
+
+    t = threading.Thread(target=go, name="sync-after-connect", daemon=True)
+    t.start()
+    return t
+
+
 def start_autosync(db_path: Path, minutes: int) -> threading.Thread | None:
     """Sync and rank shortly after start, then every `minutes` (0: off). Shares run_sync's lock
     with the Sync button, so the two never overlap; a busy lock just skips this round. Settings
@@ -862,9 +878,10 @@ CALLBACK_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <p><a href="{back}">Back to FrontDesk</a></p></main></body></html>"""
 
 
-def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
+def oauth_callback(settings: dict, query: str, db_path: Path | None = None) -> tuple[int, str]:
     """Google's redirect after consent. Answers a small page either way; the token is written
-    only when the state is one this server issued and Google granted exactly what was asked."""
+    only when the state is one this server issued and Google granted exactly what was asked.
+    Connecting Gmail read access starts a sync (given `db_path`)."""
     import html
 
     from ..gmail import connect
@@ -880,6 +897,8 @@ def oauth_callback(settings: dict, query: str) -> tuple[int, str]:
     # to localhost). The origin came from that signed-in page's own POST, which passed the
     # same-host check.
     back = html.escape(origin + "/index.html", quote=True) if origin else "/index.html"
+    if kind == "read" and db_path is not None:
+        sync_soon(db_path)
     return HTTPStatus.OK, CALLBACK_PAGE.format(
         title="Connected", text=html.escape(connect.KINDS[kind]) + " is connected. "
         "You can close this tab, or go back to FrontDesk.", back=back)
@@ -918,7 +937,8 @@ def run_attack(db_path: Path, settings: dict, req: dict,
     return HTTPStatus.OK, out
 
 
-def run_google(settings: dict, req: dict, origin: str) -> tuple[int, dict]:
+def run_google(settings: dict, req: dict, origin: str,
+               db_path: Path | None = None) -> tuple[int, dict]:
     """The page's Connect, paste-back and Disconnect: {"op": "start" | "finish" |
     "disconnect", "kind": "read" | "actions", "url": the pasted address}."""
     from ..gmail import connect
@@ -933,7 +953,10 @@ def run_google(settings: dict, req: dict, origin: str) -> tuple[int, dict]:
             url = req.get("url")
             if not isinstance(url, str) or len(url) > 4096:
                 raise connect.ConnectError("paste the whole address from the browser bar")
-            return HTTPStatus.OK, {"status": "done", "kind": connect.finish(url)}
+            kind = connect.finish(url)
+            if kind == "read" and db_path is not None:
+                sync_soon(db_path)   # as oauth_callback does, for the paste-back path
+            return HTTPStatus.OK, {"status": "done", "kind": kind}
         if op == "disconnect":
             connect.disconnect(req.get("kind"))
             return HTTPStatus.OK, {"status": "done"}
@@ -1032,7 +1055,7 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                 if not host_allowed(self.headers.get("Host", ""), names):
                     self._send(HTTPStatus.FORBIDDEN, b"Forbidden\n", TEXT)
                     return
-                code, page = oauth_callback(settings or {}, query)
+                code, page = oauth_callback(settings or {}, query, db_path)
                 self._send(code, page.encode(), "text/html; charset=utf-8")
                 return
             if not self._gate():
@@ -1223,7 +1246,7 @@ def make_handler(db_path: Path, settings: dict | None = None, token: str | None 
                     return
                 req = req if isinstance(req, dict) else {}
                 if self.path == "/api/google":
-                    status, out = run_google(s, req, origin or "")
+                    status, out = run_google(s, req, origin or "", db_path)
                 elif self.path == "/api/attack":
                     status, out = run_attack(db_path, s, req)
                 else:
