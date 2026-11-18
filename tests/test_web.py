@@ -412,6 +412,39 @@ def test_run_sync_records_the_result(tmp_path, monkeypatch):
     assert srv._last_sync["ok"] is True and srv._last_sync["summary"] == "synced 2, ranked 1"
 
 
+def test_a_failed_gmail_pull_still_ranks_what_is_stored(tmp_path, monkeypatch):
+    """An item already synced was left unranked for days while every Gmail pull failed (network,
+    then an expired sign-in): ranking ran only after a good pull (seen 2026-11-18)."""
+    from frontdesk import sources, triage
+    from frontdesk.gmail.auth import AuthError
+    from frontdesk.web import server as srv
+    monkeypatch.setattr("frontdesk.providers.get_provider", lambda s: object())
+    ranked = []
+    monkeypatch.setattr(triage, "run", lambda *a, **k: ranked.append(1) or (2, 0))
+
+    def signed_out(*a, **k):
+        raise AuthError("Gmail sign-in needed. Open Account (top right).")
+    monkeypatch.setattr(sources, "sync_all", signed_out)
+    status, out = srv.run_sync(tmp_path / "f.db", {})
+    assert status == 502 and ranked == [1] and out["triaged"] == 2
+    assert srv._last_sync["ok"] is False
+    # the sign-in words stay, so the page still offers its Account button
+    assert srv._last_sync["summary"] == ("Gmail sign-in needed. Open Account (top right); "
+                                         "ranked 2 already synced")
+
+    class TransportError(Exception):
+        pass
+
+    def offline(*a, **k):
+        raise TransportError("https://oauth2.googleapis.com/token unreachable")
+    monkeypatch.setattr(sources, "sync_all", offline)
+    monkeypatch.setattr(triage, "run", lambda *a, **k: (0, 0))
+    status, out = srv.run_sync(tmp_path / "f.db", {})
+    # a library's error is named by type only; nothing ranked leaves the message as it was
+    assert status == 502 and out["error"] == "TransportError"
+    assert not srv._sync_lock.locked()
+
+
 def test_the_page_reload_mark_moves_only_when_a_sync_changed_something(tmp_path, monkeypatch):
     from frontdesk import sources, triage
     from frontdesk.gmail.sync import SyncResult

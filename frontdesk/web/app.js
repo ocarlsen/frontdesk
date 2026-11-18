@@ -2269,7 +2269,8 @@ async function syncNow(auto = false) {
   try {
     const res = await fetch("/api/sync", { method: "POST", headers: { "X-FrontDesk": "sync" } });
     const out = await res.json();
-    if (!res.ok) throw Object.assign(new Error(out.error || "HTTP " + res.status), { status: res.status });
+    if (!res.ok) throw Object.assign(new Error(out.error || "HTTP " + res.status),
+      { status: res.status, triaged: out.triaged });
     let msg = "Synced " + out.synced + ", removed " + out.removed + ", ranked " + out.triaged;
     if (out.failed) msg += ", " + out.failed + " failed";
     if (out.triage_error) msg += ". Ranking skipped: " + out.triage_error;
@@ -2280,6 +2281,7 @@ async function syncNow(auto = false) {
     note.classList.toggle("err", !auto);
     if (!auto) offerConnect(note, e.message);
     else if (e.status === 502) pollStatus();   // a failed sync, not a refusal: show it now
+    if (e.triaged) load();   // Gmail failed but stored items were ranked: show them
   } finally {
     btn.disabled = false;
     btn.textContent = "Sync";

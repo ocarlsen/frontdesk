@@ -187,13 +187,27 @@ def _record_sync(ok: bool, summary: str, changed: bool = True) -> None:
         _last_sync["changed_at"] = at
 
 
+def _rank(store: Store, settings: dict, out: dict) -> None:
+    """Rank every stored item that needs it into `out` (triaged, failed, cost_usd, or
+    triage_error when the model can't be reached)."""
+    from .. import triage
+    from ..providers import ProviderError, get_provider
+    try:
+        done: list = []
+        out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
+                                                   log=lambda *_: None, done=done,
+                                                   profile=settings.get("owner_profile", ""))
+        out["cost_usd"] = triage.summarize(done)["cost_usd"]
+    except ProviderError as e:
+        out["triage_error"] = str(e)
+
+
 def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
     """Sync then triage, for the page's Sync button. Never opens a consent flow (a server request
-    can't), and a busy lock answers 409 instead of queueing a second Gmail pull."""
-    from .. import triage
+    can't), and a busy lock answers 409 instead of queueing a second Gmail pull. A failed Gmail
+    pull still ranks what is already stored, so an unranked item never waits on Gmail."""
     from ..gmail.auth import AuthError
     from ..gmail.client import GmailError
-    from ..providers import ProviderError, get_provider
     from ..sources import sync_all
     if settings.get("demo"):
         return HTTPStatus.CONFLICT, {"error": "Sync is off in demo mode (synthetic inbox)."}
@@ -203,22 +217,21 @@ def run_sync(db_path: Path, settings: dict) -> tuple[int, dict]:
     try:
         try:
             res = sync_all(store, settings, log=lambda *_: None, interactive=False)
-        except (AuthError, GmailError) as e:
-            _record_sync(False, str(e))
-            return HTTPStatus.BAD_GATEWAY, {"error": str(e)}
+        except Exception as e:  # noqa: BLE001 - network trouble too, not just sign-in
+            # Our own errors say what to do; anything else (a library's) is named by type only.
+            err = str(e) if isinstance(e, (AuthError, GmailError)) else type(e).__name__
+            out = {"error": err, "triaged": 0, "failed": 0}
+            _rank(store, settings, out)
+            if out["triaged"]:
+                out["error"] = f"{err.rstrip('.')}; ranked {out['triaged']} already synced"
+            _record_sync(False, out["error"])
+            return HTTPStatus.BAD_GATEWAY, out
         out = {"synced": sum(r.synced for r in res.values()),
                "removed": sum(r.removed for r in res.values()), "triaged": 0, "failed": 0,
                "changed": sum(r.changed for r in res.values()),
                "unchanged": sorted(k for k, r in res.items() if r.skipped),
                "sources": sorted(res)}
-        try:
-            done: list = []
-            out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
-                                                       log=lambda *_: None, done=done,
-                                                       profile=settings.get("owner_profile", ""))
-            out["cost_usd"] = triage.summarize(done)["cost_usd"]
-        except ProviderError as e:
-            out["triage_error"] = str(e)
+        _rank(store, settings, out)
         changed = bool(out["changed"] or out["removed"] or out["triaged"] or out["failed"])
         summary = f"synced {out['synced']}, ranked {out['triaged']}"
         if out["unchanged"]:
