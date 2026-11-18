@@ -136,4 +136,4 @@ class GeminiProvider:
             # thinking tokens", Gemini thinking docs).
             tokens_out=out, cache_read=cached,
             latency_ms=int((time.monotonic() - t0) * 1000),
-            model_served=resp.model_version or self.model))
+            model_served=resp.model_version or self.model), raw=text)

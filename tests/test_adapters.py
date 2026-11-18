@@ -75,7 +75,7 @@ def _req():
 def test_openai_normal_answer_and_usage():
     p, rec = oa(oa_response())
     c = p.complete_json("SYS", "USER", triage.SCHEMA, max_tokens=900)
-    assert c.data == ANSWER
+    assert c.data == ANSWER and json.loads(c.raw) == ANSWER
     u = c.usage
     assert (u.tokens_in, u.tokens_out, u.cache_read, u.cache_write) == (960, 120, 40, 0)
     assert u.model_served == "gpt-test-2026-01-01"
@@ -168,7 +168,7 @@ def gm(result, **opts):
 def test_gemini_normal_answer_and_usage():
     p, rec = gm(gm_response())
     c = p.complete_json("SYS", "USER", assist.SCHEMA, max_tokens=700)
-    assert c.data == ANSWER
+    assert c.data == ANSWER and json.loads(c.raw) == ANSWER   # thinking parts excluded
     u = c.usage
     assert (u.tokens_in, u.tokens_out, u.cache_read, u.cache_write) == (700, 150, 300, 0)
     assert u.model_served == "gemini-test-001"

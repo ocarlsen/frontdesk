@@ -22,6 +22,7 @@ class Usage:
 class Completion:
     data: dict
     usage: Usage = field(default_factory=Usage)
+    raw: str = ""   # the model's response text before parsing, for triage traces
 
 
 class ProviderError(Exception):

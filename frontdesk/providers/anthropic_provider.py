@@ -63,4 +63,4 @@ class AnthropicProvider:
             cache_read=getattr(u, "cache_read_input_tokens", 0) or 0,
             cache_write=getattr(u, "cache_creation_input_tokens", 0) or 0,
             latency_ms=int((time.monotonic() - t0) * 1000),
-            model_served=getattr(resp, "model", "") or self.model))
+            model_served=getattr(resp, "model", "") or self.model), raw=text)

@@ -141,4 +141,4 @@ class OpenAIProvider:
             # whether writes bill above the input rate is unverified, so they stay in tokens_in.
             cache_read=cached,
             latency_ms=int((time.monotonic() - t0) * 1000),
-            model_served=getattr(resp, "model", "") or self.model))
+            model_served=getattr(resp, "model", "") or self.model), raw=text)

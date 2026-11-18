@@ -190,13 +190,14 @@ def _record_sync(ok: bool, summary: str, changed: bool = True) -> None:
 def _rank(store: Store, settings: dict, out: dict) -> None:
     """Rank every stored item that needs it into `out` (triaged, failed, cost_usd, or
     triage_error when the model can't be reached)."""
-    from .. import triage
+    from .. import traces, triage
     from ..providers import ProviderError, get_provider
     try:
         done: list = []
         out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
                                                    log=lambda *_: None, done=done,
-                                                   profile=settings.get("owner_profile", ""))
+                                                   profile=settings.get("owner_profile", ""),
+                                                   traces=traces.enabled(settings))
         out["cost_usd"] = triage.summarize(done)["cost_usd"]
     except ProviderError as e:
         out["triage_error"] = str(e)

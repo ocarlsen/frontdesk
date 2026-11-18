@@ -41,6 +41,14 @@ Each item of the [OWASP Top 10 for LLM Applications, 2025 edition](https://genai
   `frontdesk stats`: counts and model costs only (rankings, Ask answers, drafts saved, replies
   sent and whether each went out as FrontDesk wrote it, searches, keeps), no mail text, addresses
   or thread ids.
+- **Triage traces.** `~/.frontdesk/traces.jsonl` (mode 0600, local only, never sent anywhere)
+  gets one line per ranking call: the full rendered input (system prompt and the thread's mail
+  text, your profile and What's going on) and the model's raw output, with the parsed result,
+  model, tokens, cost and any refusal or error. It is append-only so you can read what the model
+  saw (`frontdesk traces`). At 50 MB it moves to `traces.1.jsonl` and a fresh file starts, so up to
+  about 100 MB of mail text can sit there; it is not pruned when a thread leaves your inbox. Set
+  `triage_traces` to `false` in `settings.json` to stop writing it, and delete the two files to
+  remove what is there. Evals and the smoke check never write it.
 - **Sent off the machine:** the text of each thread, with your profile and What's going on (a
   ranking reads at most 2,500 characters of it, Ask reads every open item), to the model vendors
   whose API key you have set: ranking, Ask and Ask's reviewer can each use a different one. Ask

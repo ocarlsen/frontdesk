@@ -13,6 +13,9 @@ GMAIL_WEB_CLIENT_SECRET = HOME / "client_secret_web.json"   # optional: Connect 
 GMAIL_TOKEN = HOME / "gmail_token.json"
 GMAIL_ACTIONS_TOKEN = HOME / "gmail_actions_token.json"   # gmail.modify; only actions load it
 
+TRACES_FILE = "traces.jsonl"          # under HOME; the older half rotates to traces.1.jsonl
+TRACES_MAX_BYTES = 50 * 1024 * 1024   # rotate before an append would pass this
+
 DEFAULTS = {
     # Ranking: the cheapest model that clears every safety floor in evals/results/SCOREBOARD.md.
     "provider": "gemini",
@@ -32,6 +35,9 @@ DEFAULTS = {
         {"provider": "gemini", "model": "gemini-3.8-flash", "label": "Gemini 3.8 Flash"},
     ],
     "review_model": "claude-fable-5-1",   # Ask's Second opinion and Polish draft
+    # Append each ranking's full input and raw output to ~/.frontdesk/traces.jsonl (0600) for
+    # `frontdesk traces`. The file holds mail text; false stops writing it.
+    "triage_traces": True,
     "owner_profile": "",   # a few sentences on what matters to you; added to the model's prompt
     "reply_signoff": "",   # e.g. "Best,\nAlex": ends every suggested email reply (not Slack)
     # Senders whose mail shows web images without asking (lowercased addresses). Images are
