@@ -82,3 +82,20 @@ def test_sync_keeps_a_kept_thread_until_it_is_archived(tmp_path, monkeypatch):
     actions.set_archived(s, f"gmail:{OLD}", True, None, "click-0001")
     res = _sync(monkeypatch, s, SyncGmail("def456", "", threads()))
     assert res.removed == 1 and s.get_item(f"gmail:{OLD}") is None and not s.is_kept(f"gmail:{OLD}")
+
+
+def test_keep_and_rank_writes_a_trace_unless_off(tmp_path):
+    import json
+
+    from frontdesk import traces
+    db = tmp_path / "a.db"
+    server.keep_result(db, {"triage_traces": False}, f"gmail:{OLD}",
+                       client_factory=lambda: SyncGmail("", "", threads()), provider_factory=Provider)
+    assert not traces.path().exists()
+    server.keep_result(db, {}, f"gmail:{OLD}", client_factory=lambda: SyncGmail("", "", threads()),
+                       provider_factory=Provider)
+    server.keep_result(db, {}, f"gmail:{OLD}", client_factory=lambda: SyncGmail("", "", threads()),
+                       provider_factory=lambda: Provider(fail=True))
+    rows = [json.loads(x) for x in traces.path().read_text().splitlines()]
+    assert [r["outcome"] for r in rows] == ["ok", "error"]
+    assert rows[0]["item_id"] == f"gmail:{OLD}" and rows[0]["user"] and rows[0]["system"]

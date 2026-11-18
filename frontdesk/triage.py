@@ -198,6 +198,15 @@ def summarize(done: list[Triage]) -> dict:
     }
 
 
+def write_trace(item, provider, version: str, tr: dict, outcome: str, t=None, error: str = "",
+                log=print) -> None:
+    """Append one trace row; a full disk is logged, never allowed to stop the ranking."""
+    try:
+        traces_mod.append(traces_mod.record(item, provider, version, tr, outcome, t, error))
+    except OSError as e:
+        log(f"  trace not written for {item.id}: {type(e).__name__}")
+
+
 def run(store: Store, provider: Provider, limit: int | None = None, workers: int = 4,
         log=print, done: list[Triage] | None = None, profile: str = "",
         traces: bool = False) -> tuple[int, int]:
@@ -214,12 +223,8 @@ def run(store: Store, provider: Provider, limit: int | None = None, workers: int
     ok = failed = 0
 
     def trace(item, tr, outcome, t=None, error=""):
-        if not traces:
-            return
-        try:
-            traces_mod.append(traces_mod.record(item, provider, version, tr, outcome, t, error))
-        except OSError as e:   # a full disk must not stop the ranking itself
-            log(f"  trace not written for {item.id}: {type(e).__name__}")
+        if traces:
+            write_trace(item, provider, version, tr, outcome, t, error, log)
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {}

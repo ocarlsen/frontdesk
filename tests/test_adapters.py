@@ -42,6 +42,21 @@ class Recorder:
         return self.result
 
 
+# ---------- Anthropic ----------
+
+def test_anthropic_raw_is_the_response_text():
+    from types import SimpleNamespace as NS
+
+    from frontdesk.providers.anthropic_provider import AnthropicProvider
+    text = json.dumps(ANSWER)
+    resp = NS(stop_reason="end_turn", content=[NS(type="text", text=text)], model="claude-test-1",
+              usage=NS(input_tokens=10, output_tokens=5))
+    p = AnthropicProvider(KEY, "claude-test")
+    p.client.beta.messages.create = Recorder(resp)
+    c = p.complete_json("SYS", "USER", triage.SCHEMA)
+    assert c.data == ANSWER and c.raw == text and c.usage.model_served == "claude-test-1"
+
+
 # ---------- OpenAI ----------
 
 def oa_response(content=None, status="completed", incomplete=None, cached=40):
