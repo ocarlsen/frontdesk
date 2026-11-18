@@ -14,6 +14,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
+from . import traces as traces_mod
 from .items import BUCKETS, Item, Triage, model_dict
 from .pricing import cost_usd
 from .providers import Provider, ProviderError, ProviderRefusal
@@ -157,11 +158,22 @@ def validate(raw: dict) -> dict:
 
 
 def triage_item(provider: Provider, item: Item, today: str | None = None,
-                profile: str = "", situation: str = "") -> Triage:
-    """`situation` is situation_block()'s output; evals and the smoke check pass none."""
+                profile: str = "", situation: str = "", trace: dict | None = None) -> Triage:
+    """`situation` is situation_block()'s output; evals and the smoke check pass none. `trace`,
+    if given, is filled with the rendered system and user text before the call and the raw
+    response after it, so the caller still has them when the call or validation raises."""
     today = today or datetime.now(UTC).strftime("%Y-%m-%d")
-    res = provider.complete_json(system_prompt(profile, situation), render_user(item, today),
-                                 SCHEMA)
+    system, user = system_prompt(profile, situation), render_user(item, today)
+    if trace is not None:
+        trace.update(system=system, user=user)
+    try:
+        res = provider.complete_json(system, user, SCHEMA)
+    except ProviderError as e:
+        if trace is not None:
+            trace["raw"] = e.raw
+        raise
+    if trace is not None:
+        trace["raw"] = res.raw
     out = validate(res.data)
     u = res.usage
     served = u.model_served or provider.model
@@ -191,34 +203,55 @@ def summarize(done: list[Triage]) -> dict:
     }
 
 
+def write_trace(item, provider, version: str, tr: dict, outcome: str, t=None, error: str = "",
+                log=print) -> None:
+    """Append one trace row; a full disk is logged, never allowed to stop the ranking."""
+    try:
+        traces_mod.append(traces_mod.record(item, provider, version, tr, outcome, t, error))
+    except OSError as e:
+        log(f"  trace not written for {item.id}: {type(e).__name__}")
+
+
 def run(store: Store, provider: Provider, limit: int | None = None, workers: int = 4,
-        log=print, done: list[Triage] | None = None, profile: str = "") -> tuple[int, int]:
+        log=print, done: list[Triage] | None = None, profile: str = "",
+        traces: bool = False) -> tuple[int, int]:
     """Triage new, changed or prompt-stale items. Model calls run in a small pool; every write
     happens on this thread because the sqlite connection is not shared across threads. A refusal
     is recorded as terminal and an error is retried on later runs up to a cap, so a Sync click
     never re-bills the same failure forever. Returns (ok, failed); pass `done` to collect the
     saved Triage rows (for summarize()). Every ranking in the run reads the same What's going on
-    lines, read once here."""
+    lines, read once here. `traces` appends one record per call to traces.jsonl (the caller passes
+    the triage_traces setting through traces.enabled())."""
     version = prompt_version(profile)
     todo = store.items_needing_triage(version)[:limit]
     situation = situation_block(store.situation()) if todo else ""
     ok = failed = 0
+
+    def trace(item, tr, outcome, t=None, error=""):
+        if traces:
+            write_trace(item, provider, version, tr, outcome, t, error, log)
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(triage_item, provider, it, None, profile, situation): it
-                   for it in todo}
-        for fut, item in futures.items():
+        futures = {}
+        for it in todo:
+            tr: dict = {}
+            futures[pool.submit(triage_item, provider, it, None, profile, situation, tr)] = (it, tr)
+        for fut, (item, tr) in futures.items():
             try:
                 t = fut.result()
                 store.save_triage(t)
+                trace(item, tr, "ok", t)
                 ok += 1
                 if done is not None:
                     done.append(t)
             except ProviderRefusal as e:
                 failed += 1
                 store.record_failure(item, version, "refusal", str(e))
+                trace(item, tr, "refusal", error=str(e))
                 log(f"  refused {item.id}: {e}")
             except ProviderError as e:
                 failed += 1
                 store.record_failure(item, version, "error", str(e))
+                trace(item, tr, "error", error=str(e))
                 log(f"  failed {item.id}: {e}")
     return ok, failed

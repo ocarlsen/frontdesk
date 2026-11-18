@@ -42,6 +42,35 @@ class Recorder:
         return self.result
 
 
+# ---------- Anthropic ----------
+
+def test_anthropic_failures_carry_the_raw_text():
+    from types import SimpleNamespace as NS
+
+    from frontdesk.providers.anthropic_provider import AnthropicProvider
+    for stop, text in (("end_turn", "not json {"), ("max_tokens", '{"bucket": "fy')):
+        resp = NS(stop_reason=stop, content=[NS(type="text", text=text)], model="m",
+                  usage=NS(input_tokens=1, output_tokens=1))
+        p = AnthropicProvider(KEY, "claude-test")
+        p.client.beta.messages.create = Recorder(resp)
+        with pytest.raises(ProviderError) as ei:
+            p.complete_json("s", "u", triage.SCHEMA)
+        assert ei.value.raw == text
+
+
+def test_anthropic_raw_is_the_response_text():
+    from types import SimpleNamespace as NS
+
+    from frontdesk.providers.anthropic_provider import AnthropicProvider
+    text = '{ "urgency":2,\n  "bucket" : "fyi", "reason":"r","proposed_reply":"","summary":"s" }'
+    resp = NS(stop_reason="end_turn", content=[NS(type="text", text=text)], model="claude-test-1",
+              usage=NS(input_tokens=10, output_tokens=5))
+    p = AnthropicProvider(KEY, "claude-test")
+    p.client.beta.messages.create = Recorder(resp)
+    c = p.complete_json("SYS", "USER", triage.SCHEMA)
+    assert c.data == ANSWER and c.raw == text and c.usage.model_served == "claude-test-1"
+
+
 # ---------- OpenAI ----------
 
 def oa_response(content=None, status="completed", incomplete=None, cached=40):
@@ -72,10 +101,33 @@ def _req():
     return httpx2.Request("POST", "https://api.openai.com/v1/responses")
 
 
+ODD = '{ "urgency":2,\n  "bucket" : "fyi", "reason":"r","proposed_reply":"","summary":"s" }'
+
+
+def test_openai_raw_is_the_exact_text():
+    p, _ = oa(oa_response(content=[{"type": "output_text", "text": ODD, "annotations": []}]))
+    c = p.complete_json("s", "u", triage.SCHEMA)
+    assert c.data == ANSWER and c.raw == ODD
+
+
+def test_openai_failures_carry_the_raw_text():
+    for text in ("not json {", "[1, 2]"):
+        p, _ = oa(oa_response(content=[{"type": "output_text", "text": text, "annotations": []}]))
+        with pytest.raises(ProviderError) as ei:
+            p.complete_json("s", "u", triage.SCHEMA)
+        assert ei.value.raw == text
+    p, _ = oa(oa_response(status="incomplete", incomplete={"reason": "max_output_tokens"},
+                          content=[{"type": "output_text", "text": '{"bucket": "fy',
+                                    "annotations": []}]))
+    with pytest.raises(ProviderError) as ei:
+        p.complete_json("s", "u", triage.SCHEMA)
+    assert ei.value.raw == '{"bucket": "fy'
+
+
 def test_openai_normal_answer_and_usage():
     p, rec = oa(oa_response())
     c = p.complete_json("SYS", "USER", triage.SCHEMA, max_tokens=900)
-    assert c.data == ANSWER
+    assert c.data == ANSWER and json.loads(c.raw) == ANSWER
     u = c.usage
     assert (u.tokens_in, u.tokens_out, u.cache_read, u.cache_write) == (960, 120, 40, 0)
     assert u.model_served == "gpt-test-2026-01-01"
@@ -143,7 +195,7 @@ def test_openai_invalid_json(text):
 
 # ---------- Gemini ----------
 
-def gm_response(text=None, finish="STOP", block=None, cached=300):
+def gm_response(text=None, finish="STOP", block=None, cached=300, texts=None):
     d = {"modelVersion": "gemini-test-001",
          "usageMetadata": {"promptTokenCount": 1000, "cachedContentTokenCount": cached,
                            "candidatesTokenCount": 100, "thoughtsTokenCount": 50,
@@ -151,8 +203,8 @@ def gm_response(text=None, finish="STOP", block=None, cached=300):
     if block:
         d["promptFeedback"] = {"blockReason": block}
     else:
-        parts = [{"text": "thinking about it", "thought": True},
-                 {"text": json.dumps(ANSWER) if text is None else text}]
+        parts = [{"text": "thinking about it", "thought": True}]
+        parts += [{"text": x} for x in (texts or [json.dumps(ANSWER) if text is None else text])]
         d["candidates"] = [{"content": {"role": "model", "parts": parts},
                             "finishReason": finish}]
     return genai_types.GenerateContentResponse.model_validate(d)
@@ -165,10 +217,26 @@ def gm(result, **opts):
     return p, rec
 
 
+def test_gemini_raw_is_the_exact_join_of_the_non_thought_parts():
+    a, b = '{ "urgency":2,\n  "bucket" : "fyi", ', '"reason":"r","proposed_reply":"","summary":"s" }'
+    p, _ = gm(gm_response(texts=[a, b]))
+    c = p.complete_json("s", "u", triage.SCHEMA)
+    assert c.data == ANSWER and c.raw == a + b
+
+
+def test_gemini_failures_carry_the_raw_text():
+    for kw in ({"text": "not json {"}, {"text": '"just a string"'},
+               {"text": '{"bucket": "fy', "finish": "MAX_TOKENS"}):
+        p, _ = gm(gm_response(**kw))
+        with pytest.raises(ProviderError) as ei:
+            p.complete_json("s", "u", triage.SCHEMA)
+        assert ei.value.raw == kw["text"]
+
+
 def test_gemini_normal_answer_and_usage():
     p, rec = gm(gm_response())
     c = p.complete_json("SYS", "USER", assist.SCHEMA, max_tokens=700)
-    assert c.data == ANSWER
+    assert c.data == ANSWER and json.loads(c.raw) == ANSWER   # thinking parts excluded
     u = c.usage
     assert (u.tokens_in, u.tokens_out, u.cache_read, u.cache_write) == (700, 150, 300, 0)
     assert u.model_served == "gemini-test-001"

@@ -190,13 +190,14 @@ def _record_sync(ok: bool, summary: str, changed: bool = True) -> None:
 def _rank(store: Store, settings: dict, out: dict) -> None:
     """Rank every stored item that needs it into `out` (triaged, failed, cost_usd, or
     triage_error when the model can't be reached)."""
-    from .. import triage
+    from .. import traces, triage
     from ..providers import ProviderError, get_provider
     try:
         done: list = []
         out["triaged"], out["failed"] = triage.run(store, get_provider(settings),
                                                    log=lambda *_: None, done=done,
-                                                   profile=settings.get("owner_profile", ""))
+                                                   profile=settings.get("owner_profile", ""),
+                                                   traces=traces.enabled(settings))
         out["cost_usd"] = triage.summarize(done)["cost_usd"]
     except ProviderError as e:
         out["triage_error"] = str(e)
@@ -581,7 +582,7 @@ def keep_slack(db_path: Path, settings: dict, item_id: str, slack_factory=None,
 
 def _keep_and_rank(db_path: Path, settings: dict, item, source: str,
                    provider_factory=None) -> tuple[int, dict]:
-    from .. import triage
+    from .. import traces, triage
     from ..providers import ProviderError, ProviderRefusal, get_provider
     store = Store(db_path)
     try:
@@ -589,17 +590,26 @@ def _keep_and_rank(db_path: Path, settings: dict, item, source: str,
         store.log_usage("keep", source=source)
         profile = settings.get("owner_profile", "")
         version = triage.prompt_version(profile)
+        want_trace, tr, provider = traces.enabled(settings), {}, None
         try:
             provider = (provider_factory or (lambda: get_provider(settings)))()
-            store.save_triage(triage.triage_item(
-                provider, item, profile=profile,
-                situation=triage.situation_block(store.situation())))
+            t = triage.triage_item(provider, item, profile=profile,
+                                   situation=triage.situation_block(store.situation()), trace=tr)
+            store.save_triage(t)
+            if want_trace:
+                triage.write_trace(item, provider, version, tr, "ok", t, log=lambda *_: None)
             ranked = True
         except ProviderRefusal as e:
             store.record_failure(item, version, "refusal", str(e))
+            if want_trace and provider:
+                triage.write_trace(item, provider, version, tr, "refusal", error=str(e),
+                                   log=lambda *_: None)
             ranked = False
         except ProviderError as e:
             store.record_failure(item, version, "error", str(e))
+            if want_trace and provider:
+                triage.write_trace(item, provider, version, tr, "error", error=str(e),
+                                   log=lambda *_: None)
             ranked = False
     finally:
         store.db.close()

@@ -48,19 +48,19 @@ class AnthropicProvider:
             raise ProviderError("anthropic: connection error") from e
         if resp.stop_reason == "refusal":
             raise ProviderRefusal("anthropic: model declined")
-        if resp.stop_reason == "max_tokens":
-            raise ProviderError("anthropic: hit max_tokens before finishing")
         text = next((b.text for b in resp.content if b.type == "text"), None)
+        if resp.stop_reason == "max_tokens":
+            raise ProviderError("anthropic: hit max_tokens before finishing", raw=text or "")
         if text is None:
             raise ProviderError("anthropic: no text block in response")
         try:
             data = json.loads(text)
         except json.JSONDecodeError as e:
-            raise ProviderError("anthropic: response was not valid JSON") from e
+            raise ProviderError("anthropic: response was not valid JSON", raw=text) from e
         u = resp.usage
         return Completion(data, Usage(
             tokens_in=u.input_tokens or 0, tokens_out=u.output_tokens or 0,
             cache_read=getattr(u, "cache_read_input_tokens", 0) or 0,
             cache_write=getattr(u, "cache_creation_input_tokens", 0) or 0,
             latency_ms=int((time.monotonic() - t0) * 1000),
-            model_served=getattr(resp, "model", "") or self.model))
+            model_served=getattr(resp, "model", "") or self.model), raw=text)

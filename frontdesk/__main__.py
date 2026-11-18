@@ -5,7 +5,15 @@ import argparse
 import sys
 
 from . import config
+from .items import BUCKETS
 from .store import Store
+
+
+def _positive(v: str) -> int:
+    n = int(v)
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"must be 1 or more, got {v}")
+    return n
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,6 +26,13 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--limit", type=int, help="triage at most N threads")
     sub.add_parser("serve", help="serve the ranked page")
     sub.add_parser("status", help="counts per bucket")
+    tr = sub.add_parser("traces", help="read recent triage traces: input, then raw output "
+                                       "(local file; holds mail text)")
+    tr.add_argument("-n", type=_positive, default=50, help="newest N records (default 50)")
+    tr.add_argument("--bucket", choices=BUCKETS, help="only rankings that landed in this bucket")
+    tr.add_argument("--version", help="only this prompt version")
+    tr.add_argument("--system", action="store_true", help="also show the system prompt")
+    tr.add_argument("--json", action="store_true", help="one JSON record per line")
     doc = sub.add_parser("doctor", help="what is set up and what is missing (offline; never "
                                         "prints a key)")
     doc.add_argument("--online", action="store_true",
@@ -152,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
     s = config.settings()
     store = Store()
 
+    if args.cmd == "traces":
+        return traces_main(args)
     if args.cmd == "stats":
         from .stats import main as stats_main
         return stats_main(store, args.days, args.json)
@@ -169,13 +186,13 @@ def main(argv: list[str] | None = None) -> int:
         for name, r in sync_all(store, s).items():
             print(f"{name}: synced {r.synced}, removed {r.removed}")
     elif args.cmd == "triage":
-        from . import triage
+        from . import traces, triage
         from .providers import get_provider
         provider = get_provider(s)
         print(f"triaging with {provider.name}:{provider.model} ...")
         done: list = []
         ok, failed = triage.run(store, provider, limit=args.limit, done=done,
-                                profile=s["owner_profile"])
+                                profile=s["owner_profile"], traces=traces.enabled(s))
         sm = triage.summarize(done)
         cost = "n/a" if sm["cost_usd"] is None else f"${sm['cost_usd']:.4f}"
         print(f"triaged {ok}, failed {failed}; est. cost {cost}, cache hit "
@@ -209,6 +226,25 @@ def main(argv: list[str] | None = None) -> int:
             k = tri.bucket if tri else "untriaged"
             counts[k] = counts.get(k, 0) + 1
         print(" ".join(f"{k}={v}" for k, v in counts.items()) or "empty")
+    return 0
+
+
+def traces_main(args) -> int:
+    import json as _json
+
+    from . import traces
+    rows = traces.load(args.n, args.bucket, args.version)
+    if not rows and not traces.path().exists():
+        print(f"no traces yet: {traces.path()} is written by Sync, Keep and "
+              "`frontdesk triage` once you set triage_traces to true in settings.json")
+        return 0
+    for r in rows:
+        if args.json:
+            # model_bucket matches the column `eval --mine` reads from stored labels.
+            print(_json.dumps({**r, "model_bucket": (r.get("parsed") or {}).get("bucket")},
+                              ensure_ascii=False))
+        else:
+            print(traces.format_record(r, args.system))
     return 0
 
 

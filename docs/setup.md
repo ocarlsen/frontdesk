@@ -77,7 +77,8 @@ a page opened at that https address then connects directly.
 - Slack: `slack_keychain_service`, `slack_days` (7), `slack_unread_days` (90), `slack_max_items`
   (100), `slack_channel_messages` (`"mentions"` or `"all"`).
 - Server: `serve_host`, `serve_port`, `serve_display_host`, `serve_allowed_hosts`,
-  `auto_sync_minutes` (15; 0 turns it off), `mark_read_on_open`.
+  `auto_sync_minutes` (15; 0 turns it off), `mark_read_on_open`, `triage_traces` (false;
+  if you turn it on, each ranking is written to the local trace file `frontdesk traces` reads).
 - IMAP, for `frontdesk unanswered` and `inbox-buckets`: see [unanswered.md](unanswered.md).
 
 Unknown keys are an error, not ignored.

@@ -264,7 +264,7 @@ the attack suite measures how often one still sways a ranking or a draft.</p></d
 
 <section id="privacy" aria-labelledby="privacy-title">
 <h2 id="privacy-title">Privacy policy</h2>
-<p class="updated">Last updated <time datetime="2026-11-04">November 4, 2026</time></p>
+<p class="updated">Last updated <time datetime="2026-11-18">November 18, 2026</time></p>
 
 <h3>What FrontDesk is</h3>
 <p>FrontDesk is software you run on your own computer. There is no FrontDesk server, no
@@ -306,7 +306,10 @@ They send nothing anywhere else, store nothing, and use no model.</p>
 <h3>Where your data goes</h3>
 <p>FrontDesk keeps the threads it syncs, its rankings, your Google and Slack sign-in tokens, and
 what you tell it (your profile, the people you keep notes on with their addresses, any names you
-type for them, your "What's going on" list and your Ask conversations) on your computer, in a folder only your user account can read. It sends data to these places only: to
+type for them, your "What's going on" list and your Ask conversations) on your computer, in a
+folder only your user account can read. If you turn on <code>triage_traces</code>, it also keeps
+a trace file there of what each ranking sent to the model and got back (see Keeping and
+deleting). It sends data to these places only: to
 Google, to read your mail and, if you allow it, to archive threads, save drafts and send replies;
 to Slack, if you connect it, to read your conversations and post replies you confirm; and to the AI
 model provider you configure, which receives the text of each thread, with your profile and
@@ -334,10 +337,17 @@ API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
 <h3>Keeping and deleting</h3>
 <p>Threads you archive, or that leave your inbox, are removed from FrontDesk's local store on the
-next sync. A usage log, also on your computer, keeps counts and model costs for
-<code>frontdesk stats</code> (threads ranked, questions asked, drafts saved, replies sent and
-whether each was sent as FrontDesk wrote it); it holds no mail text, addresses or thread ids, and
-is never sent anywhere. The Memory page deletes any person you keep a note on, with their addresses. Deleting
+next sync, except from the trace file. If you turn on <code>triage_traces</code>, that file (on
+your computer, readable only by you, never sent anywhere) keeps what each ranking sent to the
+model: the email or Slack text, your profile and your "What's going on" list, with what came
+back, including the suggested reply. You read it with <code>frontdesk traces</code>. It is capped
+at about 100 MB and is not pruned when a thread leaves your inbox: delete
+<code>traces.jsonl</code> and <code>traces.1.jsonl</code> to remove it, and set
+<code>triage_traces</code> back to <code>false</code> to stop it. A usage log, also on your
+computer, keeps counts and model costs for <code>frontdesk stats</code> (threads ranked,
+questions asked, drafts saved, replies sent and whether each was sent as FrontDesk wrote it); it
+holds no mail text, addresses or thread ids, and is never sent anywhere. The Memory page deletes
+any person you keep a note on, with their addresses. Deleting
 the <code>~/.frontdesk</code> folder removes everything FrontDesk has stored.
 To revoke its access to your Google account, remove it at
 <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>

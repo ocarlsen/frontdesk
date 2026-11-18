@@ -22,10 +22,17 @@ class Usage:
 class Completion:
     data: dict
     usage: Usage = field(default_factory=Usage)
+    raw: str = ""   # the model's response text before parsing, for triage traces
 
 
 class ProviderError(Exception):
-    """A call failed in a way the caller should record and move past (not crash the run)."""
+    """A call failed in a way the caller should record and move past (not crash the run).
+    `raw` is the model's response text when the failure came after it arrived (truncated or
+    unparseable output), for triage traces; "" otherwise."""
+
+    def __init__(self, *args, raw: str = ""):
+        super().__init__(*args)
+        self.raw = raw
 
 
 class ProviderRefusal(ProviderError):
