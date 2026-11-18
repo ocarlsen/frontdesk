@@ -12,7 +12,7 @@ from frontdesk import traces, triage
 from frontdesk.__main__ import main
 from frontdesk.providers import Completion, ProviderError, ProviderRefusal, Usage
 from frontdesk.store import Store
-from tests.test_triage import FakeProvider, item
+from test_triage import FakeProvider, item
 
 
 def mode(p):
