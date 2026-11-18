@@ -164,10 +164,10 @@ model-free IMAP check for threads still waiting on your reply: [docs/unanswered.
 .venv/bin/ruff check frontdesk tests
 ```
 
-`frontdesk traces` pages through recent ranking calls (the input the model saw, then its raw
-output; `--bucket`, `--version`, `-n`, `--json`) from `~/.frontdesk/traces.jsonl`, a local 0600 file
-written on every Sync, Keep or `frontdesk triage` (`triage_traces` in `settings.json` turns it off).
-It holds mail text: the reading session that precedes a prompt change starts there.
+If you turn on `triage_traces` in `settings.json`, every Sync, Keep or `frontdesk triage` appends
+each ranking call to `~/.frontdesk/traces.jsonl`, a local 0600 file, and `frontdesk traces` pages
+through them (the input the model saw, then its raw output; `--bucket`, `--version`, `-n`,
+`--json`). It holds mail text: the reading session that precedes a prompt change starts there.
 
 Browser tests (Chromium as a desktop window and as an iPhone 15, synthetic demo only): `cd tests/e2e && npm ci && npm test` (uses the repo's `.venv`, else `FRONTDESK_PYTHON`, else `python3`).
 

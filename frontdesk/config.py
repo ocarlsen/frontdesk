@@ -36,8 +36,8 @@ DEFAULTS = {
     ],
     "review_model": "claude-fable-5-1",   # Ask's Second opinion and Polish draft
     # Append each ranking's full input and raw output to ~/.frontdesk/traces.jsonl (0600) for
-    # `frontdesk traces`. The file holds mail text; false stops writing it.
-    "triage_traces": True,
+    # `frontdesk traces`. The file holds mail text, so it is off until you turn it on.
+    "triage_traces": False,
     "owner_profile": "",   # a few sentences on what matters to you; added to the model's prompt
     "reply_signoff": "",   # e.g. "Best,\nAlex": ends every suggested email reply (not Slack)
     # Senders whose mail shows web images without asking (lowercased addresses). Images are

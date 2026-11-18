@@ -236,7 +236,7 @@ def traces_main(args) -> int:
     rows = traces.load(args.n, args.bucket, args.version)
     if not rows and not traces.path().exists():
         print(f"no traces yet: {traces.path()} is written by Sync, Keep and "
-              "`frontdesk triage` (setting triage_traces)")
+              "`frontdesk triage` once you set triage_traces to true in settings.json")
         return 0
     for r in rows:
         if args.json:

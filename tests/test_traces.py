@@ -69,7 +69,8 @@ def test_rotation_at_the_cap_keeps_0600(isolated_home):
 
 
 def test_enabled_is_strict():
-    assert traces.enabled({}) is True
+    assert traces.enabled({}) is False   # off until the owner turns it on: the file holds mail
+    assert traces.enabled({"triage_traces": True}) is True
     assert traces.enabled({"triage_traces": False}) is False
     with pytest.raises(ValueError, match=r"triage_traces.*'no'"):
         traces.enabled({"triage_traces": "no"})
