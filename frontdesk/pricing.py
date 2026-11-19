@@ -3,11 +3,12 @@ eval report, not a bill: check the vendor's pricing page before quoting a number
 report cost as None rather than a guess.
 
 Sources: Anthropic list prices as of 2026-06; OpenAI developers.openai.com/api/docs/pricing
-(standard tier, read 2026-10-29; the gpt-6.2-sol row read 2026-11-17); Google
-ai.google.dev/gemini-api/docs/pricing (paid tier, page updated 2026-10-28; Gemini 4 Argon from
-aistudio.google.com/docs/pricing, read 2026-11-04). Gemini 3.8 Flash doubles on 2027-01-01 (to 1.50
-/ 7.50 / 0.15); Gemini 4 Argon doubles on 2026-12-01 (to 4.00 / 20.00 / 0.20). Cache reads bill at a
-fraction of input (per model); 5-minute cache writes at 1.25x input (Anthropic)."""
+(standard tier, read 2026-10-29; the gpt-6.2-sol row read 2026-11-17; the gpt-6.2-astra row read
+2026-11-19); Google ai.google.dev/gemini-api/docs/pricing (paid tier, page updated 2026-10-28;
+Gemini 4 Argon from aistudio.google.com/docs/pricing, read 2026-11-04). Gemini 3.8 Flash doubles
+on 2027-01-01 (to 1.50 / 7.50 / 0.15); Gemini 4 Argon doubles on 2026-12-01 (to 4.00 / 20.00 /
+0.20). Cache reads bill at a fraction of input (per model); 5-minute cache writes at 1.25x input
+(Anthropic)."""
 from __future__ import annotations
 
 # model -> (input, output, cache_read)
@@ -19,6 +20,7 @@ PRICES: dict[str, tuple[float, float, float]] = {
     "claude-haiku-4-5": (1.00, 5.00, 0.10),
     "gpt-6.1-sol": (2.00, 10.00, 0.10),
     "gpt-6.2-sol": (2.00, 10.00, 0.10),
+    "gpt-6.2-astra": (8.00, 40.00, 0.40),
     "gemini-3.8-flash": (0.75, 3.75, 0.075),   # output includes thinking tokens
     "gemini-4-argon": (2.00, 10.00, 0.10),     # through 2026-11-30; output includes thinking
 }
