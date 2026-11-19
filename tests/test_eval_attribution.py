@@ -306,3 +306,20 @@ def test_rejudge_records_a_removed_scenario_as_a_failure():
     rep = ea.rejudge(old, FakeJudge(), ROOT)
     assert any(f[0] == "gone-since" and "no longer in the dataset" in f[2]
                for f in rep["failures"])
+
+
+# ---- self-judged marker
+SELF_JUDGED_LINE = ("Self-judged: the answering model also graded these answers; read its rates "
+                    "with that in mind.")
+
+
+def test_report_marks_a_self_judged_run():
+    rep = ea.run(FakeModel(), FakeJudge(), ROOT)
+    rep["judge"] = rep["model"]
+    assert SELF_JUDGED_LINE in ea.to_markdown(rep)
+
+
+def test_report_does_not_mark_a_separately_judged_run():
+    rep = ea.run(FakeModel(), FakeJudge(), ROOT)
+    assert rep["model"] != rep["judge"]
+    assert "Self-judged" not in ea.to_markdown(rep)
