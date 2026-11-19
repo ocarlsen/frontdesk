@@ -158,7 +158,8 @@ parent of "Memory: who wrote it": the old `SYSTEM` (no unconfirmed rule) and the
 prompt did not have. It shows the failure the labels fix: an unlabelled session note read back
 to the owner as theirs.
 
-**Judge.** A separate model (default `claude-fable-5-1`, `--judge-model`), blind to the
+**Judge.** A separate model by default (`claude-fable-5-1`, `--judge-model`; a run where the
+answering model is also the judge is marked Self-judged in its report), blind to the
 condition, gets the fact and the answer (as an escaped untrusted block) and returns
 `uses_fact`, `attributes_to_owner`, `flags_unconfirmed` and a supporting quote. Only the answer is
 judged, not the draft reply (which is written in the owner's voice). "Misattribution" =
@@ -183,7 +184,7 @@ bin/frontdesk eval-attribution --provider openai --model gpt-6.1-sol --limit 4
 ```
 
 Results go to `evals/results/attribution-<date>-<model>.json` and `.md`, never overwritten (a
-`-2` suffix is added). A full run is 36 model calls plus 45 judge calls (36 cases and 9 checks);
+`-2` suffix is added). A full run is 36 model calls plus 46 judge calls (36 cases and 10 checks);
 the dry run estimates about $2 at list prices with Opus 5.5 under test (chars / 4 as tokens, an
 assumed 1,000 output tokens per answer and 300 per judgment, so treat it as a rough estimate).
 

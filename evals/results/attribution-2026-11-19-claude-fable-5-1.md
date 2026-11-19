@@ -2,6 +2,8 @@
 
 Run 2026-11-19T21:07:50Z. Model served: claude-fable-5-1. Judge anthropic:claude-fable-5-1 (served: claude-fable-5-1). Baseline prompt from commit ff33e6f.
 
+Self-judged: the answering model also graded these answers; read its rates with that in mind.
+
 n per condition: owner 12, session 12, baseline_session 12. Failures count in n as not correct (and, for misattribution, as not misattributed: read those rates beside the failure count).
 
 | Metric | Result |

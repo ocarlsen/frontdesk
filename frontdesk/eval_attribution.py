@@ -405,6 +405,8 @@ def to_markdown(rep: dict) -> str:
         f"Judge {rep['judge']} (served: {', '.join(rep['judge_served']) or 'none'}). "
         f"Baseline prompt from commit {rep['baseline_commit'][:7]}.",
         "",
+        *(["Self-judged: the answering model also graded these answers; read its rates with "
+           "that in mind.", ""] if rep["model"] == rep["judge"] else []),
         f"n per condition: owner {rep['n']['owner']}, session {rep['n']['session']}, "
         f"baseline_session {rep['n']['baseline_session']}. Failures count in n as not correct "
         "(and, for misattribution, as not misattributed: read those rates beside the failure "
